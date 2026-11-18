@@ -18,6 +18,8 @@ pr/
 
 `main/` is a complete accepted baseline. A PR scope is a sparse overlay. It contains only items rebuilt by that PR.
 
+A normal main run does not need to rebuild the full catalog. `build update-main` copies the existing complete baseline, validates the selected fresh item results, replaces only those item directories, and writes a new complete manifest. New selected items may be added when the consumer catalog grows; unrelated baseline items are preserved.
+
 A preview resolves the complete view by starting with `main/` and replacing the item paths present in the PR overlay. Promotion does the same replacement into a new complete `main/` candidate. Unaffected item directories are preserved.
 
 The build manifest records the source commit and the input/result fingerprints for every stored item. The item directory also keeps the runner's `item.json` and per-step state.

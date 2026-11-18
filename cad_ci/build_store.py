@@ -148,6 +148,64 @@ def prepare_main(
     return manifest
 
 
+
+def update_main(
+    *,
+    main: Path,
+    candidate_root: Path,
+    out: Path,
+    item_paths: Iterable[Path | str],
+    source_commit: str,
+) -> dict:
+    """Create a new complete main baseline from selected fresh item output.
+
+    The existing main baseline supplies every item that was not selected for
+    this run. Selected item directories must be complete runner results in
+    `candidate_root`. They are validated before the output tree is changed.
+    """
+
+    main_manifest = load_manifest(main, expected_scope="main")
+    paths = tuple(_safe_relative(path) for path in item_paths)
+    if not paths:
+        raise BuildStoreError("main update requires at least one selected item")
+
+    # Validate every replacement first. A bad candidate must fail before a
+    # partially updated main candidate is exposed to later publication steps.
+    replacements: dict[Path, dict] = {}
+    for item_path in paths:
+        source = candidate_root / item_path
+        if not source.is_dir():
+            raise BuildStoreError(
+                f"missing candidate item: {item_path.as_posix()}"
+            )
+        replacements[item_path] = _item_record(
+            candidate_root,
+            item_path,
+            source_commit,
+        )
+
+    if out.exists():
+        shutil.rmtree(out)
+    shutil.copytree(main, out)
+
+    rows = dict(main_manifest["items"])
+    for item_path, row in replacements.items():
+        _replace_tree(candidate_root / item_path, out / item_path)
+        rows[item_path.as_posix()] = row
+
+    manifest = {
+        "schema": 1,
+        "scope": "main",
+        "source_commit": source_commit,
+        "items": rows,
+    }
+    (out / MANIFEST).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def prepare_overlay(
     *,
     candidate_root: Path,

@@ -12,6 +12,7 @@ from cad_ci.build_store import (
     prepare_main,
     prepare_overlay,
     promote_overlay,
+    update_main,
     remove_pr,
     resolve_view,
 )
@@ -159,6 +160,82 @@ class BuildStoreTests(unittest.TestCase):
                 "old-b",
             )
             self.assertEqual(manifest["source_commit"], "main-new")
+
+
+    def test_update_main_replaces_only_selected_item(self):
+        """A partial main run keeps unrelated baseline item bytes unchanged."""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            main = root / "main"
+            write_main(
+                main,
+                {
+                    "qualification/item-a": "old-a",
+                    "qualification/item-b": "old-b",
+                },
+            )
+            sibling_before = (
+                main / "qualification/item-b/result.txt"
+            ).read_bytes()
+
+            candidate = root / "candidate"
+            write_item(candidate, "qualification/item-a", "new-a")
+
+            updated = root / "updated"
+            manifest = update_main(
+                main=main,
+                candidate_root=candidate,
+                out=updated,
+                item_paths=["qualification/item-a"],
+                source_commit="main-new",
+            )
+
+            self.assertEqual(
+                (updated / "qualification/item-a/result.txt").read_text(),
+                "new-a",
+            )
+            self.assertEqual(
+                (updated / "qualification/item-b/result.txt").read_bytes(),
+                sibling_before,
+            )
+            self.assertEqual(
+                manifest["items"]["qualification/item-b"],
+                load_manifest(main)["items"]["qualification/item-b"],
+            )
+            self.assertEqual(
+                manifest["items"]["qualification/item-a"]["source_commit"],
+                "main-new",
+            )
+            self.assertEqual(manifest["source_commit"], "main-new")
+
+    def test_update_main_validates_all_replacements_before_writing_output(self):
+        """A missing selected result must not leave a half-updated candidate."""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            main = root / "main"
+            write_main(main, {"qualification/item-a": "old-a"})
+            out = root / "updated"
+            out.mkdir()
+            (out / "sentinel.txt").write_text("untouched")
+
+            with self.assertRaisesRegex(
+                BuildStoreError,
+                "missing candidate item",
+            ):
+                update_main(
+                    main=main,
+                    candidate_root=root / "candidate",
+                    out=out,
+                    item_paths=["qualification/item-a"],
+                    source_commit="main-new",
+                )
+
+            self.assertEqual(
+                (out / "sentinel.txt").read_text(),
+                "untouched",
+            )
 
     def test_install_and_cleanup_pr_scope(self):
         with tempfile.TemporaryDirectory() as tmp:

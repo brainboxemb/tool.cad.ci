@@ -16,6 +16,7 @@ from .build_store import (
     install_scope,
     prepare_main,
     prepare_overlay,
+    update_main,
     promote_overlay,
     remove_pr,
     resolve_view,
@@ -45,6 +46,10 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     prepare_pr = build_sub.add_parser("prepare-pr")
     _candidate_args(prepare_pr)
     prepare_pr.add_argument("--pull-request", type=int, required=True)
+
+    update_main_cmd = build_sub.add_parser("update-main")
+    _candidate_args(update_main_cmd)
+    update_main_cmd.add_argument("--main", type=Path, required=True)
 
     resolve = build_sub.add_parser("resolve")
     resolve.add_argument("--main", type=Path, required=True)
@@ -127,7 +132,7 @@ def _candidate_paths(
             raise BuildStoreError(f"unknown item(s): {', '.join(unknown)}")
         return tuple(items[item_id].path for item_id in args.items)
     if require_selection:
-        raise BuildStoreError("PR candidate requires --items")
+        raise BuildStoreError("selected build operation requires --items")
     return tuple(item.path for item in items.values())
 
 
@@ -171,6 +176,14 @@ def _run_build(args: argparse.Namespace) -> int:
             item_paths=_candidate_paths(args, require_selection=True),
             source_commit=args.source_commit,
             pull_request=args.pull_request,
+        )
+    elif args.build_command == "update-main":
+        update_main(
+            main=args.main,
+            candidate_root=args.candidate_root,
+            out=args.out,
+            item_paths=_candidate_paths(args, require_selection=True),
+            source_commit=args.source_commit,
         )
     elif args.build_command == "resolve":
         resolve_view(main=args.main, overlay=args.overlay, out=args.out)
