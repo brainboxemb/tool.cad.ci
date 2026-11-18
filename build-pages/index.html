@@ -29,6 +29,7 @@ pr/
     &lt;affected item source path&gt;/...
 </code></pre>
 <p><code>main/</code> is a complete accepted baseline. A PR scope is a sparse overlay. It contains only items rebuilt by that PR.</p>
+<p>A normal main run does not need to rebuild the full catalog. <code>build update-main</code> copies the existing complete baseline, validates the selected fresh item results, replaces only those item directories, and writes a new complete manifest. New selected items may be added when the consumer catalog grows; unrelated baseline items are preserved.</p>
 <p>A preview resolves the complete view by starting with <code>main/</code> and replacing the item paths present in the PR overlay. Promotion does the same replacement into a new complete <code>main/</code> candidate. Unaffected item directories are preserved.</p>
 <p>The build manifest records the source commit and the input/result fingerprints for every stored item. The item directory also keeps the runner's <code>item.json</code> and per-step state.</p>
 <h2>Pages branch</h2>

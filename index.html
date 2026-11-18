@@ -81,7 +81,16 @@ cad-ci run --repo . --item item-a --until verify
   --pull-request 12 \
   --items item-a
 </code></pre>
-<p>Resolve <code>main</code> plus an overlay or promote that overlay into a new complete main candidate with <code>cad-ci build resolve</code> and <code>cad-ci build promote</code>.</p>
+<p>After the first complete baseline exists, update only rebuilt items on a normal main run:</p>
+<pre><code class="language-text">cad-ci build update-main \
+  --repo . \
+  --main generated-build/main \
+  --candidate-root build \
+  --out output/main \
+  --source-commit &lt;sha&gt; \
+  --items item-a
+</code></pre>
+<p>Resolve <code>main</code> plus a PR overlay with <code>cad-ci build resolve</code>. <code>cad-ci build promote</code> remains available when a verified PR overlay is deliberately promoted.</p>
 <p>Generated branches are published with <code>cad-ci publish build</code> and <code>cad-ci publish pages</code>. The publisher uses normal pushes, checks that the source branch is still current, and retries branch-head races without force-push.</p>
 <h2>Pages framework</h2>
 <p><code>cad_ci.pages</code> provides:</p>
