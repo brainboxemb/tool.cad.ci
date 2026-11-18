@@ -1,3 +1,5 @@
+"""Git helpers used to make local and GitHub CI selection behave the same."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -5,10 +7,16 @@ import subprocess
 
 
 class GitError(RuntimeError):
-    pass
+    """Raised when Git cannot calculate the requested repository state."""
 
 
 def changed_files(repo: Path, base: str, head: str) -> tuple[str, ...]:
+    """Return files changed between two exact Git revisions.
+
+    The tool owns this comparison so workflow YAML only needs to supply the
+    revisions. This keeps local runs and GitHub Actions on the same code path.
+    """
+
     completed = subprocess.run(
         ["git", "diff", "--name-only", "--diff-filter=ACDMRTUXB", base, head, "--"],
         cwd=repo,

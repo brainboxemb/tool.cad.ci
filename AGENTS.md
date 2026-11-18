@@ -50,31 +50,41 @@ Do not write:
 
 Prefer names such as `changed_files`, `affected_items`, `build_plan`, `run_step`, and `previous_result`.
 
-## Code comments
+## Code comments and explanations
 
-Write comments when they explain information that is not obvious from the code.
+Code must be explained clearly enough that another engineer can understand the intent without reconstructing it from the implementation.
 
-Useful comments explain:
+Every Python module should start with a short module docstring that says what the module owns.
 
-- why a decision is necessary;
-- an important safety rule;
-- a non-obvious dependency;
+Public and non-trivial helper functions should have a short docstring that explains:
+
+- what the function does;
+- what important input it expects;
+- what it returns or changes when that is not obvious.
+
+Add comments inside functions where they help explain:
+
+- why a decision is made;
+- why a safety check exists;
+- why earlier output may or may not be reused;
+- why dependencies are expanded;
+- why a partial rerun refuses stale state;
+- why generated branches are updated in a particular way;
 - why an apparently simpler implementation is deliberately not used.
 
-Do not:
-
-- repeat the next line of code;
-- narrate simple control flow;
-- use comments instead of clear names;
-- keep old implementation stories in normal source code.
+The goal is not to comment every assignment. The goal is that the important flow and rules are visible in the code.
 
 Prefer:
 
-> `# Keep dependency output intact so an exact-step rerun can validate it.`
+> `# A changed dependency can change every item that consumes its output.`
 
-Do not write:
+> `# Do not rebuild earlier steps for --step. A stale prerequisite must fail visibly.`
 
-> `# Loop over all dependencies.`
+Do not write comments that only repeat syntax:
+
+> `# Loop over dependencies.`
+
+When a core module has almost no explanatory text, treat that as incomplete documentation and fix it before merge.
 
 ## Git workflow
 
