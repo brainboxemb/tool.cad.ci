@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 - 2026-11-18
+
+- add durable `build/main` baselines and sparse `build/pr/<number>` overlays;
+- add overlay resolution and scoped promotion;
+- add stable/preview Pages handling with provenance;
+- add normal-push generated-branch publication with source freshness checks and retry;
+- add a shared HTML page framework while keeping consumer CSS and content local;
+- add documentation Pages built with the same framework.
+
 ## 0.1.0 - 2026-11-18
 
 Initial `tool.cad.ci` implementation:

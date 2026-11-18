@@ -4,10 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "brainboxemb-cad-ci"
-version = "0.1.0"
+version = "0.2.0"
 description = "Repository-local CI planner and runner for SolidCraft Forge/CAD"
 requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+docs = ["mistune>=3.0"]
 
 [project.scripts]
 cad-ci = "cad_ci.cli:main"
