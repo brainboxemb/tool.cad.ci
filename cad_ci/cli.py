@@ -1,3 +1,5 @@
+"""Command-line interface for planning and running a consumer repository."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,16 +14,22 @@ from .runner import RunError, run_item
 
 
 def _parser() -> argparse.ArgumentParser:
+    """Build the CLI without putting repository behaviour into workflow YAML."""
+
     parser = argparse.ArgumentParser(prog="cad-ci")
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("plan", "run"):
         command = sub.add_parser(name)
         command.add_argument("--repo", type=Path, default=Path.cwd())
+
+        # CI normally supplies exact base/head revisions. --changed remains
+        # useful for focused local tests and diagnostics.
         source = command.add_mutually_exclusive_group()
         source.add_argument("--changed", nargs="*")
         source.add_argument("--base")
         command.add_argument("--head")
         command.add_argument("--item")
+
         if name == "plan":
             command.add_argument("--json", action="store_true")
         else:
@@ -33,6 +41,8 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _changed(repo: Path, args) -> tuple[str, ...] | None:
+    """Resolve CLI selection input to changed repository paths."""
+
     if args.base is not None:
         if args.head is None:
             raise RunError("--base requires --head")
@@ -45,6 +55,8 @@ def _changed(repo: Path, args) -> tuple[str, ...] | None:
 
 
 def _select(items, changed, item_id):
+    """Select one named item or calculate all affected items."""
+
     if item_id is not None:
         if item_id not in items:
             raise RunError(f"unknown item: {item_id}")
@@ -53,12 +65,15 @@ def _select(items, changed, item_id):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the requested plan or execution command."""
+
     args = _parser().parse_args(argv)
     try:
         repo = args.repo.resolve()
         items = load_repository(repo)
         selected = _select(items, _changed(repo, args), args.item)
         plan = build_plan(items, selected)
+
         if args.command == "plan":
             if args.json:
                 print(
@@ -83,9 +98,13 @@ def main(argv: list[str] | None = None) -> int:
         partial = args.step is not None or args.start is not None or args.until is not None
         if partial and args.item is None:
             raise RunError("--step/--from/--until require --item")
+
+        # Partial execution is deliberately limited to the named item. Its
+        # dependencies are validated by the runner, not silently rebuilt.
         execution_plan = plan
         if partial:
             execution_plan = [entry for entry in plan if entry.item.id == args.item]
+
         for entry in execution_plan:
             item_partial = partial and entry.item.id == args.item
             events = run_item(

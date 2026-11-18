@@ -1,3 +1,5 @@
+"""Turn changed files and item dependencies into an ordered build plan."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,6 +10,8 @@ from .paths import matches
 
 @dataclass(frozen=True)
 class PlanEntry:
+    """One item in the execution order and the reason it was included."""
+
     item: Item
     reason: str
 
@@ -16,8 +20,16 @@ def affected_items(
     items: dict[str, Item],
     changed_files: tuple[str, ...] | None,
 ) -> set[str]:
+    """Return items that must be reconsidered for the supplied file changes.
+
+    `None` means an explicit full run. An empty tuple means no files changed.
+    """
+
     if changed_files is None:
         return set(items)
+
+    # The root file controls item discovery. A change can add/remove items or
+    # change folder patterns, so selecting every item is the safe behaviour.
     if "cad-ci.yml" in changed_files:
         return set(items)
 
@@ -36,7 +48,8 @@ def affected_items(
         ):
             affected.add(item.id)
 
-    # A changed dependency can change the result of every item that uses it.
+    # A changed dependency can change every item that consumes its output.
+    # Repeat until stable because dependency chains can be several items deep.
     changed = True
     while changed:
         changed = False
@@ -51,9 +64,13 @@ def build_plan(
     items: dict[str, Item],
     selected: set[str],
 ) -> list[PlanEntry]:
+    """Return dependencies before the selected items that need them."""
+
     needed = set(selected)
 
     def add_dependencies(item_id: str) -> None:
+        # Dependencies are included even when their own source did not change.
+        # Their saved result may be needed to validate or run the selected item.
         for dependency in items[item_id].needs:
             if dependency not in needed:
                 needed.add(dependency)
@@ -75,6 +92,8 @@ def build_plan(
         ordered.append(PlanEntry(item, reason))
         done.add(item_id)
 
+    # Iterating repository order keeps the plan stable when two independent
+    # items have no ordering requirement between them.
     for item_id in items:
         add(item_id)
     return ordered

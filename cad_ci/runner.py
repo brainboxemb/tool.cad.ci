@@ -1,3 +1,10 @@
+"""Run item steps and reuse only results that still match their inputs.
+
+The runner deliberately refuses to repair stale prerequisites during an exact
+or ranged partial rerun. A partial command should do exactly what the operator
+asked, or fail with the prerequisite that must be rebuilt first.
+"""
+
 from __future__ import annotations
 
 import os
@@ -17,22 +24,30 @@ from .state import (
 
 
 class RunError(RuntimeError):
-    pass
+    """Raised when an item cannot be run safely or a command fails."""
 
 
 def item_output_dir(repo: Path, item: Item) -> Path:
+    """Return the build directory that mirrors this item's source path."""
+
     return repo / "build" / item.path
 
 
 def item_state_path(repo: Path, item: Item) -> Path:
+    """Return the complete-item state file."""
+
     return item_output_dir(repo, item) / "item.json"
 
 
 def step_state_path(repo: Path, item: Item, step: Step) -> Path:
+    """Return the saved state file for one item step."""
+
     return item_output_dir(repo, item) / "steps" / f"{step.id}.json"
 
 
 def _output_hashes(repo: Path, item: Item, step: Step) -> dict[str, str] | None:
+    """Hash declared step outputs, or return None when any output is missing."""
+
     base = item_output_dir(repo, item)
     result: dict[str, str] = {}
     for output in step.outputs:
@@ -49,11 +64,16 @@ def _valid_step_result(
     step: Step,
     input_fingerprint: str,
 ) -> str | None:
+    """Return the saved result hash only when state and output files still match."""
+
     state = read_json(step_state_path(repo, item, step))
     if not state or state.get("status") != "pass":
         return None
     if state.get("input_fingerprint") != input_fingerprint:
         return None
+
+    # Re-hash the real files. A passing JSON file alone must never make edited
+    # or partially deleted build output reusable.
     outputs = _output_hashes(repo, item, step)
     if outputs is None or outputs != state.get("outputs", {}):
         return None
@@ -69,8 +89,11 @@ def _current_item_result(
     items: dict[str, Item],
     stack: tuple[str, ...] = (),
 ) -> str:
+    """Validate a complete saved item, including all dependency results."""
+
     if item.id in stack:
         raise RunError(f"dependency cycle while checking {item.id}")
+
     dependency_results: dict[str, str] = {}
     for dependency_id in item.needs:
         dependency = items[dependency_id]
@@ -90,6 +113,8 @@ def _current_item_result(
             raise RunError(f"stale or missing step {item.id}:{step.id}")
         previous_result = result
 
+    # item.json marks that the complete ordered flow reached its final step.
+    # Step files alone are insufficient after a partial --until run.
     item_state = read_json(item_state_path(repo, item))
     if not item_state or item_state.get("status") != "pass":
         raise RunError(f"missing complete item result for {item.id}")
@@ -102,6 +127,8 @@ def _current_item_result(
 
 
 def _dependency_results(repo: Path, item: Item, items: dict[str, Item]) -> dict[str, str]:
+    """Return validated result hashes for every direct dependency."""
+
     result: dict[str, str] = {}
     for dependency_id in item.needs:
         dependency = items[dependency_id]
@@ -113,6 +140,8 @@ def _dependency_results(repo: Path, item: Item, items: dict[str, Item]) -> dict[
 
 
 def _run_command(repo: Path, item: Item, step: Step) -> tuple[int, float]:
+    """Run one consumer command with stable repository/item environment variables."""
+
     output_dir = item_output_dir(repo, item)
     output_dir.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
@@ -124,6 +153,7 @@ def _run_command(repo: Path, item: Item, step: Step) -> tuple[int, float]:
             "CAD_CI_OUTPUT": str(output_dir),
         }
     )
+
     started = time.monotonic()
     if isinstance(step.run, tuple):
         completed = subprocess.run(step.run, cwd=repo / item.path, env=env, check=False)
@@ -133,6 +163,8 @@ def _run_command(repo: Path, item: Item, step: Step) -> tuple[int, float]:
 
 
 def _step_range(item: Item, step: str | None, start: str | None, until: str | None) -> tuple[int, int, bool]:
+    """Resolve exact-step and range options to inclusive step indexes."""
+
     ids = [value.id for value in item.steps]
     for requested in (step, start, until):
         if requested is not None and requested not in ids:
@@ -140,6 +172,7 @@ def _step_range(item: Item, step: str | None, start: str | None, until: str | No
     if step is not None:
         index = ids.index(step)
         return index, index, True
+
     first = ids.index(start) if start is not None else 0
     last = ids.index(until) if until is not None else len(ids) - 1
     if first > last:
@@ -156,6 +189,8 @@ def run_item(
     start: str | None = None,
     until: str | None = None,
 ) -> list[tuple[str, str]]:
+    """Run or reuse the requested part of one item and return execution events."""
+
     dependency_results = _dependency_results(repo, item, items)
     item_fingerprint = item_input_fingerprint(repo, item, dependency_results)
     first, last, force_range = _step_range(item, step, start, until)
@@ -165,7 +200,10 @@ def run_item(
     for index, current in enumerate(item.steps):
         input_fingerprint = step_input_fingerprint(item_fingerprint, current, previous_result)
         valid_result = _valid_step_result(repo, item, current, input_fingerprint)
+
         if index < first:
+            # Do not rebuild earlier steps for --step/--from. The operator asked
+            # for a partial rerun, so stale prerequisite state must fail visibly.
             if valid_result is None:
                 raise RunError(
                     f"{item.id}:{item.steps[first].id} requires a current result for earlier step {current.id}"
@@ -175,6 +213,8 @@ def run_item(
         if index > last:
             break
 
+        # An explicitly selected step/range is intentionally rerun even when its
+        # current output could otherwise be reused.
         force = step is not None or force_range
         if item.reuse and not force and valid_result is not None:
             events.append((current.id, "reused"))
@@ -202,10 +242,11 @@ def run_item(
         if status != "pass":
             missing = "" if outputs is not None else " or a declared output is missing"
             raise RunError(f"step failed: {item.id}:{current.id} (exit {code}{missing})")
+
         events.append((current.id, "ran"))
         previous_result = result_fingerprint
 
-    # A run that reaches the final step can leave a complete current item result.
+    # Only a run that reaches the final step may claim a complete item result.
     if last == len(item.steps) - 1:
         write_json(
             item_state_path(repo, item),

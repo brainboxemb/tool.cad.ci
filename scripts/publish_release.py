@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Publish the release declared by VERSION after a green main CI run.
+
+GitHub Actions supplies authentication and the exact main commit. This script
+owns the release checks so version policy does not live as shell logic in YAML.
+"""
+
 from __future__ import annotations
 
 import json
@@ -14,12 +20,16 @@ _VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 
 def release_version(root: Path = ROOT) -> str:
+    """Return the release version after checking all version sources agree."""
+
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
     if not _VERSION.fullmatch(version):
         raise ValueError(f"VERSION is not a release version: {version}")
+
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
     if f'version = "{version}"' not in pyproject:
         raise ValueError("VERSION and pyproject.toml do not match")
+
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
     if f"## {version} -" not in changelog:
         raise ValueError(f"CHANGELOG.md has no {version} release section")
@@ -27,6 +37,8 @@ def release_version(root: Path = ROOT) -> str:
 
 
 def _request(url: str, token: str, *, method: str = "GET", data: dict | None = None):
+    """Send one authenticated GitHub REST request and decode its JSON response."""
+
     payload = None if data is None else json.dumps(data).encode("utf-8")
     request = Request(
         url,
@@ -44,9 +56,14 @@ def _request(url: str, token: str, *, method: str = "GET", data: dict | None = N
 
 
 def publish(repository: str, sha: str, token: str, root: Path = ROOT) -> str:
+    """Create the missing GitHub release for the exact supplied main commit."""
+
     version = release_version(root)
     tag = f"v{version}"
     base = f"https://api.github.com/repos/{repository}"
+
+    # Main workflows can be retried. Treat an existing tag/release as success so
+    # a rerun does not fail after the first publication already completed.
     try:
         _request(f"{base}/releases/tags/{tag}", token)
         return f"release already exists: {tag}"
@@ -71,6 +88,8 @@ def publish(repository: str, sha: str, token: str, root: Path = ROOT) -> str:
 
 
 def main() -> int:
+    """Read the Actions environment and publish or report a clear error."""
+
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     sha = os.environ.get("GITHUB_SHA", "")
     token = os.environ.get("GITHUB_TOKEN", "")
