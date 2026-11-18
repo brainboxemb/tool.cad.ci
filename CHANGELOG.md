@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-11-18
 
 - add durable `build/main` baselines and sparse `build/pr/<number>` overlays;
 - add overlay resolution and scoped promotion;
