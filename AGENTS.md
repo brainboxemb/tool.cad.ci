@@ -134,7 +134,9 @@ A release is made only after:
 
 - the tool unit tests pass;
 - the synthetic consumer passes end to end;
-- the release version is fixed in source;
-- the exact release commit is known.
+- the release version is fixed in `VERSION`, `pyproject.toml`, and `CHANGELOG.md`;
+- the exact release commit is on `main`.
+
+The `CI` workflow calls `scripts/publish_release.py` after the green `main` test job. Keep version checks and GitHub release policy in that script, not inline in workflow YAML.
 
 Forge and CAD consume a pinned released revision as external tooling. They do not call a workflow from moving `main` in this repository.
