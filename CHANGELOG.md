@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-11-18
+
+- allow a step output to be a directory as well as a file;
+- hash directory contents recursively in stable relative-path order;
+- invalidate reuse when a nested output file changes;
+- reject symlinks inside declared output directories.
+
 ## 0.2.0 - 2026-11-18
 
 - add durable `build/main` baselines and sparse `build/pr/<number>` overlays;
