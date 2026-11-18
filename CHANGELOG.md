@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 - 2026-11-18
+
+- add `cad-ci build update-main` for partial main baseline updates;
+- validate all selected replacement items before writing the new candidate;
+- preserve every unselected baseline item and manifest row;
+- allow selected new catalog items to be added without a full rebuild.
+
 ## 0.2.1 - 2026-11-18
 
 - allow a step output to be a directory as well as a file;
