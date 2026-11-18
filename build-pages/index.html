@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Build output and Pages — tool.cad.ci</title>
+  <link rel="stylesheet" href="/tool.cad.ci/site.css">
+</head>
+<body>
+  <header>
+    <strong>tool.cad.ci</strong>
+    <nav><a href="/tool.cad.ci/index.html">Overview</a>
+<a href="/tool.cad.ci/requirements/index.html">Requirements</a>
+<a href="/tool.cad.ci/consumer/index.html">Consumer setup</a>
+<a href="/tool.cad.ci/build-pages/index.html">Build output and Pages</a></nav>
+  </header>
+  <main>
+    <h1>Build output and Pages</h1>
+    <h1>Build output and Pages</h1>
+<p><code>tool.cad.ci</code> keeps technical output and public HTML separate.</p>
+<h2>Build branch</h2>
+<p>The durable <code>build</code> branch has two scopes:</p>
+<pre><code class="language-text">main/
+  build.json
+  &lt;item source path&gt;/...
+pr/
+  &lt;number&gt;/
+    build.json
+    &lt;affected item source path&gt;/...
+</code></pre>
+<p><code>main/</code> is a complete accepted baseline. A PR scope is a sparse overlay. It contains only items rebuilt by that PR.</p>
+<p>A preview resolves the complete view by starting with <code>main/</code> and replacing the item paths present in the PR overlay. Promotion does the same replacement into a new complete <code>main/</code> candidate. Unaffected item directories are preserved.</p>
+<p>The build manifest records the source commit and the input/result fingerprints for every stored item. The item directory also keeps the runner's <code>item.json</code> and per-step state.</p>
+<h2>Pages branch</h2>
+<p>The <code>gh-pages</code> branch contains presentation output only:</p>
+<pre><code class="language-text">/
+  index.html
+  ...
+  provenance.json
+previews/
+  pr-&lt;number&gt;/
+    index.html
+    ...
+    provenance.json
+</code></pre>
+<p>Updating the stable site preserves every preview. Updating or cleaning one preview changes only that preview directory.</p>
+<p><code>provenance.json</code> is written by the site build and should identify the source commit and build evidence used for that site.</p>
+<h2>Shared site framework</h2>
+<p>The library provides the base HTML structure and navigation. A consumer supplies:</p>
+<ul>
+<li>page titles;</li>
+<li>page body HTML;</li>
+<li>its own stylesheet;</li>
+<li>the correct Pages base path;</li>
+<li>provenance values.</li>
+</ul>
+<p>The framework deliberately does not impose Forge/CAD branding or CSS.</p>
+<h2>Git publication</h2>
+<p>Generated branches are never force-pushed.</p>
+<p>For every write the publisher:</p>
+<ol>
+<li>checks that the source branch still points to the expected source commit;</li>
+<li>clones the current generated branch head;</li>
+<li>applies one scoped filesystem change;</li>
+<li>commits it;</li>
+<li>checks source freshness again;</li>
+<li>pushes normally;</li>
+<li>retries from the new branch head when another writer won the race.</li>
+</ol>
+<p>This means correctness does not depend on GitHub Actions concurrency behaving like a queue.</p>
+
+  </main>
+</body>
+</html>

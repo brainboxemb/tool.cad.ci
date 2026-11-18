@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requirements — tool.cad.ci</title>
+  <link rel="stylesheet" href="/tool.cad.ci/site.css">
+</head>
+<body>
+  <header>
+    <strong>tool.cad.ci</strong>
+    <nav><a href="/tool.cad.ci/index.html">Overview</a>
+<a href="/tool.cad.ci/requirements/index.html">Requirements</a>
+<a href="/tool.cad.ci/consumer/index.html">Consumer setup</a>
+<a href="/tool.cad.ci/build-pages/index.html">Build output and Pages</a></nav>
+  </header>
+  <main>
+    <h1>Requirements</h1>
+    <h1>Requirements</h1>
+<h2>Repository ownership</h2>
+<ul>
+<li>The consumer repository lists CI item folders in <code>cad-ci.yml</code>.</li>
+<li>Each item folder owns its <code>ci.yml</code>.</li>
+<li>Item commands and domain rules stay in the consumer repository.</li>
+<li><code>kind</code> is descriptive only. The runner does not hardcode library, integration, qualification, Forge, or CAD behaviour.</li>
+</ul>
+<h2>Planning</h2>
+<ul>
+<li>The runner can find items affected by changed files.</li>
+<li>An affected dependency also affects its dependants.</li>
+<li>A plan includes required dependencies before the selected item.</li>
+<li>The plan is printable without running commands.</li>
+</ul>
+<h2>Running</h2>
+<ul>
+<li>A complete item can run from first to last step.</li>
+<li>One step can run by itself when earlier state and dependency state are current.</li>
+<li><code>--from</code> and <code>--until</code> select a step range.</li>
+<li>Missing or stale prerequisite state stops a partial run with a clear error.</li>
+</ul>
+<h2>Reuse</h2>
+<ul>
+<li>Successful output may be reused only when the item inputs, item config, dependencies, step config, and declared output files still match.</li>
+<li>A complete successful item writes reusable item state.</li>
+<li>A partial run does not pretend that the whole item was rebuilt.</li>
+</ul>
+<h2>Durable build output</h2>
+<ul>
+<li>Runner output mirrors the item source path under the local <code>build/</code> candidate root.</li>
+<li>Durable <code>build/main</code> is a complete accepted baseline.</li>
+<li>Durable <code>build/pr/&lt;number&gt;</code> is a sparse overlay containing only selected rebuilt items.</li>
+<li>Resolving a PR view starts with <code>main</code> and replaces overlay item paths.</li>
+<li>Promotion replaces only overlay item paths and preserves unaffected main items.</li>
+<li><code>build.json</code> records per-item source, input fingerprint and result fingerprint.</li>
+<li>Cleanup of one PR changes only that PR namespace.</li>
+</ul>
+<h2>Pages</h2>
+<ul>
+<li><code>gh-pages</code> stable HTML lives at the branch root.</li>
+<li>PR previews live under <code>previews/pr-&lt;number&gt;/</code>.</li>
+<li>Updating stable Pages preserves all previews.</li>
+<li>Updating or removing one preview preserves stable output and other previews.</li>
+<li>Every built site contains <code>provenance.json</code>.</li>
+<li>The shared framework owns HTML structure/navigation, not consumer CSS or domain content.</li>
+<li>Project Pages and preview sites can provide different base paths.</li>
+</ul>
+<h2>Generated-branch publication</h2>
+<ul>
+<li>Generated branches are never force-pushed.</li>
+<li>A publisher starts from the latest remote generated-branch head.</li>
+<li>Publication can require a source ref to still match an expected source commit.</li>
+<li>Source freshness is checked before work and again before push.</li>
+<li>A rejected generated-branch push is retried from the newer head with a bounded retry count.</li>
+<li>Repeated publication/cleanup may be idempotent.</li>
+</ul>
+<h2>Use in CI</h2>
+<ul>
+<li>Local and GitHub Actions runs use the same <code>cad-ci</code> commands.</li>
+<li>GitHub Actions does not contain changed-path selection, item loops, or item-specific commands.</li>
+<li>Forge and CAD consume a pinned released revision of <code>tool.cad.ci</code> as external tooling.</li>
+</ul>
+
+  </main>
+</body>
+</html>

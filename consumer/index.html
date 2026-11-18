@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consumer setup — tool.cad.ci</title>
+  <link rel="stylesheet" href="/tool.cad.ci/site.css">
+</head>
+<body>
+  <header>
+    <strong>tool.cad.ci</strong>
+    <nav><a href="/tool.cad.ci/index.html">Overview</a>
+<a href="/tool.cad.ci/requirements/index.html">Requirements</a>
+<a href="/tool.cad.ci/consumer/index.html">Consumer setup</a>
+<a href="/tool.cad.ci/build-pages/index.html">Build output and Pages</a></nav>
+  </header>
+  <main>
+    <h1>Consumer setup</h1>
+    <h1>Using tool.cad.ci from Forge or CAD</h1>
+<p>Forge and CAD consume a released <code>tool.cad.ci</code> revision as external tooling.</p>
+<p>Do not call a reusable workflow from this repository. The consumer workflow checks out its own source and invokes the pinned tool against that checkout.</p>
+<p>A consumer can record the tool beside its other external repositories, for example:</p>
+<pre><code class="language-yaml">repositories:
+  cad-ci:
+    type: git
+    url: https://github.com/brainboxemb/tool.cad.ci.git
+    version: &lt;exact-release-commit&gt;
+</code></pre>
+<p>After bootstrap, invoke the checkout directly:</p>
+<pre><code class="language-text">python ext/cad-ci/cad-ci.py plan --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
+python ext/cad-ci/cad-ci.py run  --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
+</code></pre>
+<p>The workflow still owns GitHub-specific setup such as checkout, credentials and artifact transport. It does not own changed-path rules, item loops or item commands.</p>
+<h2>Repository config</h2>
+<p>The root file only points to CI folders:</p>
+<pre><code class="language-yaml">schema: 1
+items:
+  - tests/unit
+  - examples/*
+  - qualification/*
+</code></pre>
+<p>Each discovered folder owns its behaviour:</p>
+<pre><code class="language-yaml">id: qualification-simple-box
+kind: qualification
+needs:
+  - integration-simple-box
+strategy:
+  affected: changed
+  reuse: true
+steps:
+  - id: build
+    run: [python, build.py]
+    outputs: [model.json]
+  - id: verify
+    run: [python, verify.py]
+    outputs: [verified.json]
+</code></pre>
+<p><code>kind</code> is only a label. The tool does not know what a library test, integration test or qualification means.</p>
+
+  </main>
+</body>
+</html>
