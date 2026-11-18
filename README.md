@@ -88,7 +88,19 @@ cad-ci build prepare-pr \
   --items item-a
 ```
 
-Resolve `main` plus an overlay or promote that overlay into a new complete main candidate with `cad-ci build resolve` and `cad-ci build promote`.
+After the first complete baseline exists, update only rebuilt items on a normal main run:
+
+```text
+cad-ci build update-main \
+  --repo . \
+  --main generated-build/main \
+  --candidate-root build \
+  --out output/main \
+  --source-commit <sha> \
+  --items item-a
+```
+
+Resolve `main` plus a PR overlay with `cad-ci build resolve`. `cad-ci build promote` remains available when a verified PR overlay is deliberately promoted.
 
 Generated branches are published with `cad-ci publish build` and `cad-ci publish pages`. The publisher uses normal pushes, checks that the source branch is still current, and retries branch-head races without force-push.
 
