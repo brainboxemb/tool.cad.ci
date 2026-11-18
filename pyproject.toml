@@ -9,6 +9,9 @@ description = "Repository-local CI planner and runner for SolidCraft Forge/CAD"
 requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0"]
 
+[project.optional-dependencies]
+docs = ["mistune>=3.0"]
+
 [project.scripts]
 cad-ci = "cad_ci.cli:main"
 
