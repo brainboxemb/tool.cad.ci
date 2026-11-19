@@ -108,6 +108,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   cad-ci:
@@ -119,6 +120,7 @@ revision. The called workflow:</p>
 <li>checks out the caller repository at its real source commit;</li>
 <li>checks out <code>tool.cad.ci</code> at the same commit that contains the called workflow;</li>
 <li>installs that exact tool/library stack;</li>
+<li>authenticates Docker to <code>ghcr.io</code> with the workflow GitHub token;</li>
 <li>performs exactly one <code>cad-ci run</code>;</li>
 </ul>
 <p>Consumers such as Forge that need domain setup between selection and execution
@@ -132,7 +134,9 @@ the inherited process environment. Stable repository expectations, such as a
 runtime/version selected by that repository, belong in root
 <code>cad-ci.yml:variables</code>. The pinned library applies those repository values
 after caller environment. Secrets remain normal GitHub Actions
-secrets/permissions.</p>
+secrets/permissions. A caller that needs GHCR packages grants
+<code>packages: read</code>; the reusable workflow uses that token permission for the
+generic Docker login and does not expose the token to CAD-CI commands.</p>
 <p>When a downstream consumer job must publish or transform generated output, set
 <code>upload_build: true</code>. The run workflow uploads the complete materialized
 <code>build/</code> tree, including hidden <code>.cad-ci</code> evidence, and returns its name as

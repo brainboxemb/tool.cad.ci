@@ -68,7 +68,13 @@
 <li>Caller <code>environment_json</code> values are inherited process environment only; root <code>cad-ci.yml:variables</code> are parsed by the released library and override a caller value with the same name.</li>
 <li>The tool does not parse, duplicate or merge root repository variables.</li>
 <li>CAD-CI-owned <code>CAD_CI_*</code> values remain authoritative over both caller environment and repository variables.</li>
-<li>Domain image setup, credentials and publication remain consumer-owned unless separately specified as generic behaviour.</li>
+<li>Domain image selection/build/publication remain consumer-owned.</li>
+<li>Generic authentication of the GitHub Actions runner to <code>ghcr.io</code> is
+reusable-workflow behavior: the caller grants <code>packages: read</code> and the
+workflow uses its GitHub token for Docker login before consumer commands run.</li>
+<li>The workflow never parses or selects a consumer container image and never
+exposes registry credentials through <code>environment_json</code> or CAD-CI-owned
+environment.</li>
 </ul>
 <h2>CI use</h2>
 <ul>
