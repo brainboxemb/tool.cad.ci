@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 - 2026-11-19
+
+- add one high-level `reusable-ci.yml` entry point for normal consumers;
+- keep `reusable-plan.yml` and `reusable-run.yml` as lower-level building blocks for consumers with domain setup between planning and execution;
+- pass optional materialized `build/` output through a generic GitHub artifact for downstream publication or transformation jobs;
+- keep hidden `.cad-ci` evidence in that artifact while excluding private `.cache/cad-ci` state;
+- keep workflow, tool and library identity pinned to the exact released tool commit.
+
+
 ## 0.5.0 - 2026-11-19
 
 - add reusable GitHub Actions workflows for generic CAD-CI planning and execution;
