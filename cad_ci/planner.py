@@ -54,6 +54,12 @@ def affected_items(
     while changed:
         changed = False
         for item in items.values():
+            # direct items are selected only by their own watched/config paths,
+            # an explicit --item request, or a full run. This is useful for
+            # summary/aggregate items: a change in one dependency should not
+            # automatically pull every sibling dependency into an incremental run.
+            if item.affected == "direct":
+                continue
             if item.id not in affected and any(dep in affected for dep in item.needs):
                 affected.add(item.id)
                 changed = True

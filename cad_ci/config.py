@@ -137,8 +137,8 @@ def load_repository(repo: Path) -> dict[str, Item]:
         if not isinstance(strategy, dict):
             raise ConfigError(f"strategy must be a mapping: {config_path}")
         affected = strategy.get("affected", "changed")
-        if affected not in ("changed", "always"):
-            raise ConfigError(f"strategy.affected must be changed or always: {config_path}")
+        if affected not in ("changed", "direct", "always"):
+            raise ConfigError(f"strategy.affected must be changed, direct or always: {config_path}")
         reuse = strategy.get("reuse", True)
         if not isinstance(reuse, bool):
             raise ConfigError(f"strategy.reuse must be true or false: {config_path}")

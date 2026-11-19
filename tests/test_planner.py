@@ -39,6 +39,59 @@ class PlannerTests(unittest.TestCase):
             selected = affected_items(items, ("src/core.py",))
             self.assertEqual(selected, {"lib", "example", "qa", "qb"})
 
+
+    def test_direct_fan_in_item_is_not_selected_by_dependency_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.make_repo(repo)
+            (repo / "cad-ci.yml").write_text(
+                "schema: 1\nitems: [lib, example, qa, qb, summary]\n"
+            )
+            summary = repo / "summary"
+            summary.mkdir()
+            (summary / "ci.yml").write_text(
+                "id: summary\n"
+                "needs: [qa, qb]\n"
+                "watch: [summary/**]\n"
+                "strategy: {affected: direct}\n"
+                "steps: [{id: collect, run: [python, -c, 'print(1)']}]\n"
+            )
+            items = load_repository(repo)
+
+            selected = affected_items(items, ("qa/model.txt",))
+            self.assertEqual(selected, {"qa"})
+            plan = build_plan(items, selected)
+            self.assertEqual(
+                [entry.item.id for entry in plan],
+                ["lib", "example", "qa"],
+            )
+
+    def test_direct_fan_in_item_still_expands_dependencies_when_selected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self.make_repo(repo)
+            (repo / "cad-ci.yml").write_text(
+                "schema: 1\nitems: [lib, example, qa, qb, summary]\n"
+            )
+            summary = repo / "summary"
+            summary.mkdir()
+            (summary / "ci.yml").write_text(
+                "id: summary\n"
+                "needs: [qa, qb]\n"
+                "watch: [summary/**]\n"
+                "strategy: {affected: direct}\n"
+                "steps: [{id: collect, run: [python, -c, 'print(1)']}]\n"
+            )
+            items = load_repository(repo)
+
+            selected = affected_items(items, ("summary/report.py",))
+            self.assertEqual(selected, {"summary"})
+            plan = build_plan(items, selected)
+            self.assertEqual(
+                [entry.item.id for entry in plan],
+                ["lib", "example", "qa", "qb", "summary"],
+            )
+
     def test_always_item_is_selected_without_path_match(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

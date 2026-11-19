@@ -17,7 +17,7 @@ The consumer repository owns:
 `tool.cad.ci` owns:
 
 - reading the consumer CI files;
-- affected-item selection;
+- affected-item selection, including direct-only fan-in items;
 - dependency ordering;
 - run planning;
 - step execution;

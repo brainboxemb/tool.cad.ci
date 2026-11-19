@@ -48,6 +48,14 @@ steps:
 
 `kind` is descriptive only. The runner does not attach behaviour to names such as `qualification`, `library-test`, or `integration`.
 
+`strategy.affected` controls automatic changed-path selection:
+
+- `changed` (default): select the item for its own changed inputs and when a dependency changes;
+- `direct`: select it only for its own changed inputs. Dependency changes still invalidate the item when it is explicitly/full-run, but do not automatically select it;
+- `always`: select it on every changed-path plan.
+
+Use `direct` for fan-in summary items that depend on several sibling items. Otherwise changing one sibling would automatically select the summary and pull every sibling dependency into that incremental run.
+
 ## Run commands
 
 ```text
