@@ -88,6 +88,36 @@ Consumer output mirrors the item source path below `build/`. Public execution
 evidence lives below `build/<item>/.cad-ci/`; private SCons state/cache stays
 below `.cache/cad-ci/`.
 
+## Reusable GitHub Actions
+
+Consumers do not need to copy the generic CAD-CI setup into their own
+workflows. Reference the released reusable workflow at the exact tool commit.
+
+For a normal PR/push run:
+
+```yaml
+jobs:
+  cad-ci:
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-run.yml@<tool-commit>
+```
+
+The called workflow:
+- checks out the caller repository at its real source commit;
+- checks out `tool.cad.ci` at the same commit that contains the called workflow;
+- installs that exact tool/library stack;
+- restores `.cache/cad-ci/`;
+- performs exactly one `cad-ci run`;
+- saves the SCons cache after success.
+
+Consumers such as Forge that need domain setup between selection and execution
+can first call `reusable-plan.yml`, prepare their runtime image, then call
+`reusable-run.yml` with explicit source/base SHAs. The plan and run workflows
+contain no Forge/SolidCraft/CAD-domain item names.
+
+The optional `environment_json` input is only for non-secret domain values
+such as an immutable runtime-image reference. Secrets remain normal GitHub
+Actions secrets/permissions.
+
 ## Durable build output
 
 Fetch the generated build branch:
