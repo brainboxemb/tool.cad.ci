@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 - 2026-11-19
+
+- key the reusable GitHub Actions CAD-CI cache by exact source commit instead of workflow run/attempt;
+- reuse the same cache record when the same source commit is rerun;
+- preserve prefix fallback so a new source commit can restore the newest compatible SCons state without requiring cache-delete permissions.
+
 ## 0.7.0 - 2026-11-19
 
 - consume lib.py.cad.ci 0.4.0 at exact commit 73985ca9638bf7a5e3209bfd1d3896d043193bb2;
