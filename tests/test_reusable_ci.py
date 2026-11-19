@@ -152,6 +152,12 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v4", text)
         self.assertIn("path: build/", text)
         self.assertIn("include-hidden-files: true", text)
+        self.assertIn("id: build_artifact", text)
+        self.assertNotIn("id: build-artifact", text)
+        self.assertIn(
+            "build_artifact_name: ${{ steps.build_artifact.outputs.name }}",
+            text,
+        )
         self.assertIn(
             "value: ${{ jobs.run.outputs.build_artifact_name }}",
             text,
