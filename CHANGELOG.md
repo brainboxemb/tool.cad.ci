@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 - 2026-11-19
+
+- add reusable GitHub Actions workflows for generic CAD-CI planning and execution;
+- tie the reusable workflow definition and installed tool to one exact commit through `job.workflow_repository` and `job.workflow_sha`;
+- restore/save the SCons cache centrally in the reusable run workflow;
+- expose compact plan JSON for consumers that need domain setup between planning and execution;
+- support validated non-secret consumer environment values without duplicating generic workflow setup.
+
+
 ## 0.4.0 - 2026-11-19
 
 - consume lib.py.cad.ci 0.3.0 at exact commit 155ec24915e7b2d1b9f5306db9df84a50b53dba8;
