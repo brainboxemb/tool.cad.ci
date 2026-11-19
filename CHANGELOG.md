@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 - 2026-11-19
+
+- add `cad-ci build fetch` for authenticated, read-only generated-branch materialization;
+- delegate generated-branch Git handling to `lib.py.cad.ci` 0.1.3.
+
 ## 0.3.1 - 2026-11-19
 
 - let prepare-pr and update-main derive sparse item selection from --base/--head or --changed;

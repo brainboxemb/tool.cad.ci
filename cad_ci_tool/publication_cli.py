@@ -29,6 +29,7 @@ from cad_ci.git_publish import (
     publish_build_scope,
     publish_pages,
     publish_pages_preview_cleanup,
+    materialize_generated_branch,
 )
 from cad_ci.pages import PagesError, install_preview, install_stable, remove_preview
 
@@ -69,6 +70,12 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     install.add_argument("--store", type=Path, required=True)
     install.add_argument("--scope", choices=("main", "pr"), required=True)
     install.add_argument("--pull-request", type=int)
+
+    fetch = build_sub.add_parser("fetch")
+    fetch.add_argument("--repo", type=Path, default=Path.cwd())
+    fetch.add_argument("--out", type=Path, required=True)
+    fetch.add_argument("--branch", default="build")
+    fetch.add_argument("--remote", default="origin")
 
     remove = build_sub.add_parser("remove-pr")
     remove.add_argument("--store", type=Path, required=True)
@@ -198,7 +205,15 @@ def run_publication_command(args: argparse.Namespace) -> int:
 def _run_build(args: argparse.Namespace) -> int:
     """Execute local build-store preparation or installation."""
 
-    if args.build_command == "prepare-main":
+    if args.build_command == "fetch":
+        commit = materialize_generated_branch(
+            source_repo=args.repo.resolve(),
+            branch=args.branch,
+            out=args.out,
+            remote=args.remote,
+        )
+        print(commit)
+    elif args.build_command == "prepare-main":
         prepare_main(
             candidate_root=args.candidate_root,
             out=args.out,

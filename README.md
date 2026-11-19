@@ -68,6 +68,15 @@ For CI, prefer `--base/--head`. The tool runs `git diff` itself so changed-path 
 
 ## Durable build output
 
+Fetch the current generated build branch when a consumer needs the stable
+baseline locally:
+
+```text
+cad-ci build fetch --repo . --out generated-build
+```
+
+The command prints the exact fetched branch commit SHA.
+
 Prepare a complete baseline from every configured item:
 
 ```text
@@ -123,8 +132,8 @@ See `docs/build-pages.md` for the branch layout and publication flow.
 
 ## Python implementation
 
-This tool pins `lib.py.cad.ci` v0.1.2 at exact commit
-`35f04ab18f529026b29698d5a2c81af9a796919a`.
+This tool pins `lib.py.cad.ci` v0.1.3 at exact commit
+`c981dcf6cf84781abbc430ca286995a77a959bb4`.
 
 Generic Python behaviour is developed and unit-tested in that library first.
 The complete CLI + library combination is then proven in

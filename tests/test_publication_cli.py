@@ -4,6 +4,9 @@ from pathlib import Path
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
+from contextlib import redirect_stdout
+import io
 
 from cad_ci_tool.cli import main
 
@@ -177,6 +180,36 @@ class PublicationCliTests(unittest.TestCase):
                 ]),
                 2,
             )
+
+    def test_build_fetch_delegates_to_library(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            out = root / "generated"
+            stream = io.StringIO()
+
+            with patch(
+                "cad_ci_tool.publication_cli.materialize_generated_branch",
+                return_value="abc123",
+            ) as fetch, redirect_stdout(stream):
+                result = main([
+                    "build",
+                    "fetch",
+                    "--repo",
+                    str(repo),
+                    "--out",
+                    str(out),
+                ])
+
+            self.assertEqual(result, 0)
+            fetch.assert_called_once_with(
+                source_repo=repo.resolve(),
+                branch="build",
+                out=out,
+                remote="origin",
+            )
+            self.assertEqual(stream.getvalue().strip(), "abc123")
 
 
 if __name__ == "__main__":
