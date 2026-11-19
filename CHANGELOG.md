@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 - 2026-11-19
+
+- fix reusable build artifact name propagation to downstream caller jobs;
+- align the artifact-name step id with the job output expression;
+- add a regression test for the reusable workflow output contract.
+
+
 ## 0.6.0 - 2026-11-19
 
 - add one high-level `reusable-ci.yml` entry point for normal consumers;
