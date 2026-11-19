@@ -129,6 +129,21 @@ class ReusableWorkflowTests(unittest.TestCase):
             "Optional non-secret environment values for consumer commands.",
             text,
         )
+    def test_high_level_workflow_delegates_to_one_generic_run(self):
+        """Normal consumers should not reproduce generic setup locally."""
+
+        text = self.read("reusable-ci.yml")
+        call = "uses: ./.github/workflows/reusable-run.yml"
+        self.assertIn("workflow_call:", text)
+        self.assertEqual(text.count(call), 1)
+        self.assertNotIn("actions/checkout@", text)
+        self.assertNotIn("actions/setup-python@", text)
+        self.assertNotIn("scripts/reusable_ci.py", text)
+        self.assertIn("upload_build: ${{ inputs.upload_build }}", text)
+        self.assertIn(
+            "value: ${{ jobs.cad-ci.outputs.build_artifact_name }}",
+            text,
+        )
 
     def test_run_workflow_can_upload_build_with_hidden_evidence(self):
         text = self.read("reusable-run.yml")
