@@ -23,6 +23,20 @@ on:
         required: false
         type: string
         default: "{}"
+      upload_build:
+        description: Upload the materialized build tree for a downstream consumer job.
+        required: false
+        type: boolean
+        default: false
+      build_artifact_name:
+        description: Artifact name used when upload_build is true.
+        required: false
+        type: string
+        default: "cad-ci-build"
+    outputs:
+      build_artifact_name:
+        description: Uploaded build artifact name, or empty when upload_build is false.
+        value: ${{ jobs.run.outputs.build_artifact_name }}
 
 permissions:
   contents: read
@@ -30,6 +44,8 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+    outputs:
+      build_artifact_name: ${{ steps.build_artifact.outputs.name }}
     env:
       CAD_CI_SOURCE_SHA: ${{ inputs.source_sha != '' && inputs.source_sha || (github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha) }}
       CAD_CI_BASE_SHA: ${{ inputs.base_sha != '' && inputs.base_sha || (github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || '') }}
@@ -74,6 +90,20 @@ jobs:
             --source-sha "$CAD_CI_SOURCE_SHA" \
             --base-sha "$CAD_CI_BASE_SHA" \
             --full-run "${{ inputs.full_run }}"
+
+      - name: Record build artifact name
+        id: build-artifact
+        if: inputs.upload_build
+        run: echo "name=${{ inputs.build_artifact_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload CAD CI build output
+        if: inputs.upload_build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.build_artifact_name }}
+          path: build/
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Save CAD CI SCons cache
         if: success()
