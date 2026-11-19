@@ -130,6 +130,18 @@ class ReusableWorkflowTests(unittest.TestCase):
             text,
         )
 
+    def test_run_workflow_can_upload_build_with_hidden_evidence(self):
+        text = self.read("reusable-run.yml")
+        self.assertIn("upload_build:", text)
+        self.assertIn("build_artifact_name:", text)
+        self.assertIn("actions/upload-artifact@v4", text)
+        self.assertIn("path: build/", text)
+        self.assertIn("include-hidden-files: true", text)
+        self.assertIn(
+            "value: ${{ jobs.run.outputs.build_artifact_name }}",
+            text,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
