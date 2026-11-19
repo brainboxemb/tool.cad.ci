@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - 2026-11-19
+
+- consume lib.py.cad.ci 0.3.0 at exact commit 155ec24915e7b2d1b9f5306db9df84a50b53dba8;
+- run one SCons-backed repository graph per cad-ci run instead of executing items one by one;
+- keep plan explanatory while SCons owns incremental target decisions;
+- forward mutually exclusive step, until and from partial-run controls to the library;
+- validate durable build scopes against .cad-ci SCons evidence;
+- keep sparse PR overlays limited to selected top-level items;
+- update CLI tests and documentation to the permanent tool.cad.ci.test acceptance flow.
+
+
 ## 0.3.2 - 2026-11-19
 
 - add `cad-ci build fetch` for authenticated, read-only generated-branch materialization;
