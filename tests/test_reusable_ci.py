@@ -122,6 +122,9 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("path: .cache/cad-ci", text)
         self.assertIn("actions/cache/restore@v4", text)
         self.assertIn("actions/cache/save@v4", text)
+        self.assertIn("${{ env.CAD_CI_SOURCE_SHA }}", text)
+        self.assertNotIn("${{ github.run_id }}", text)
+        self.assertNotIn("${{ github.run_attempt }}", text)
 
     def test_free_environment_input_is_documented_as_non_secret(self):
         text = self.read("reusable-run.yml")
