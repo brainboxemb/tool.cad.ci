@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 - 2026-11-20
+
+- authenticate Docker to GitHub Container Registry in the reusable run workflow with the workflow GitHub token;
+- preserve `packages: read` through both reusable workflow layers;
+- keep registry authentication generic and independent of consumer image names;
+- leave CAD-CI planning/execution behavior in `lib.py.cad.ci` unchanged;
+- require black-box acceptance in `tool.cad.ci.test` before consumer adoption.
+
+
 ## 0.9.0 - 2026-11-19
 
 - consume `lib.py.cad.ci` 0.5.0 at exact commit `345794521fe162eb1908e1e8f38a6eabb02c8290`;
