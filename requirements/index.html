@@ -65,6 +65,9 @@
 <li><code>reusable-run.yml</code> performs exactly one <code>cad-ci run</code> and does not restore or save GitHub Actions cache state.</li>
 <li>A consumer can optionally request a <code>build/</code> artifact for a downstream domain/publication job; the artifact includes hidden <code>.cad-ci</code> evidence and excludes private <code>.cache/cad-ci</code> state.</li>
 <li>Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.</li>
+<li>Caller <code>environment_json</code> values are inherited process environment only; root <code>cad-ci.yml:variables</code> are parsed by the released library and override a caller value with the same name.</li>
+<li>The tool does not parse, duplicate or merge root repository variables.</li>
+<li>CAD-CI-owned <code>CAD_CI_*</code> values remain authoritative over both caller environment and repository variables.</li>
 <li>Domain image setup, credentials and publication remain consumer-owned unless separately specified as generic behaviour.</li>
 </ul>
 <h2>CI use</h2>

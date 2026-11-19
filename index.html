@@ -22,8 +22,8 @@
 argument parsing, terminal output, documentation/release plumbing and
 CLI-specific tests. It does not implement its own planner, execution engine,
 cache, build store, Pages or Git publication mechanics.</p>
-<p>The tool pins <code>lib.py.cad.ci</code> 0.4.0 at exact commit
-<code>73985ca9638bf7a5e3209bfd1d3896d043193bb2</code>.</p>
+<p>The tool pins <code>lib.py.cad.ci</code> 0.5.0 at exact commit
+<code>345794521fe162eb1908e1e8f38a6eabb02c8290</code>.</p>
 <h2>Consumer layout</h2>
 <pre><code class="language-text">cad-ci.yml
 shared/
@@ -37,6 +37,9 @@ cases/simple_case1/
 
 defaults:
   timeout_seconds: 300
+
+variables:
+  BUILD_MODE: &quot;verify&quot;
 
 items:
   - cases/*
@@ -65,6 +68,10 @@ steps:
 </code></pre>
 <p><code>watch</code> is coarse Git-selection input. Step <code>inputs</code> are SCons build
 dependencies. If a step omits <code>inputs</code>, it inherits the item <code>watch</code> paths.</p>
+<p>Root <code>variables</code> are validated by the pinned library, injected into every
+consumer command and included in SCons target signatures. Repository variables
+override inherited caller values with the same name; CAD-CI-owned <code>CAD_CI_*</code>
+values remain authoritative.</p>
 <h2>Plan and run</h2>
 <pre><code class="language-text">cad-ci plan --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
 cad-ci run  --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
@@ -120,9 +127,12 @@ runtime image, then call <code>reusable-run.yml</code> with explicit source/base
 Normal consumers use <code>reusable-ci.yml</code> and do not reproduce generic
 checkout/Python/tool-install/run setup locally. None of these workflows
 contains Forge/SolidCraft/CAD-domain item names.</p>
-<p>The optional <code>environment_json</code> input is only for non-secret domain values
-such as an immutable runtime-image reference. Secrets remain normal GitHub
-Actions secrets/permissions.</p>
+<p>The optional <code>environment_json</code> input supplies non-secret caller values to
+the inherited process environment. Stable repository expectations, such as a
+runtime/version selected by that repository, belong in root
+<code>cad-ci.yml:variables</code>. The pinned library applies those repository values
+after caller environment. Secrets remain normal GitHub Actions
+secrets/permissions.</p>
 <p>When a downstream consumer job must publish or transform generated output, set
 <code>upload_build: true</code>. The run workflow uploads the complete materialized
 <code>build/</code> tree, including hidden <code>.cad-ci</code> evidence, and returns its name as
