@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-19
 
 - split reusable Python CI mechanics into `lib.py.cad.ci`;
-- reduce `tool.cad.ci` to the CLI adapter that pins the library by exact commit.
+- reduce `tool.cad.ci` to the CLI adapter that pins the library by exact commit;
+- consume `lib.py.cad.ci` v0.1.2 for direct fan-in selection and validated dependency context.
 
 ## 0.2.2 - 2026-11-18
 
