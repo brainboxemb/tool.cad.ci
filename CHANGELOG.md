@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 - 2026-11-19
+
+- remove implicit GitHub Actions cache restore/save from reusable CAD-CI workflows;
+- keep SCons job-local private state separate from durable build output;
+- preserve one generic CAD-CI run and optional build-artifact handoff without persistent cache side effects.
+
+
 ## 0.7.1 - 2026-11-19
 
 - key the reusable GitHub Actions CAD-CI cache by exact source commit instead of workflow run/attempt;
