@@ -111,6 +111,73 @@ class PublicationCliTests(unittest.TestCase):
             )
             self.assertFalse((pr_out / "qualification/b").exists())
 
+    def test_prepare_pr_can_derive_selection_from_changed_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            (repo / "cad-ci.yml").write_text(
+                "schema: 1\nitems: [qualification/*]\n"
+            )
+            candidate = root / "candidate"
+            write_item(repo, "qualification/a", "qa", "source-a")
+            write_item(repo, "qualification/b", "qb", "source-b")
+            write_item(candidate, "qualification/a", "qa", "a")
+            write_item(candidate, "qualification/b", "qb", "b")
+
+            out = root / "pr"
+            self.assertEqual(
+                main([
+                    "build",
+                    "prepare-pr",
+                    "--repo",
+                    str(repo),
+                    "--candidate-root",
+                    str(candidate),
+                    "--out",
+                    str(out),
+                    "--source-commit",
+                    "pr-2",
+                    "--pull-request",
+                    "5",
+                    "--changed",
+                    "qualification/a/model.py",
+                ]),
+                0,
+            )
+            self.assertTrue((out / "qualification/a/result.txt").is_file())
+            self.assertFalse((out / "qualification/b").exists())
+
+    def test_selected_build_requires_selection_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            (repo / "cad-ci.yml").write_text(
+                "schema: 1\nitems: [qualification/*]\n"
+            )
+            candidate = root / "candidate"
+            write_item(repo, "qualification/a", "qa", "source-a")
+            write_item(candidate, "qualification/a", "qa", "a")
+
+            self.assertEqual(
+                main([
+                    "build",
+                    "prepare-pr",
+                    "--repo",
+                    str(repo),
+                    "--candidate-root",
+                    str(candidate),
+                    "--out",
+                    str(root / "pr"),
+                    "--source-commit",
+                    "pr-3",
+                    "--pull-request",
+                    "6",
+                ]),
+                2,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
