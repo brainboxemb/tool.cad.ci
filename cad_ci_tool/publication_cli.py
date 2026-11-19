@@ -11,6 +11,8 @@ import argparse
 from pathlib import Path
 
 from cad_ci.config import load_repository
+from cad_ci.git import GitError, changed_files
+from cad_ci.planner import affected_items, build_plan
 from cad_ci.build_store import (
     BuildStoreError,
     install_scope,
@@ -31,7 +33,7 @@ from cad_ci.git_publish import (
 from cad_ci.pages import PagesError, install_preview, install_stable, remove_preview
 
 
-PUBLICATION_ERRORS = (BuildStoreError, PagesError, GitPublishError)
+PUBLICATION_ERRORS = (BuildStoreError, PagesError, GitPublishError, GitError)
 
 
 def add_publication_commands(sub: argparse._SubParsersAction) -> None:
@@ -41,14 +43,14 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     build_sub = build.add_subparsers(dest="build_command", required=True)
 
     prepare_main_cmd = build_sub.add_parser("prepare-main")
-    _candidate_args(prepare_main_cmd)
+    _candidate_args(prepare_main_cmd, selectable=False)
 
     prepare_pr = build_sub.add_parser("prepare-pr")
-    _candidate_args(prepare_pr)
+    _candidate_args(prepare_pr, selectable=True)
     prepare_pr.add_argument("--pull-request", type=int, required=True)
 
     update_main_cmd = build_sub.add_parser("update-main")
-    _candidate_args(update_main_cmd)
+    _candidate_args(update_main_cmd, selectable=True)
     update_main_cmd.add_argument("--main", type=Path, required=True)
 
     resolve = build_sub.add_parser("resolve")
@@ -108,14 +110,25 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     publish_pages_cleanup.add_argument("--pull-request", type=int, required=True)
 
 
-def _candidate_args(parser: argparse.ArgumentParser) -> None:
-    """Add arguments shared by complete-main and sparse-PR preparation."""
+def _candidate_args(
+    parser: argparse.ArgumentParser,
+    *,
+    selectable: bool,
+) -> None:
+    """Add candidate arguments and optional planner-based selection inputs."""
 
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--candidate-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
-    parser.add_argument("--items", nargs="*")
+    if not selectable:
+        return
+
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--items", nargs="+")
+    source.add_argument("--changed", nargs="+")
+    source.add_argument("--base")
+    parser.add_argument("--head")
 
 
 def _candidate_paths(
@@ -125,15 +138,38 @@ def _candidate_paths(
 ) -> tuple[Path, ...]:
     """Resolve consumer item IDs to their source paths for build-store layout."""
 
-    items = load_repository(args.repo.resolve())
-    if args.items:
-        unknown = [item_id for item_id in args.items if item_id not in items]
+    repo = args.repo.resolve()
+    items = load_repository(repo)
+
+    explicit = getattr(args, "items", None)
+    if explicit:
+        unknown = [item_id for item_id in explicit if item_id not in items]
         if unknown:
             raise BuildStoreError(f"unknown item(s): {', '.join(unknown)}")
-        return tuple(items[item_id].path for item_id in args.items)
-    if require_selection:
-        raise BuildStoreError("selected build operation requires --items")
-    return tuple(item.path for item in items.values())
+        return tuple(items[item_id].path for item_id in explicit)
+
+    base = getattr(args, "base", None)
+    head = getattr(args, "head", None)
+    changed = getattr(args, "changed", None)
+    if base is not None:
+        if head is None:
+            raise BuildStoreError("--base requires --head")
+        changed_paths = changed_files(repo, base, head)
+    elif head is not None:
+        raise BuildStoreError("--head requires --base")
+    elif changed is not None:
+        changed_paths = tuple(changed)
+    else:
+        if require_selection:
+            raise BuildStoreError(
+                "selected build operation requires --items, --changed, "
+                "or --base/--head"
+            )
+        return tuple(item.path for item in items.values())
+
+    selected = affected_items(items, changed_paths)
+    plan = build_plan(items, selected)
+    return tuple(entry.item.path for entry in plan)
 
 
 def _publish_common(parser: argparse.ArgumentParser) -> None:
