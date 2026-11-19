@@ -17,8 +17,9 @@
   <main>
     <h1>Overview</h1>
     <h1>tool.cad.ci</h1>
-<p>Repository-local CI planning, execution and generated-output handling for the SolidCraft Forge and CAD repositories.</p>
-<p>The consumer repository owns its CI behaviour. <code>tool.cad.ci</code> reads that behaviour, decides which items are affected, runs or reuses them, and can publish verified per-item build output and Pages.</p>
+<p><code>tool.cad.ci</code> is the command-line interface for BrainboxEmb CAD CI.</p>
+<p>The reusable Python implementation lives in <code>lib.py.cad.ci</code>. This repository owns command parsing, terminal output and process exit handling. It must not reimplement planner, runner, state, build-store, Pages or Git-publication mechanics.</p>
+<p>The consumer repository owns its CI behaviour. The CLI invokes the pinned library to read that behaviour, plan and run items, reuse valid results, and manage generic build/Pages output.</p>
 <h2>Consumer layout</h2>
 <pre><code class="language-text">cad-ci.yml
 src/
@@ -93,7 +94,7 @@ cad-ci run --repo . --item item-a --until verify
 <p>Resolve <code>main</code> plus a PR overlay with <code>cad-ci build resolve</code>. <code>cad-ci build promote</code> remains available when a verified PR overlay is deliberately promoted.</p>
 <p>Generated branches are published with <code>cad-ci publish build</code> and <code>cad-ci publish pages</code>. The publisher uses normal pushes, checks that the source branch is still current, and retries branch-head races without force-push.</p>
 <h2>Pages framework</h2>
-<p><code>cad_ci.pages</code> provides:</p>
+<p><code>lib.py.cad.ci</code> provides <code>cad_ci.pages</code>, including:</p>
 <ul>
 <li>the base HTML structure and navigation;</li>
 <li>stable root and <code>previews/pr-N</code> handling;</li>
@@ -103,6 +104,12 @@ cad-ci run --repo . --item item-a --until verify
 </ul>
 <p>Forge, CAD and other consumers keep their own content and CSS.</p>
 <p>See <code>docs/build-pages.md</code> for the branch layout and publication flow.</p>
+<h2>Python implementation</h2>
+<p>This tool pins <code>lib.py.cad.ci</code> v0.1.2 at exact commit
+<code>35f04ab18f529026b29698d5a2c81af9a796919a</code>.</p>
+<p>Generic Python behaviour is developed and unit-tested in that library first.
+The complete CLI + library combination is then proven in
+<code>exp.2026-014.cad-ci-consumer</code> before a tool release is used by Forge/CAD.</p>
 
   </main>
 </body>
