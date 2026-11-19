@@ -123,8 +123,8 @@ See `docs/build-pages.md` for the branch layout and publication flow.
 
 ## Python implementation
 
-This tool pins `lib.py.cad.ci` v0.1.1 at exact commit
-`c6a4ba66167cf7ae7faa0dbfa596bd1feb50a3ac`.
+This tool pins `lib.py.cad.ci` v0.1.2 at exact commit
+`35f04ab18f529026b29698d5a2c81af9a796919a`.
 
 Generic Python behaviour is developed and unit-tested in that library first.
 The complete CLI + library combination is then proven in
