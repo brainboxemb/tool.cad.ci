@@ -5,7 +5,7 @@ import json
 import tempfile
 import unittest
 
-from cad_ci.cli import main
+from cad_ci_tool.cli import main
 
 
 def write_item(

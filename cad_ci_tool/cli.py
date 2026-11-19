@@ -7,15 +7,15 @@ import json
 from pathlib import Path
 import sys
 
-from .config import ConfigError, load_repository
-from .git import GitError, changed_files
-from .planner import affected_items, build_plan
+from cad_ci.config import ConfigError, load_repository
+from cad_ci.git import GitError, changed_files
+from cad_ci.planner import affected_items, build_plan
 from .publication_cli import (
     PUBLICATION_ERRORS,
     add_publication_commands,
     run_publication_command,
 )
-from .runner import RunError, run_item
+from cad_ci.runner import RunError, run_item
 
 
 def _parser() -> argparse.ArgumentParser:
