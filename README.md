@@ -7,8 +7,8 @@ argument parsing, terminal output, documentation/release plumbing and
 CLI-specific tests. It does not implement its own planner, execution engine,
 cache, build store, Pages or Git publication mechanics.
 
-The tool pins `lib.py.cad.ci` 0.3.0 at exact commit
-`155ec24915e7b2d1b9f5306db9df84a50b53dba8`.
+The tool pins `lib.py.cad.ci` 0.4.0 at exact commit
+`73985ca9638bf7a5e3209bfd1d3896d043193bb2`.
 
 ## Consumer layout
 
