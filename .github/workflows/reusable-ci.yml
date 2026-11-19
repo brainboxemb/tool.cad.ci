@@ -1,0 +1,53 @@
+name: Reusable CAD CI
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: Exact caller source commit; defaults to the triggering source commit.
+        required: false
+        type: string
+        default: ""
+      base_sha:
+        description: Base commit for incremental selection; defaults to the triggering event base.
+        required: false
+        type: string
+        default: ""
+      full_run:
+        description: Run every configured item instead of using a Git diff.
+        required: false
+        type: boolean
+        default: false
+      environment_json:
+        description: Optional non-secret environment values for consumer commands.
+        required: false
+        type: string
+        default: "{}"
+      upload_build:
+        description: Upload the materialized build tree for a downstream consumer job.
+        required: false
+        type: boolean
+        default: false
+      build_artifact_name:
+        description: Artifact name used when upload_build is true.
+        required: false
+        type: string
+        default: "cad-ci-build"
+    outputs:
+      build_artifact_name:
+        description: Uploaded build artifact name, or empty when upload_build is false.
+        value: ${{ jobs.cad_ci.outputs.build_artifact_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  cad_ci:
+    uses: ./.github/workflows/reusable-run.yml
+    with:
+      source_sha: ${{ inputs.source_sha }}
+      base_sha: ${{ inputs.base_sha }}
+      full_run: ${{ inputs.full_run }}
+      environment_json: ${{ inputs.environment_json }}
+      upload_build: ${{ inputs.upload_build }}
+      build_artifact_name: ${{ inputs.build_artifact_name }}

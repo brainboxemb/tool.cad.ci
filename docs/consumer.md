@@ -1,31 +1,35 @@
 # Using tool.cad.ci from Forge or CAD
 
-Forge and CAD consume a released `tool.cad.ci` revision as external tooling.
+Forge and CAD consume one exact released `tool.cad.ci` revision. Do not
+consume moving `main`.
 
-Do not call a reusable workflow from this repository and do not consume moving
-`main`. A consumer records one exact released tool commit, bootstraps it and
-invokes that checkout against its own repository.
-
-Example external-repository pin:
+A normal consumer uses the high-level reusable workflow and keeps only its
+trigger, permissions and the exact released tool commit:
 
 ```yaml
-repositories:
+jobs:
   cad-ci:
-    type: git
-    url: https://github.com/brainboxemb/tool.cad.ci.git
-    version: <exact-release-commit>
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@<exact-release-commit>
 ```
 
-Then:
+The reusable workflow owns generic checkout, Python/tool setup, SCons cache
+transport and one repository run. The consumer does not duplicate those steps.
+
+A consumer that needs domain preparation between planning and execution may
+instead use `reusable-plan.yml` and `reusable-run.yml` at that same exact
+tool commit. Forge's immutable runtime-image preparation is an example of such
+domain work.
+
+Local/manual use still invokes the released CLI directly:
 
 ```text
-python ext/cad-ci/cad-ci.py plan --repo . --base <base-sha> --head <head-sha>
-python ext/cad-ci/cad-ci.py run  --repo . --base <base-sha> --head <head-sha>
+cad-ci plan --repo . --base <base-sha> --head <head-sha>
+cad-ci run  --repo . --base <base-sha> --head <head-sha>
 ```
 
-The consumer workflow owns GitHub-specific setup such as checkout and
-credentials. It does not own changed-path rules, item loops, consumer commands
-or rebuild decisions.
+The consumer owns its domain commands, credentials and runtime preparation. It
+does not own changed-path rules, item loops, generic checkout/tool bootstrap,
+cache mechanics or rebuild decisions.
 
 ## Repository config
 

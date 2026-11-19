@@ -93,8 +93,10 @@ End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 ## GitHub Actions
 
 Generic consumer setup belongs in reusable workflows in this repository. A
-consumer should reference those workflows at one exact tool.cad.ci commit SHA
-instead of copying checkout/Python/tool-install/cache/plan/run steps.
+normal consumer should call the single high-level `reusable-ci.yml` workflow
+at one exact tool.cad.ci commit SHA instead of copying
+checkout/Python/tool-install/cache/plan/run steps. Lower-level plan/run
+workflows exist only for consumers that need domain preparation between them.
 
 The reusable workflow revision is also the tool revision. Checkout the workflow
 repository using `job.workflow_repository` and `job.workflow_sha`, then install

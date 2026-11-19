@@ -93,15 +93,27 @@ below `.cache/cad-ci/`.
 Consumers do not need to copy the generic CAD-CI setup into their own
 workflows. Reference the released reusable workflow at the exact tool commit.
 
-For a normal PR/push run:
+For a normal PR/push run, the consumer keeps only its event trigger,
+permissions and one reusable-workflow call:
 
 ```yaml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-run.yml@<tool-commit>
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@<tool-commit>
 ```
 
-The called workflow:
+`reusable-ci.yml` delegates to the generic run workflow from that same tool
+revision. The called workflow:
 - checks out the caller repository at its real source commit;
 - checks out `tool.cad.ci` at the same commit that contains the called workflow;
 - installs that exact tool/library stack;
@@ -110,9 +122,11 @@ The called workflow:
 - saves the SCons cache after success.
 
 Consumers such as Forge that need domain setup between selection and execution
-can first call `reusable-plan.yml`, prepare their runtime image, then call
-`reusable-run.yml` with explicit source/base SHAs. The plan and run workflows
-contain no Forge/SolidCraft/CAD-domain item names.
+can use the lower-level pair: first call `reusable-plan.yml`, prepare their
+runtime image, then call `reusable-run.yml` with explicit source/base SHAs.
+Normal consumers use `reusable-ci.yml` and do not reproduce generic
+checkout/Python/tool-install/cache/run setup locally. None of these workflows
+contains Forge/SolidCraft/CAD-domain item names.
 
 The optional `environment_json` input is only for non-secret domain values
 such as an immutable runtime-image reference. Secrets remain normal GitHub

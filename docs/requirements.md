@@ -39,10 +39,11 @@
 
 ## Reusable GitHub Actions
 
-- `tool.cad.ci` provides reusable `workflow_call` workflows for generic planning and execution.
+- `tool.cad.ci` provides one high-level `reusable-ci.yml` workflow for normal consumers plus lower-level reusable planning/execution workflows for consumers that need domain setup between them.
 - A consumer references those workflows at one exact tool commit SHA.
 - The called workflow checks out its own tool source using `job.workflow_repository` and `job.workflow_sha`; workflow and tool implementation therefore cannot drift.
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
+- `reusable-ci.yml` is the normal consumer entry point and delegates to the generic run workflow from the same tool revision.
 - `reusable-plan.yml` exposes the compact generic item plan for consumers that need domain setup between planning and execution.
 - `reusable-run.yml` restores/saves `.cache/cad-ci/` and performs exactly one `cad-ci run`.
 - A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
