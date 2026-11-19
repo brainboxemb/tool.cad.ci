@@ -12,8 +12,7 @@ jobs:
     uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@<exact-release-commit>
 ```
 
-The reusable workflow owns generic checkout, Python/tool setup, SCons cache
-transport and one repository run. The consumer does not duplicate those steps.
+The reusable workflow owns generic checkout, Python/tool setup and one repository run. The consumer does not duplicate those steps.
 
 A consumer that needs domain preparation between planning and execution may
 instead use `reusable-plan.yml` and `reusable-run.yml` at that same exact
@@ -29,7 +28,7 @@ cad-ci run  --repo . --base <base-sha> --head <head-sha>
 
 The consumer owns its domain commands, credentials and runtime preparation. It
 does not own changed-path rules, item loops, generic checkout/tool bootstrap,
-cache mechanics or rebuild decisions.
+persistent cache transport or rebuild decisions.
 
 ## Repository config
 
