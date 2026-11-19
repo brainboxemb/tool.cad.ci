@@ -2,6 +2,7 @@
 
 from contextlib import redirect_stdout
 from pathlib import Path
+import json
 import io
 import tempfile
 import unittest
@@ -69,6 +70,18 @@ class RunCliTests(unittest.TestCase):
                     0,
                 )
             self.assertIn("built: case-a:build", first.getvalue())
+            self.assertIn("output=unchanged", first.getvalue())
+            self.assertNotIn("materialization=", first.getvalue())
+
+            step_evidence = json.loads(
+                (
+                    repo
+                    / "build/cases/a/.cad-ci/steps/build.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(step_evidence["output_state"], "UNCHANGED")
+            self.assertNotIn("materialization", step_evidence)
+
             self.assertTrue((repo / "build/cases/a/built.txt").is_file())
             self.assertTrue((repo / "build/cases/a/verified.txt").is_file())
             self.assertTrue(
