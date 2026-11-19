@@ -125,3 +125,19 @@ A release is made only after:
 - the exact release commit is on main and its test job is green.
 
 Consumers pin a released tool revision. They never consume moving tool main.
+
+## Repository plan
+
+`docs/plan.md` is the current source of truth for unfinished repository work.
+
+Keep it as a current snapshot, not as historical documentation:
+
+- state the current goal and execution order;
+- include every open issue in an issue assessment snapshot;
+- give each open issue an explicit status such as `now`, `later`, `blocked`, `probably obsolete`, or `effectively complete but still open`;
+- explain briefly why that status applies;
+- identify dependencies or blockers between issues;
+- remove completed work from the active execution sections after merge/release, while keeping the issue assessment current.
+
+Issues contain detail and history. README and design/requirements documents describe stable purpose and behavior. The plan tells an agent what work is actually current and what should happen next.
+
