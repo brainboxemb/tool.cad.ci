@@ -90,12 +90,24 @@ below <code>.cache/cad-ci/</code>.</p>
 <h2>Reusable GitHub Actions</h2>
 <p>Consumers do not need to copy the generic CAD-CI setup into their own
 workflows. Reference the released reusable workflow at the exact tool commit.</p>
-<p>For a normal PR/push run:</p>
-<pre><code class="language-yaml">jobs:
+<p>For a normal PR/push run, the consumer keeps only its event trigger,
+permissions and one reusable-workflow call:</p>
+<pre><code class="language-yaml">name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-run.yml@&lt;tool-commit&gt;
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@&lt;tool-commit&gt;
 </code></pre>
-<p>The called workflow:</p>
+<p><code>reusable-ci.yml</code> delegates to the generic run workflow from that same tool
+revision. The called workflow:</p>
 <ul>
 <li>checks out the caller repository at its real source commit;</li>
 <li>checks out <code>tool.cad.ci</code> at the same commit that contains the called workflow;</li>
@@ -105,9 +117,11 @@ workflows. Reference the released reusable workflow at the exact tool commit.</p
 <li>saves the SCons cache after success.</li>
 </ul>
 <p>Consumers such as Forge that need domain setup between selection and execution
-can first call <code>reusable-plan.yml</code>, prepare their runtime image, then call
-<code>reusable-run.yml</code> with explicit source/base SHAs. The plan and run workflows
-contain no Forge/SolidCraft/CAD-domain item names.</p>
+can use the lower-level pair: first call <code>reusable-plan.yml</code>, prepare their
+runtime image, then call <code>reusable-run.yml</code> with explicit source/base SHAs.
+Normal consumers use <code>reusable-ci.yml</code> and do not reproduce generic
+checkout/Python/tool-install/cache/run setup locally. None of these workflows
+contains Forge/SolidCraft/CAD-domain item names.</p>
 <p>The optional <code>environment_json</code> input is only for non-secret domain values
 such as an immutable runtime-image reference. Secrets remain normal GitHub
 Actions secrets/permissions.</p>

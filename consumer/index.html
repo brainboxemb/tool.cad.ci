@@ -17,24 +17,27 @@
   <main>
     <h1>Consumer setup</h1>
     <h1>Using tool.cad.ci from Forge or CAD</h1>
-<p>Forge and CAD consume a released <code>tool.cad.ci</code> revision as external tooling.</p>
-<p>Do not call a reusable workflow from this repository and do not consume moving
-<code>main</code>. A consumer records one exact released tool commit, bootstraps it and
-invokes that checkout against its own repository.</p>
-<p>Example external-repository pin:</p>
-<pre><code class="language-yaml">repositories:
+<p>Forge and CAD consume one exact released <code>tool.cad.ci</code> revision. Do not
+consume moving <code>main</code>.</p>
+<p>A normal consumer uses the high-level reusable workflow and keeps only its
+trigger, permissions and the exact released tool commit:</p>
+<pre><code class="language-yaml">jobs:
   cad-ci:
-    type: git
-    url: https://github.com/brainboxemb/tool.cad.ci.git
-    version: &lt;exact-release-commit&gt;
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@&lt;exact-release-commit&gt;
 </code></pre>
-<p>Then:</p>
-<pre><code class="language-text">python ext/cad-ci/cad-ci.py plan --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
-python ext/cad-ci/cad-ci.py run  --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
+<p>The reusable workflow owns generic checkout, Python/tool setup, SCons cache
+transport and one repository run. The consumer does not duplicate those steps.</p>
+<p>A consumer that needs domain preparation between planning and execution may
+instead use <code>reusable-plan.yml</code> and <code>reusable-run.yml</code> at that same exact
+tool commit. Forge's immutable runtime-image preparation is an example of such
+domain work.</p>
+<p>Local/manual use still invokes the released CLI directly:</p>
+<pre><code class="language-text">cad-ci plan --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
+cad-ci run  --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
 </code></pre>
-<p>The consumer workflow owns GitHub-specific setup such as checkout and
-credentials. It does not own changed-path rules, item loops, consumer commands
-or rebuild decisions.</p>
+<p>The consumer owns its domain commands, credentials and runtime preparation. It
+does not own changed-path rules, item loops, generic checkout/tool bootstrap,
+cache mechanics or rebuild decisions.</p>
 <h2>Repository config</h2>
 <p>Root <code>cad-ci.yml</code> discovers items and can define repository defaults:</p>
 <pre><code class="language-yaml">schema: 1
