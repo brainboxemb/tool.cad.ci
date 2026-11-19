@@ -10,8 +10,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .config import load_repository
-from .build_store import (
+from cad_ci.config import load_repository
+from cad_ci.build_store import (
     BuildStoreError,
     install_scope,
     prepare_main,
@@ -21,14 +21,14 @@ from .build_store import (
     remove_pr,
     resolve_view,
 )
-from .git_publish import (
+from cad_ci.git_publish import (
     GitPublishError,
     publish_build_pr_cleanup,
     publish_build_scope,
     publish_pages,
     publish_pages_preview_cleanup,
 )
-from .pages import PagesError, install_preview, install_stable, remove_preview
+from cad_ci.pages import PagesError, install_preview, install_stable, remove_preview
 
 
 PUBLICATION_ERRORS = (BuildStoreError, PagesError, GitPublishError)
