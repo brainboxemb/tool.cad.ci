@@ -10,7 +10,8 @@ Keep this repository narrow:
 - exit-code handling;
 - CLI documentation;
 - release plumbing;
-- CLI-specific tests.
+- reusable GitHub Actions workflows that expose the released CLI stack;
+- CLI/workflow-specific tests.
 
 Do not implement generic CI behaviour here.
 
@@ -91,11 +92,20 @@ End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
 ## GitHub Actions
 
-Keep workflow YAML thin. It may own triggers, permissions, checkout, runner
-setup, credentials and GitHub-required artifact/cache transport.
+Generic consumer setup belongs in reusable workflows in this repository. A
+consumer should reference those workflows at one exact tool.cad.ci commit SHA
+instead of copying checkout/Python/tool-install/cache/plan/run steps.
+
+The reusable workflow revision is also the tool revision. Checkout the workflow
+repository using `job.workflow_repository` and `job.workflow_sha`, then install
+that source. Do not require a second consumer pin for the same generic stack.
+
+Keep workflow YAML thin. It may own permissions, checkout, runner setup,
+credentials and GitHub-required artifact/cache transport.
 
 Do not put changed-path rules, item loops, consumer commands, rebuild decisions
-or execution timeout policy in workflow YAML.
+or execution timeout policy in workflow YAML. Consumer-specific runtime/image
+or publication work stays in the consumer until it has its own generic contract.
 
 ## Language and comments
 
