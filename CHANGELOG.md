@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 - 2026-11-19
+
+- let prepare-pr and update-main derive sparse item selection from --base/--head or --changed;
+- use the same lib.py.cad.ci affected/dependency plan as plan/run.
+
 ## 0.3.0 - 2026-11-19
 
 - split reusable Python CI mechanics into `lib.py.cad.ci`;
