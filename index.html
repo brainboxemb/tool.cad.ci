@@ -111,6 +111,11 @@ contain no Forge/SolidCraft/CAD-domain item names.</p>
 <p>The optional <code>environment_json</code> input is only for non-secret domain values
 such as an immutable runtime-image reference. Secrets remain normal GitHub
 Actions secrets/permissions.</p>
+<p>When a downstream consumer job must publish or transform generated output, set
+<code>upload_build: true</code>. The run workflow uploads the complete materialized
+<code>build/</code> tree, including hidden <code>.cad-ci</code> evidence, and returns its name as
+<code>build_artifact_name</code>. Private <code>.cache/cad-ci</code> SCons state is never part of
+that artifact.</p>
 <h2>Durable build output</h2>
 <p>Fetch the generated build branch:</p>
 <pre><code class="language-text">cad-ci build fetch --repo . --out generated-build
