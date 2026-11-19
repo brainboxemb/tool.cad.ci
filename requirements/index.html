@@ -54,12 +54,24 @@
 <li>Generated branches are never force-pushed.</li>
 <li>Source freshness and retry behaviour are implemented in the library.</li>
 </ul>
+<h2>Reusable GitHub Actions</h2>
+<ul>
+<li><code>tool.cad.ci</code> provides reusable <code>workflow_call</code> workflows for generic planning and execution.</li>
+<li>A consumer references those workflows at one exact tool commit SHA.</li>
+<li>The called workflow checks out its own tool source using <code>job.workflow_repository</code> and <code>job.workflow_sha</code>; workflow and tool implementation therefore cannot drift.</li>
+<li>The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.</li>
+<li><code>reusable-plan.yml</code> exposes the compact generic item plan for consumers that need domain setup between planning and execution.</li>
+<li><code>reusable-run.yml</code> restores/saves <code>.cache/cad-ci/</code> and performs exactly one <code>cad-ci run</code>.</li>
+<li>Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.</li>
+<li>Domain image setup, credentials and publication remain consumer-owned unless separately specified as generic behaviour.</li>
+</ul>
 <h2>CI use</h2>
 <ul>
 <li>Local and GitHub Actions use the same <code>cad-ci</code> commands.</li>
+<li>Consumer repositories do not copy generic checkout/Python/tool-install/cache/plan/run setup.</li>
 <li>Workflow YAML does not contain changed-item loops, domain commands or rebuild logic.</li>
 <li>Forge and CAD consume only a released tool revision.</li>
-<li>The released tool/library combination is proven in <code>tool.cad.ci.test</code> before consumer migration.</li>
+<li>The released tool/library/workflow combination is proven in <code>tool.cad.ci.test</code> before consumer migration.</li>
 </ul>
 
   </main>
