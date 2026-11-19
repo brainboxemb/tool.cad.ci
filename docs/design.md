@@ -57,3 +57,28 @@ SCons decisions, item loops or consumer commands.
 A tool revision is released only after its own tests pass against the exact
 library pin. The exact released tool revision is then tested from
 `tool.cad.ci.test` before Forge or another CAD repository adopts it.
+
+
+## GitHub Container Registry authentication
+
+The reusable workflow owns runner-level GitHub credentials. Before invoking
+`cad-ci run`, `reusable-run.yml` authenticates Docker to `ghcr.io` using:
+
+- registry: `ghcr.io`;
+- username: `${{ github.actor }}`;
+- password: `${{ github.token }}`.
+
+Both `reusable-ci.yml` and `reusable-run.yml` retain
+`packages: read` together with `contents: read`. Reusable workflow
+permissions may only stay equal or become narrower across the call chain, so
+the high-level wrapper may not drop package-read permission before delegating.
+
+The login is generic runner setup only:
+
+- it contains no consumer image reference;
+- it does not pull/build/publish any image itself;
+- it does not export the token to consumer commands;
+- it does not add registry semantics to `lib.py.cad.ci`.
+
+A consumer that does not use GHCR still receives the same CAD-CI behavior; the
+extra authenticated Docker registry entry is otherwise unused.
