@@ -40,6 +40,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   run:
@@ -71,6 +72,13 @@ jobs:
 
       - name: Install called tool revision
         run: python -m pip install -e .cache/cad-ci-tool-source
+
+      - name: Authenticate Docker to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       - name: Run selected CAD CI graph
         env:
