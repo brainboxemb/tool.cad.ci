@@ -112,15 +112,13 @@ revision. The called workflow:</p>
 <li>checks out the caller repository at its real source commit;</li>
 <li>checks out <code>tool.cad.ci</code> at the same commit that contains the called workflow;</li>
 <li>installs that exact tool/library stack;</li>
-<li>restores <code>.cache/cad-ci/</code>;</li>
 <li>performs exactly one <code>cad-ci run</code>;</li>
-<li>saves the SCons cache after success.</li>
 </ul>
 <p>Consumers such as Forge that need domain setup between selection and execution
 can use the lower-level pair: first call <code>reusable-plan.yml</code>, prepare their
 runtime image, then call <code>reusable-run.yml</code> with explicit source/base SHAs.
 Normal consumers use <code>reusable-ci.yml</code> and do not reproduce generic
-checkout/Python/tool-install/cache/run setup locally. None of these workflows
+checkout/Python/tool-install/run setup locally. None of these workflows
 contains Forge/SolidCraft/CAD-domain item names.</p>
 <p>The optional <code>environment_json</code> input is only for non-secret domain values
 such as an immutable runtime-image reference. Secrets remain normal GitHub

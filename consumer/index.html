@@ -25,8 +25,7 @@ trigger, permissions and the exact released tool commit:</p>
   cad-ci:
     uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@&lt;exact-release-commit&gt;
 </code></pre>
-<p>The reusable workflow owns generic checkout, Python/tool setup, SCons cache
-transport and one repository run. The consumer does not duplicate those steps.</p>
+<p>The reusable workflow owns generic checkout, Python/tool setup and one repository run. The consumer does not duplicate those steps.</p>
 <p>A consumer that needs domain preparation between planning and execution may
 instead use <code>reusable-plan.yml</code> and <code>reusable-run.yml</code> at that same exact
 tool commit. Forge's immutable runtime-image preparation is an example of such
@@ -37,7 +36,7 @@ cad-ci run  --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
 </code></pre>
 <p>The consumer owns its domain commands, credentials and runtime preparation. It
 does not own changed-path rules, item loops, generic checkout/tool bootstrap,
-cache mechanics or rebuild decisions.</p>
+persistent cache transport or rebuild decisions.</p>
 <h2>Repository config</h2>
 <p>Root <code>cad-ci.yml</code> discovers items and can define repository defaults:</p>
 <pre><code class="language-yaml">schema: 1
