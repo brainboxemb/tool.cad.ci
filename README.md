@@ -118,6 +118,12 @@ The optional `environment_json` input is only for non-secret domain values
 such as an immutable runtime-image reference. Secrets remain normal GitHub
 Actions secrets/permissions.
 
+When a downstream consumer job must publish or transform generated output, set
+`upload_build: true`. The run workflow uploads the complete materialized
+`build/` tree, including hidden `.cad-ci` evidence, and returns its name as
+`build_artifact_name`. Private `.cache/cad-ci` SCons state is never part of
+that artifact.
+
 ## Durable build output
 
 Fetch the generated build branch:
