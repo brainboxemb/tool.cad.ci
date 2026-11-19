@@ -12,7 +12,7 @@ from pathlib import Path
 
 from cad_ci.config import load_repository
 from cad_ci.git import GitError, changed_files
-from cad_ci.planner import affected_items, build_plan
+from cad_ci.planner import affected_items
 from cad_ci.build_store import (
     BuildStoreError,
     install_scope,
@@ -138,12 +138,16 @@ def _candidate_args(
     parser.add_argument("--head")
 
 
-def _candidate_paths(
+def _candidate_items(
     args: argparse.Namespace,
     *,
     require_selection: bool,
-) -> tuple[Path, ...]:
-    """Resolve consumer item IDs to their source paths for build-store layout."""
+):
+    """Resolve the exact top-level Item objects included in a build scope.
+
+    Runtime dependencies are SCons' responsibility. A sparse PR overlay
+    contains only the top-level items selected by the consumer/Git change.
+    """
 
     repo = args.repo.resolve()
     items = load_repository(repo)
@@ -153,7 +157,7 @@ def _candidate_paths(
         unknown = [item_id for item_id in explicit if item_id not in items]
         if unknown:
             raise BuildStoreError(f"unknown item(s): {', '.join(unknown)}")
-        return tuple(items[item_id].path for item_id in explicit)
+        return tuple(items[item_id] for item_id in explicit)
 
     base = getattr(args, "base", None)
     head = getattr(args, "head", None)
@@ -172,11 +176,14 @@ def _candidate_paths(
                 "selected build operation requires --items, --changed, "
                 "or --base/--head"
             )
-        return tuple(item.path for item in items.values())
+        return tuple(items.values())
 
     selected = affected_items(items, changed_paths)
-    plan = build_plan(items, selected)
-    return tuple(entry.item.path for entry in plan)
+    return tuple(
+        item
+        for item_id, item in items.items()
+        if item_id in selected
+    )
 
 
 def _publish_common(parser: argparse.ArgumentParser) -> None:
@@ -217,14 +224,14 @@ def _run_build(args: argparse.Namespace) -> int:
         prepare_main(
             candidate_root=args.candidate_root,
             out=args.out,
-            item_paths=_candidate_paths(args, require_selection=False),
+            items=_candidate_items(args, require_selection=False),
             source_commit=args.source_commit,
         )
     elif args.build_command == "prepare-pr":
         prepare_overlay(
             candidate_root=args.candidate_root,
             out=args.out,
-            item_paths=_candidate_paths(args, require_selection=True),
+            items=_candidate_items(args, require_selection=True),
             source_commit=args.source_commit,
             pull_request=args.pull_request,
         )
@@ -233,7 +240,7 @@ def _run_build(args: argparse.Namespace) -> int:
             main=args.main,
             candidate_root=args.candidate_root,
             out=args.out,
-            item_paths=_candidate_paths(args, require_selection=True),
+            items=_candidate_items(args, require_selection=True),
             source_commit=args.source_commit,
         )
     elif args.build_command == "resolve":

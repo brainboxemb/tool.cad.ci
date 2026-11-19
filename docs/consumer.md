@@ -2,9 +2,11 @@
 
 Forge and CAD consume a released `tool.cad.ci` revision as external tooling.
 
-Do not call a reusable workflow from this repository. The consumer workflow checks out its own source and invokes the pinned tool against that checkout.
+Do not call a reusable workflow from this repository and do not consume moving
+`main`. A consumer records one exact released tool commit, bootstraps it and
+invokes that checkout against its own repository.
 
-A consumer can record the tool beside its other external repositories, for example:
+Example external-repository pin:
 
 ```yaml
 repositories:
@@ -14,44 +16,86 @@ repositories:
     version: <exact-release-commit>
 ```
 
-After bootstrap, invoke the checkout directly:
+Then:
 
 ```text
 python ext/cad-ci/cad-ci.py plan --repo . --base <base-sha> --head <head-sha>
 python ext/cad-ci/cad-ci.py run  --repo . --base <base-sha> --head <head-sha>
 ```
 
-The workflow still owns GitHub-specific setup such as checkout, credentials and artifact transport. It does not own changed-path rules, item loops or item commands.
+The consumer workflow owns GitHub-specific setup such as checkout and
+credentials. It does not own changed-path rules, item loops, consumer commands
+or rebuild decisions.
 
 ## Repository config
 
-The root file only points to CI folders:
+Root `cad-ci.yml` discovers items and can define repository defaults:
 
 ```yaml
 schema: 1
+
+defaults:
+  timeout_seconds: 300
+
 items:
-  - tests/unit
-  - examples/*
-  - qualification/*
+  - tool
+  - cases/*
 ```
 
-Each discovered folder owns its behaviour:
+Each item owns its behaviour:
 
 ```yaml
-id: qualification-simple-box
-kind: qualification
+id: simple-case
+
 needs:
-  - integration-simple-box
-strategy:
-  affected: changed
-  reuse: true
+  - tool
+
+watch:
+  - cases/simple_case/**
+  - shared/**
+
 steps:
   - id: build
+    inputs:
+      - cases/simple_case/build.py
+      - cases/simple_case/input/**
+      - shared/**
     run: [python, build.py]
-    outputs: [model.json]
+    outputs: [generated]
+
   - id: verify
+    inputs:
+      - cases/simple_case/verify.py
     run: [python, verify.py]
-    outputs: [verified.json]
+    outputs: [verify.json]
 ```
 
-`kind` is only a label. The tool does not know what a library test, integration test or qualification means.
+`watch` selects top-level items from a Git diff. Step `inputs` drive SCons
+incremental decisions.
+
+One tool run makes one SCons-backed library run. The consumer does not need to
+know or reproduce the dependency execution order.
+
+## Output
+
+Consumer output mirrors source item paths:
+
+```text
+build/cases/simple_case/
+  generated/
+  verify.json
+  .cad-ci/
+    item.json
+    steps/
+      build.json
+      verify.json
+```
+
+Private SCons target/cache/state data lives below `.cache/cad-ci/` and is not
+published as durable build output.
+
+## Verification before consumer migration
+
+A new tool release is first pinned and tested in `tool.cad.ci.test` using
+representative generic cases. Only after that exact released stack passes should
+Forge or CAD update its tool pin.

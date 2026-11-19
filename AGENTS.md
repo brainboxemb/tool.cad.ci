@@ -1,166 +1,115 @@
 # Repository instructions
 
-## Scope
+## Purpose
 
-`tool.cad.ci` is the thin command-line interface used by the SolidCraft Forge and CAD repositories.
+`tool.cad.ci` is the thin CLI above the released `lib.py.cad.ci` library.
 
-The reusable implementation lives in `lib.py.cad.ci`. Keep this repository narrow: argument parsing, command-line output, exit handling, docs/release plumbing and CLI-specific tests.
+Keep this repository narrow:
+- command-line parsing;
+- human/JSON output;
+- exit-code handling;
+- CLI documentation;
+- release plumbing;
+- CLI-specific tests.
 
-The consumer repository owns:
+Do not implement generic CI behaviour here.
 
-- item folders;
-- item commands;
-- domain checks;
-- qualification rules;
-- expected files and other domain data.
+## Library boundary
 
 `lib.py.cad.ci` owns:
+- configuration loading/validation;
+- coarse affected-item selection;
+- explanatory dependency planning;
+- the SCons execution adapter;
+- timeout/output handling;
+- execution evidence;
+- durable build scopes;
+- Pages;
+- generated-branch publication.
 
-- reading consumer CI files;
-- affected-item selection;
-- dependency ordering;
-- run planning;
-- step execution;
-- saved step state;
-- safe reuse of unchanged results;
-- generic build, Pages and Git-publication mechanics.
+SCons is the only generic execution/rebuild/cache engine.
 
-`tool.cad.ci` only exposes that functionality through CLI commands.
+There must be no local `cad_ci/` package in this repository. The package comes
+from the exact library commit pinned in `pyproject.toml`.
 
-Do not add Forge-specific step names or CAD-model rules to this repository.
+If a CLI change needs new generic behaviour, stop and implement/release it in
+`lib.py.cad.ci` first.
 
-## Language
+## Run model
 
-Write like an engineer explaining the system to another engineer.
+A `cad-ci run` command performs one library `run_repository()` call.
 
-- Use short, direct sentences.
-- Use normal engineering words.
-- Prefer concrete names from the code and repository.
-- Say what a component reads, checks, runs, writes, or returns.
-- Explain cause and effect directly.
-- Use established software terms when they help.
-- Avoid academic, management, and architecture-heavy wording.
-- Do not invent a term when a normal engineering term already exists.
-- Do not make a simple mechanism sound more abstract than it is.
+The tool does not:
+- loop over items for execution;
+- execute dependency plans itself;
+- maintain step state;
+- calculate rebuild fingerprints;
+- decide whether output is reusable.
 
-Prefer:
+`cad-ci plan` is explanatory only. It may show selected items and dependency
+closure/reasons, but it must not claim SCons dirty/current state.
 
-> The runner reads `ci.yml`, checks which inputs changed, and runs the affected items.
+`--step`, `--until` and `--from` are mutually exclusive and are forwarded
+unchanged to the library.
 
-Do not write:
+## Publication model
 
-> The orchestration layer evaluates repository-local execution semantics to derive the applicable build topology.
+Build-store commands pass current loaded `Item` objects to the library so
+candidate `.cad-ci/item.json` evidence can be checked against current config.
 
-Prefer names such as `changed_files`, `affected_items`, `build_plan`, `run_step`, and `previous_result`.
+Sparse PR scopes contain only the selected top-level items. Do not add runtime
+SCons dependency closure to a PR overlay.
 
-## Code comments and explanations
+## Development process
 
-Code must be explained clearly enough that another engineer can understand the intent without reconstructing it from the implementation.
+One logical change uses one issue, one branch and one pull request.
 
-Every Python module should start with a short module docstring that says what the module owns.
+For a library-dependent change:
+1. finish and release `lib.py.cad.ci`;
+2. pin the exact released library commit here;
+3. update only CLI exposure;
+4. pass this repository's tests;
+5. release this tool after green main CI;
+6. pin the exact tool release in `tool.cad.ci.test`;
+7. pass black-box acceptance there;
+8. only then migrate Forge or CAD.
 
-Public and non-trivial helper functions should have a short docstring that explains:
-
-- what the function does;
-- what important input it expects;
-- what it returns or changes when that is not obvious.
-
-Add comments inside functions where they help explain:
-
-- why a decision is made;
-- why a safety check exists;
-- why earlier output may or may not be reused;
-- why dependencies are expanded;
-- why a partial rerun refuses stale state;
-- why generated branches are updated in a particular way;
-- why an apparently simpler implementation is deliberately not used.
-
-The goal is not to comment every assignment. The goal is that the important flow and rules are visible in the code.
-
-Prefer:
-
-> `# A changed dependency can change every item that consumes its output.`
-
-> `# Do not rebuild earlier steps for --step. A stale prerequisite must fail visibly.`
-
-Do not write comments that only repeat syntax:
-
-> `# Loop over dependencies.`
-
-When a core module has almost no explanatory text, treat that as incomplete documentation and fix it before merge.
-
-## Git workflow
-
-One logical change uses one branch and one pull request.
-
-- Start from the intended target branch.
-- Keep unrelated work out of the branch.
-- Prepare a complete logical patch before pushing when practical.
-- Do not create a commit for every edited file.
-- Run focused local tests before pushing.
-- When CI reports several related failures, collect them and make one follow-up fix.
-- Merge only when the required tests are green.
-- Do not develop consumers against moving `main` of this tool.
-- Release the tool first, then pin that release or its exact commit in Forge/CAD.
-
-If the repository uses numbered issues/change records, keep the same work item through branch, PR, tests, and release notes.
+Do not develop generic behaviour in this repository or in a real consumer.
 
 ## Tests
 
-Tests are part of the implementation, not a later cleanup step.
+CLI tests should prove:
+- exact library pin;
+- one SCons repository run per CLI run;
+- partial selectors reach the library correctly;
+- publication passes current Item objects;
+- sparse selection remains sparse;
+- CLI errors become clear exit status.
 
-For runner behaviour:
-
-1. implement and unit-test generic behaviour in `lib.py.cad.ci`;
-2. pin/update that library in this tool;
-3. run the tool's CLI-specific tests;
-4. prove the complete tool + library behaviour in `exp.2026-014.cad-ci-consumer`;
-5. only then use it in Forge or CAD.
-
-Do not develop generic runner behaviour in this repository or in a real consumer.
-
-## Consumer files
-
-The root `cad-ci.yml` only lists CI item folders and root-level settings.
-
-Each item folder owns its `ci.yml`. Keep item-specific commands and watch paths there.
-
-Build output mirrors the item source path under `build/`. Do not flatten unrelated items into one output directory.
+The generic SCons acceptance matrix belongs in `lib.py.cad.ci`.
+End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
 ## GitHub Actions
 
-Keep workflow YAML thin. It may own:
+Keep workflow YAML thin. It may own triggers, permissions, checkout, runner
+setup, credentials and GitHub-required artifact/cache transport.
 
-- triggers;
-- permissions;
-- checkout;
-- runner setup;
-- credentials;
-- artifact upload/download.
+Do not put changed-path rules, item loops, consumer commands, rebuild decisions
+or execution timeout policy in workflow YAML.
 
-Affected selection, dependency ordering, item loops, reuse decisions, and step execution belong in tested code in this repository.
+## Language and comments
 
-Local and GitHub Actions execution must use the same `cad-ci` commands.
+Use short, literal engineering language. Prefer names that say what the code
+actually does. Avoid abstract CI terminology when a normal action name exists.
+
+Python modules and non-obvious helpers need concise docstrings/comments that
+explain intent and safety boundaries.
 
 ## Release
 
 A release is made only after:
+- CLI tests are green against the exact pinned library commit;
+- version is fixed in `VERSION`, `pyproject.toml` and `CHANGELOG.md`;
+- the exact release commit is on main and its test job is green.
 
-- the tool unit tests pass;
-- the synthetic consumer passes end to end;
-- the release version is fixed in `VERSION`, `pyproject.toml`, and `CHANGELOG.md`;
-- the exact release commit is on `main`.
-
-The `CI` workflow calls `scripts/publish_release.py` after the green `main` test job. Keep version checks and GitHub release policy in that script, not inline in workflow YAML.
-
-Forge and CAD consume a pinned released revision as external tooling. They do not call a workflow from moving `main` in this repository.
-
-
-## Library boundary
-
-There must be no local `cad_ci/` package in this repository. That package is
-provided by the pinned `lib.py.cad.ci` dependency.
-
-CLI code lives under `cad_ci_tool/`. If a CLI change needs new planner,
-runner, state, build, Pages or publication behaviour, stop and implement that
-behaviour in `lib.py.cad.ci` first.
+Consumers pin a released tool revision. They never consume moving tool main.
