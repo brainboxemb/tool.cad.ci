@@ -141,7 +141,7 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("scripts/reusable_ci.py", text)
         self.assertIn("upload_build: ${{ inputs.upload_build }}", text)
         self.assertIn(
-            "value: ${{ jobs.cad-ci.outputs.build_artifact_name }}",
+            "value: ${{ jobs.cad_ci.outputs.build_artifact_name }}",
             text,
         )
 
