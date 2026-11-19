@@ -72,15 +72,6 @@ jobs:
       - name: Install called tool revision
         run: python -m pip install -e .cache/cad-ci-tool-source
 
-      - name: Restore CAD CI SCons cache
-        id: cache
-        uses: actions/cache/restore@v4
-        with:
-          path: .cache/cad-ci
-          key: cad-ci-${{ runner.os }}-${{ github.repository_id }}-${{ job.workflow_sha }}-${{ env.CAD_CI_SOURCE_SHA }}
-          restore-keys: |
-            cad-ci-${{ runner.os }}-${{ github.repository_id }}-${{ job.workflow_sha }}-
-
       - name: Run selected CAD CI graph
         env:
           CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.environment_json }}
@@ -104,10 +95,3 @@ jobs:
           path: build/
           include-hidden-files: true
           if-no-files-found: error
-
-      - name: Save CAD CI SCons cache
-        if: success()
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/cad-ci
-          key: ${{ steps.cache.outputs.cache-primary-key }}
