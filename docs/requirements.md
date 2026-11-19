@@ -45,7 +45,7 @@
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
 - `reusable-ci.yml` is the normal consumer entry point and delegates to the generic run workflow from the same tool revision.
 - `reusable-plan.yml` exposes the compact generic item plan for consumers that need domain setup between planning and execution.
-- `reusable-run.yml` restores/saves `.cache/cad-ci/` and performs exactly one `cad-ci run`.
+- `reusable-run.yml` performs exactly one `cad-ci run` and does not restore or save GitHub Actions cache state.
 - A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
 - Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.
 - Domain image setup, credentials and publication remain consumer-owned unless separately specified as generic behaviour.
@@ -53,7 +53,7 @@
 ## CI use
 
 - Local and GitHub Actions use the same `cad-ci` commands.
-- Consumer repositories do not copy generic checkout/Python/tool-install/cache/plan/run setup.
+- Consumer repositories do not copy generic checkout/Python/tool-install/plan/run setup.
 - Workflow YAML does not contain changed-item loops, domain commands or rebuild logic.
 - Forge and CAD consume only a released tool revision.
 - The released tool/library/workflow combination is proven in `tool.cad.ci.test` before consumer migration.
