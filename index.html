@@ -66,6 +66,11 @@ cad-ci run --repo . --item item-a --until verify
 <p>Generated runner output mirrors the item source path under <code>build/</code>.</p>
 <p>For CI, prefer <code>--base/--head</code>. The tool runs <code>git diff</code> itself so changed-path logic does not live in workflow YAML.</p>
 <h2>Durable build output</h2>
+<p>Fetch the current generated build branch when a consumer needs the stable
+baseline locally:</p>
+<pre><code class="language-text">cad-ci build fetch --repo . --out generated-build
+</code></pre>
+<p>The command prints the exact fetched branch commit SHA.</p>
 <p>Prepare a complete baseline from every configured item:</p>
 <pre><code class="language-text">cad-ci build prepare-main \
   --repo . \
@@ -105,8 +110,8 @@ cad-ci run --repo . --item item-a --until verify
 <p>Forge, CAD and other consumers keep their own content and CSS.</p>
 <p>See <code>docs/build-pages.md</code> for the branch layout and publication flow.</p>
 <h2>Python implementation</h2>
-<p>This tool pins <code>lib.py.cad.ci</code> v0.1.2 at exact commit
-<code>35f04ab18f529026b29698d5a2c81af9a796919a</code>.</p>
+<p>This tool pins <code>lib.py.cad.ci</code> v0.1.3 at exact commit
+<code>c981dcf6cf84781abbc430ca286995a77a959bb4</code>.</p>
 <p>Generic Python behaviour is developed and unit-tested in that library first.
 The complete CLI + library combination is then proven in
 <code>exp.2026-014.cad-ci-consumer</code> before a tool release is used by Forge/CAD.</p>
