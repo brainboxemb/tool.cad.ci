@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 - 2026-11-19
+
+- consume lib.py.cad.ci 0.4.0 at exact commit 73985ca9638bf7a5e3209bfd1d3896d043193bb2;
+- expose public step evidence with `output_state` instead of `materialization`;
+- expose restore failures as `output_restore_error` instead of `materialization_error`;
+- print literal `output=...` target results and reject the old operator-facing terminology in CLI tests.
+
+
 ## 0.6.1 - 2026-11-19
 
 - fix reusable build artifact name propagation to downstream caller jobs;
