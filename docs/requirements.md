@@ -45,6 +45,7 @@
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
 - `reusable-plan.yml` exposes the compact generic item plan for consumers that need domain setup between planning and execution.
 - `reusable-run.yml` restores/saves `.cache/cad-ci/` and performs exactly one `cad-ci run`.
+- A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
 - Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.
 - Domain image setup, credentials and publication remain consumer-owned unless separately specified as generic behaviour.
 
