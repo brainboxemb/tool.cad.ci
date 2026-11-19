@@ -2,9 +2,9 @@
 
 ## Scope
 
-`tool.cad.ci` is the CI planner and runner used by the SolidCraft Forge and CAD repositories.
+`tool.cad.ci` is the thin command-line interface used by the SolidCraft Forge and CAD repositories.
 
-Keep it narrow. Do not turn it into a general CI framework. Add behaviour only when Forge or CAD needs it.
+The reusable implementation lives in `lib.py.cad.ci`. Keep this repository narrow: argument parsing, command-line output, exit handling, docs/release plumbing and CLI-specific tests.
 
 The consumer repository owns:
 
@@ -14,15 +14,18 @@ The consumer repository owns:
 - qualification rules;
 - expected files and other domain data.
 
-`tool.cad.ci` owns:
+`lib.py.cad.ci` owns:
 
-- reading the consumer CI files;
+- reading consumer CI files;
 - affected-item selection;
 - dependency ordering;
 - run planning;
 - step execution;
 - saved step state;
-- safe reuse of unchanged results.
+- safe reuse of unchanged results;
+- generic build, Pages and Git-publication mechanics.
+
+`tool.cad.ci` only exposes that functionality through CLI commands.
 
 Do not add Forge-specific step names or CAD-model rules to this repository.
 
@@ -108,12 +111,13 @@ Tests are part of the implementation, not a later cleanup step.
 
 For runner behaviour:
 
-1. add or update a focused unit test;
-2. run the full tool test suite;
-3. prove the behaviour in `exp.2026-014.cad-ci-consumer` when it affects consumer execution;
-4. only then use it in Forge or CAD.
+1. implement and unit-test generic behaviour in `lib.py.cad.ci`;
+2. pin/update that library in this tool;
+3. run the tool's CLI-specific tests;
+4. prove the complete tool + library behaviour in `exp.2026-014.cad-ci-consumer`;
+5. only then use it in Forge or CAD.
 
-Do not use a real Forge or CAD workflow as the first test of runner behaviour.
+Do not develop generic runner behaviour in this repository or in a real consumer.
 
 ## Consumer files
 
@@ -150,3 +154,13 @@ A release is made only after:
 The `CI` workflow calls `scripts/publish_release.py` after the green `main` test job. Keep version checks and GitHub release policy in that script, not inline in workflow YAML.
 
 Forge and CAD consume a pinned released revision as external tooling. They do not call a workflow from moving `main` in this repository.
+
+
+## Library boundary
+
+There must be no local `cad_ci/` package in this repository. That package is
+provided by the pinned `lib.py.cad.ci` dependency.
+
+CLI code lives under `cad_ci_tool/`. If a CLI change needs new planner,
+runner, state, build, Pages or publication behaviour, stop and implement that
+behaviour in `lib.py.cad.ci` first.

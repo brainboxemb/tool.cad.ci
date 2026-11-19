@@ -1,8 +1,10 @@
 # tool.cad.ci
 
-Repository-local CI planning, execution and generated-output handling for the SolidCraft Forge and CAD repositories.
+`tool.cad.ci` is the command-line interface for BrainboxEmb CAD CI.
 
-The consumer repository owns its CI behaviour. `tool.cad.ci` reads that behaviour, decides which items are affected, runs or reuses them, and can publish verified per-item build output and Pages.
+The reusable Python implementation lives in `lib.py.cad.ci`. This repository owns command parsing, terminal output and process exit handling. It must not reimplement planner, runner, state, build-store, Pages or Git-publication mechanics.
+
+The consumer repository owns its CI behaviour. The CLI invokes the pinned library to read that behaviour, plan and run items, reuse valid results, and manage generic build/Pages output.
 
 ## Consumer layout
 
@@ -106,7 +108,7 @@ Generated branches are published with `cad-ci publish build` and `cad-ci publish
 
 ## Pages framework
 
-`cad_ci.pages` provides:
+`lib.py.cad.ci` provides `cad_ci.pages`, including:
 
 - the base HTML structure and navigation;
 - stable root and `previews/pr-N` handling;
@@ -117,3 +119,13 @@ Generated branches are published with `cad-ci publish build` and `cad-ci publish
 Forge, CAD and other consumers keep their own content and CSS.
 
 See `docs/build-pages.md` for the branch layout and publication flow.
+
+
+## Python implementation
+
+This tool pins `lib.py.cad.ci` v0.1.0 at exact commit
+`7534dcbc6a7819006f324859d4c921fba4ce8ee8`.
+
+Generic Python behaviour is developed and unit-tested in that library first.
+The complete CLI + library combination is then proven in
+`exp.2026-014.cad-ci-consumer` before a tool release is used by Forge/CAD.
