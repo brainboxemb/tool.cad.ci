@@ -156,6 +156,11 @@ class ReusableWorkflowTests(unittest.TestCase):
             "value: ${{ jobs.run.outputs.build_artifact_name }}",
             text,
         )
+        self.assertIn("id: build_artifact", text)
+        self.assertIn(
+            "build_artifact_name: ${{ steps.build_artifact.outputs.name }}",
+            text,
+        )
 
 
 if __name__ == "__main__":
