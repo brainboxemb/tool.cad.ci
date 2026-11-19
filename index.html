@@ -17,104 +17,108 @@
   <main>
     <h1>Overview</h1>
     <h1>tool.cad.ci</h1>
-<p><code>tool.cad.ci</code> is the command-line interface for BrainboxEmb CAD CI.</p>
-<p>The reusable Python implementation lives in <code>lib.py.cad.ci</code>. This repository owns command parsing, terminal output and process exit handling. It must not reimplement planner, runner, state, build-store, Pages or Git-publication mechanics.</p>
-<p>The consumer repository owns its CI behaviour. The CLI invokes the pinned library to read that behaviour, plan and run items, reuse valid results, and manage generic build/Pages output.</p>
+<p><code>tool.cad.ci</code> is the thin command-line interface for BrainboxEmb CAD CI.</p>
+<p>The reusable implementation lives in <code>lib.py.cad.ci</code>. This repository owns
+argument parsing, terminal output, documentation/release plumbing and
+CLI-specific tests. It does not implement its own planner, execution engine,
+cache, build store, Pages or Git publication mechanics.</p>
+<p>The tool pins <code>lib.py.cad.ci</code> 0.3.0 at exact commit
+<code>155ec24915e7b2d1b9f5306db9df84a50b53dba8</code>.</p>
 <h2>Consumer layout</h2>
 <pre><code class="language-text">cad-ci.yml
-src/
-tests/unit/ci.yml
-examples/example-a/ci.yml
-qualification/item-a/ci.yml
+shared/
+cases/simple_case1/
+  ci.yml
+  build.py
+  verify.py
 </code></pre>
 <p>Root <code>cad-ci.yml</code>:</p>
 <pre><code class="language-yaml">schema: 1
+
+defaults:
+  timeout_seconds: 300
+
 items:
-  - tests/unit
-  - examples/*
-  - qualification/*
+  - cases/*
 </code></pre>
 <p>Item <code>ci.yml</code>:</p>
-<pre><code class="language-yaml">id: item-a
-kind: qualification
-needs:
-  - integration-example-a
+<pre><code class="language-yaml">id: simple-case
+
 watch:
-  - qualification/item-a/**
-  - src/**
-strategy:
-  affected: changed
-  reuse: true
+  - cases/simple_case1/**
+  - shared/**
+
 steps:
   - id: build
+    inputs:
+      - cases/simple_case1/build.py
+      - cases/simple_case1/input/**
+      - shared/**
     run: [python, build.py]
-    outputs: [model.txt]
+    outputs: [generated]
+
   - id: verify
+    inputs:
+      - cases/simple_case1/verify.py
     run: [python, verify.py]
-    outputs: [verified.txt]
+    outputs: [verify.json]
 </code></pre>
-<p><code>kind</code> is descriptive only. The runner does not attach behaviour to names such as <code>qualification</code>, <code>library-test</code>, or <code>integration</code>.</p>
-<h2>Run commands</h2>
+<p><code>watch</code> is coarse Git-selection input. Step <code>inputs</code> are SCons build
+dependencies. If a step omits <code>inputs</code>, it inherits the item <code>watch</code> paths.</p>
+<h2>Plan and run</h2>
 <pre><code class="language-text">cad-ci plan --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
-cad-ci run --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
-cad-ci plan --repo . --changed qualification/item-a/model.py
-cad-ci run --repo . --item item-a
-cad-ci run --repo . --item item-a --step verify
-cad-ci run --repo . --item item-a --from build
-cad-ci run --repo . --item item-a --until verify
+cad-ci run  --repo . --base &lt;base-sha&gt; --head &lt;head-sha&gt;
+
+cad-ci run --repo . --item simple-case
+cad-ci run --repo . --item simple-case --step verify
+cad-ci run --repo . --item simple-case --until verify
+cad-ci run --repo . --item simple-case --from build
 </code></pre>
-<p>Generated runner output mirrors the item source path under <code>build/</code>.</p>
-<p>For CI, prefer <code>--base/--head</code>. The tool runs <code>git diff</code> itself so changed-path logic does not live in workflow YAML.</p>
+<p><code>plan</code> explains which top-level items are selected and which dependencies they
+have. It does not claim whether SCons considers a step dirty or current.</p>
+<p>One <code>run</code> command makes one library <code>run_repository()</code> call. SCons owns
+prerequisite traversal, incremental decisions and CacheDir reuse.</p>
+<p>Partial selectors are mutually exclusive:</p>
+<ul>
+<li><code>--step</code> forces that exact step after making prerequisites current;</li>
+<li><code>--until</code> requests the named step normally;</li>
+<li><code>--from</code> forces the named step and every following step.</li>
+</ul>
+<p>Consumer output mirrors the item source path below <code>build/</code>. Public execution
+evidence lives below <code>build/&lt;item&gt;/.cad-ci/</code>; private SCons state/cache stays
+below <code>.cache/cad-ci/</code>.</p>
 <h2>Durable build output</h2>
-<p>Fetch the current generated build branch when a consumer needs the stable
-baseline locally:</p>
+<p>Fetch the generated build branch:</p>
 <pre><code class="language-text">cad-ci build fetch --repo . --out generated-build
 </code></pre>
-<p>The command prints the exact fetched branch commit SHA.</p>
-<p>Prepare a complete baseline from every configured item:</p>
+<p>Prepare a complete main baseline:</p>
 <pre><code class="language-text">cad-ci build prepare-main \
   --repo . \
   --candidate-root build \
   --out output/main \
   --source-commit &lt;sha&gt;
 </code></pre>
-<p>Prepare a sparse PR overlay using item IDs:</p>
+<p>Prepare a sparse PR overlay:</p>
 <pre><code class="language-text">cad-ci build prepare-pr \
   --repo . \
   --candidate-root build \
   --out output/pr \
   --source-commit &lt;sha&gt; \
   --pull-request 12 \
-  --items item-a
+  --items simple-case
 </code></pre>
-<p>After the first complete baseline exists, update only rebuilt items on a normal main run:</p>
-<pre><code class="language-text">cad-ci build update-main \
-  --repo . \
-  --main generated-build/main \
-  --candidate-root build \
-  --out output/main \
-  --source-commit &lt;sha&gt; \
-  --items item-a
-</code></pre>
-<p>Resolve <code>main</code> plus a PR overlay with <code>cad-ci build resolve</code>. <code>cad-ci build promote</code> remains available when a verified PR overlay is deliberately promoted.</p>
-<p>Generated branches are published with <code>cad-ci publish build</code> and <code>cad-ci publish pages</code>. The publisher uses normal pushes, checks that the source branch is still current, and retries branch-head races without force-push.</p>
-<h2>Pages framework</h2>
-<p><code>lib.py.cad.ci</code> provides <code>cad_ci.pages</code>, including:</p>
-<ul>
-<li>the base HTML structure and navigation;</li>
-<li>stable root and <code>previews/pr-N</code> handling;</li>
-<li><code>provenance.json</code>;</li>
-<li>support for a consumer-supplied stylesheet;</li>
-<li>a configurable Pages base path.</li>
-</ul>
-<p>Forge, CAD and other consumers keep their own content and CSS.</p>
-<p>See <code>docs/build-pages.md</code> for the branch layout and publication flow.</p>
-<h2>Python implementation</h2>
-<p>This tool pins <code>lib.py.cad.ci</code> v0.1.3 at exact commit
-<code>c981dcf6cf84781abbc430ca286995a77a959bb4</code>.</p>
-<p>Generic Python behaviour is developed and unit-tested in that library first.
-The complete CLI + library combination is then proven in
-<code>exp.2026-014.cad-ci-consumer</code> before a tool release is used by Forge/CAD.</p>
+<p>A PR overlay contains only the selected top-level items. Runtime prerequisites
+that SCons made current are not automatically added to the sparse overlay.</p>
+<p>Update selected main items with <code>cad-ci build update-main</code>. Resolve main plus
+an optional PR overlay with <code>cad-ci build resolve</code>.</p>
+<p>Generated branches are published with <code>cad-ci publish build</code> and
+<code>cad-ci publish pages</code>. Publication uses normal pushes, checks source
+freshness and retries only generated-branch races.</p>
+<h2>Verification order</h2>
+<p>Generic execution behaviour is developed and tested in <code>lib.py.cad.ci</code>.
+The CLI is tested here against one exact released library revision. The complete
+released tool/library stack is then black-box tested in <code>tool.cad.ci.test</code>.</p>
+<p>Only after that exact stack passes may Forge or CAD migrate to it.</p>
 
   </main>
 </body>
