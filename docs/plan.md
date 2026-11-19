@@ -12,7 +12,8 @@ Adopt the released repository-variable support from `lib.py.cad.ci` through
 
 ## Execution order
 
-1. Wait for `lib.py.cad.ci` 0.5.0 to be published from its tested main commit.
+1. `lib.py.cad.ci` 0.5.0 is published at exact commit
+   `345794521fe162eb1908e1e8f38a6eabb02c8290`.
 2. Complete #47 by pinning that exact library commit and documenting the
    resulting tool/library environment contract.
 3. Release the updated tool after this repository's CI is green.
@@ -27,7 +28,7 @@ Adopt the released repository-variable support from `lib.py.cad.ci` through
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #47 Release tool.cad.ci with cad-ci.yml repository variable support | now / blocked | Active next change. Blocked only until the tested `lib.py.cad.ci` 0.5.0 release exists, then pin and test that exact revision. |
+| #47 Release tool.cad.ci with cad-ci.yml repository variable support | now | Active 0.9.0 change. The tested library 0.5.0 release exists; pin it, pass tool CI, release and prove the exact tool revision in `tool.cad.ci.test`. |
 | #46 Cancel superseded normal CAD-CI runs centrally | next | Generic reusable-workflow behaviour. Keep separate from #47 and implement after the repository-variable release path is externally tested. |
 
 No other open repository issues exist at this point in time.
