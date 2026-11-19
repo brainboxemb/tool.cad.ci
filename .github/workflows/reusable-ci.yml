@@ -36,13 +36,13 @@ on:
     outputs:
       build_artifact_name:
         description: Uploaded build artifact name, or empty when upload_build is false.
-        value: ${{ jobs.cad-ci.outputs.build_artifact_name }}
+        value: ${{ jobs.cad_ci.outputs.build_artifact_name }}
 
 permissions:
   contents: read
 
 jobs:
-  cad-ci:
+  cad_ci:
     uses: ./.github/workflows/reusable-run.yml
     with:
       source_sha: ${{ inputs.source_sha }}
