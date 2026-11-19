@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 - 2026-11-19
+
+- consume `lib.py.cad.ci` 0.5.0 at exact commit `345794521fe162eb1908e1e8f38a6eabb02c8290`;
+- expose repository-wide root `cad-ci.yml:variables` through the existing thin CLI/workflow stack without duplicating parsing or merge logic;
+- document environment precedence between caller values, repository variables and CAD-CI-owned runtime values.
+
+
 ## 0.8.0 - 2026-11-19
 
 - remove implicit GitHub Actions cache restore/save from reusable CAD-CI workflows;

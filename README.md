@@ -7,8 +7,8 @@ argument parsing, terminal output, documentation/release plumbing and
 CLI-specific tests. It does not implement its own planner, execution engine,
 cache, build store, Pages or Git publication mechanics.
 
-The tool pins `lib.py.cad.ci` 0.4.0 at exact commit
-`73985ca9638bf7a5e3209bfd1d3896d043193bb2`.
+The tool pins `lib.py.cad.ci` 0.5.0 at exact commit
+`345794521fe162eb1908e1e8f38a6eabb02c8290`.
 
 ## Consumer layout
 
@@ -28,6 +28,9 @@ schema: 1
 
 defaults:
   timeout_seconds: 300
+
+variables:
+  BUILD_MODE: "verify"
 
 items:
   - cases/*
@@ -60,6 +63,11 @@ steps:
 
 `watch` is coarse Git-selection input. Step `inputs` are SCons build
 dependencies. If a step omits `inputs`, it inherits the item `watch` paths.
+
+Root `variables` are validated by the pinned library, injected into every
+consumer command and included in SCons target signatures. Repository variables
+override inherited caller values with the same name; CAD-CI-owned `CAD_CI_*`
+values remain authoritative.
 
 ## Plan and run
 
@@ -126,9 +134,12 @@ Normal consumers use `reusable-ci.yml` and do not reproduce generic
 checkout/Python/tool-install/run setup locally. None of these workflows
 contains Forge/SolidCraft/CAD-domain item names.
 
-The optional `environment_json` input is only for non-secret domain values
-such as an immutable runtime-image reference. Secrets remain normal GitHub
-Actions secrets/permissions.
+The optional `environment_json` input supplies non-secret caller values to
+the inherited process environment. Stable repository expectations, such as a
+runtime/version selected by that repository, belong in root
+`cad-ci.yml:variables`. The pinned library applies those repository values
+after caller environment. Secrets remain normal GitHub Actions
+secrets/permissions.
 
 When a downstream consumer job must publish or transform generated output, set
 `upload_build: true`. The run workflow uploads the complete materialized

@@ -7,30 +7,34 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current goal
 
-Keep the released CAD-CI tool stable while removing one remaining unwanted
-workflow side effect. Do not add Forge, SolidCraft or ordinary Python-library
-CI behaviour here.
+Adopt the released repository-variable support from `lib.py.cad.ci` through
+#47 without duplicating configuration or environment logic in this tool.
 
 ## Execution order
 
-1. Complete #42 on this branch: cache restore/save is removed and tests reject
-   persistent cache actions.
-2. Release 0.8.0 after this repository's CI is green.
-3. Update `tool.cad.ci.test` to the exact 0.8.0 commit and require external
-   acceptance to pass.
-4. Only then update Forge/CAD repositories to the accepted 0.8.0 pin.
+1. `lib.py.cad.ci` 0.5.0 is published at exact commit
+   `345794521fe162eb1908e1e8f38a6eabb02c8290`.
+2. Complete #47 by pinning that exact library commit and documenting the
+   resulting tool/library environment contract.
+3. Release the updated tool after this repository's CI is green.
+4. Update `tool.cad.ci.test` to the exact released tool commit and prove a
+   root `cad-ci.yml:variables` value reaches a real consumer command.
+5. Only after that external test update Forge through its own runtime-config
+   issue.
+6. Complete #46 separately; superseded-run cancellation is workflow behaviour
+   and must not be mixed into the repository-variable change.
 
 ## Open issue assessment — 2026-11-19
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #43 Make docs/plan.md the repository work source of truth | now | Housekeeping required to make this plan and issue assessment permanent repository policy. |
-| #42 Remove implicit GitHub Actions cache side effects from reusable CAD-CI | now | Active 0.8.0 change: cache restore/save has been removed. Complete repository CI, release, and external acceptance before closing. |
-| #26 Allow reusable run workflow to hand build output to downstream consumer jobs | effectively complete but still open | The current 0.7.1 workflow exposes `upload_build`, `build_artifact_name`, uploads `build/`, and the external test passes. Re-check the exact acceptance wording, then close if no requirement remains. |
-| #1 Implement v0.1 repository-local CI planner and runner | effectively complete but still open | The repository has progressed to 0.7.1 and the planner/runner/tool stack is released and externally tested. Review the original checklist only to confirm no historical requirement is still intentionally open, then close/supersede. |
+| #47 Release tool.cad.ci with cad-ci.yml repository variable support | now | Active 0.9.0 change. The tested library 0.5.0 release exists; pin it, pass tool CI, release and prove the exact tool revision in `tool.cad.ci.test`. |
+| #46 Cancel superseded normal CAD-CI runs centrally | next | Generic reusable-workflow behaviour. Keep separate from #47 and implement after the repository-variable release path is externally tested. |
+
+No other open repository issues exist at this point in time.
 
 ## Boundary
 
-Do not use this plan to redesign `lib.py.cad.ci`. If a change requires new
-generic execution, selection, SCons, build-store or Pages behaviour, implement
-and release that in `lib.py.cad.ci` first.
+Do not implement or parse root repository variables in this tool. That behaviour
+belongs to `lib.py.cad.ci`. This repository pins the released library and
+exposes it through the CLI/reusable workflows.
