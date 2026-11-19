@@ -113,18 +113,16 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("path: .cache/cad-ci-tool-source", text)
         self.assertEqual(text.count("scripts/reusable_ci.py plan"), 1)
 
-    def test_run_workflow_uses_one_generic_run_and_persistent_scons_cache(self):
+    def test_run_workflow_uses_one_generic_run_without_persistent_cache(self):
         text = self.read("reusable-run.yml")
         self.assertIn("workflow_call:", text)
         self.assertIn("repository: ${{ job.workflow_repository }}", text)
         self.assertIn("ref: ${{ job.workflow_sha }}", text)
         self.assertEqual(text.count("scripts/reusable_ci.py run"), 1)
-        self.assertIn("path: .cache/cad-ci", text)
-        self.assertIn("actions/cache/restore@v4", text)
-        self.assertIn("actions/cache/save@v4", text)
-        self.assertIn("${{ env.CAD_CI_SOURCE_SHA }}", text)
-        self.assertNotIn("${{ github.run_id }}", text)
-        self.assertNotIn("${{ github.run_attempt }}", text)
+        self.assertNotIn("actions/cache/restore", text)
+        self.assertNotIn("actions/cache/save", text)
+        self.assertNotIn("cache-primary-key", text)
+        self.assertNotIn("restore-keys:", text)
 
     def test_free_environment_input_is_documented_as_non_secret(self):
         text = self.read("reusable-run.yml")
