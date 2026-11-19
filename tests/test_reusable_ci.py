@@ -124,6 +124,33 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("cache-primary-key", text)
         self.assertNotIn("restore-keys:", text)
 
+
+    def test_reusable_workflows_preserve_package_read_permission(self):
+        """GHCR auth permission must survive both reusable workflow layers."""
+
+        for name in ("reusable-ci.yml", "reusable-run.yml"):
+            with self.subTest(name=name):
+                text = self.read(name)
+                self.assertIn("permissions:", text)
+                self.assertIn("contents: read", text)
+                self.assertIn("packages: read", text)
+
+    def test_run_workflow_authenticates_ghcr_before_consumer_run(self):
+        """Docker receives the workflow token without exposing image policy."""
+
+        text = self.read("reusable-run.yml")
+        login = "uses: docker/login-action@v3"
+        run_step = "name: Run selected CAD CI graph"
+
+        self.assertIn(login, text)
+        self.assertIn("registry: ghcr.io", text)
+        self.assertIn("username: ${{ github.actor }}", text)
+        self.assertIn("password: ${{ github.token }}", text)
+        self.assertLess(text.index(login), text.index(run_step))
+
+        # Generic authentication must not select one consumer runtime image.
+        self.assertNotIn("FORGE_RUNTIME_IMAGE", text)
+
     def test_free_environment_input_is_documented_as_non_secret(self):
         text = self.read("reusable-run.yml")
         self.assertIn(
