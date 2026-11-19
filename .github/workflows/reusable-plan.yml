@@ -1,0 +1,82 @@
+name: Reusable CAD CI plan
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: Exact caller source commit; defaults to the triggering source commit.
+        required: false
+        type: string
+        default: ""
+      base_sha:
+        description: Base commit for incremental selection; defaults to the triggering event base.
+        required: false
+        type: string
+        default: ""
+      full_run:
+        description: Select every configured item instead of using a Git diff.
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      plan_json:
+        description: Compact JSON array returned by cad-ci plan.
+        value: ${{ jobs.plan.outputs.plan_json }}
+      source_sha:
+        description: Exact caller source commit used by the plan.
+        value: ${{ jobs.plan.outputs.source_sha }}
+      base_sha:
+        description: Base commit used by the plan.
+        value: ${{ jobs.plan.outputs.base_sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      plan_json: ${{ steps.plan.outputs.plan_json }}
+      source_sha: ${{ steps.refs.outputs.source_sha }}
+      base_sha: ${{ steps.refs.outputs.base_sha }}
+    env:
+      CAD_CI_SOURCE_SHA: ${{ inputs.source_sha != '' && inputs.source_sha || (github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha) }}
+      CAD_CI_BASE_SHA: ${{ inputs.base_sha != '' && inputs.base_sha || (github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || '') }}
+
+    steps:
+      - name: Checkout caller source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CAD_CI_SOURCE_SHA }}
+          fetch-depth: 0
+
+      - name: Checkout called tool revision
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .cache/cad-ci-tool-source
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install called tool revision
+        run: python -m pip install -e .cache/cad-ci-tool-source
+
+      - name: Record source revisions
+        id: refs
+        run: |
+          echo "source_sha=$CAD_CI_SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$CAD_CI_BASE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Plan selected CAD CI items
+        id: plan
+        run: |
+          python .cache/cad-ci-tool-source/scripts/reusable_ci.py plan \
+            --repo . \
+            --source-sha "$CAD_CI_SOURCE_SHA" \
+            --base-sha "$CAD_CI_BASE_SHA" \
+            --full-run "${{ inputs.full_run }}" \
+            --github-output "$GITHUB_OUTPUT"
