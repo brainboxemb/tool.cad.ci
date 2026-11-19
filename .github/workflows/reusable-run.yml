@@ -92,7 +92,7 @@ jobs:
             --full-run "${{ inputs.full_run }}"
 
       - name: Record build artifact name
-        id: build-artifact
+        id: build_artifact
         if: inputs.upload_build
         run: echo "name=${{ inputs.build_artifact_name }}" >> "$GITHUB_OUTPUT"
 
