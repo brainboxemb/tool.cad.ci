@@ -7,62 +7,55 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current status
 
-Released `tool.cad.ci` 0.14.0 at
-`5bca68eb109a69e3a05e7711daf394926ee0e7d4` provides the complete
-single-runner PR lifecycle and is externally accepted in `tool.cad.ci.test`.
+Released `tool.cad.ci 0.14.1` at
+`18812d38e2390c23fd3c431cfde2ce9367bdfd40` is externally accepted and is
+the current Forge stack.
 
-Forge has adopted that workflow. A clean simple-box-only production PR measured
-41 seconds end-to-end. The selected graph was exactly:
+Released `lib.py.cad.ci 0.8.4` at
+`4e033fd17e911b3feb92b1a34433b884ca788ab6` adds safe durable-main cleanup
+for items that no longer exist in current processed repository configuration.
 
-- `forge-package:tool_build`;
-- `simple-box:contract_test`;
-- `simple-box:model_verify`.
-
-Measured fixed bootstrap cost before the first CAD-CI action includes roughly:
-
-- caller checkout with full history/refs: 3.7 s;
-- external PyYAML/SCons install: 3.1 s;
-- docker/login-action: 1.8 s.
+The generic behavior is complete in the library. The tool only needs to expose
+the new library input.
 
 ## Current goal
 
-Complete #72 as tool.cad.ci 0.14.1 by removing avoidable PR bootstrap overhead
-without changing selection, SCons execution, durable build or publication
-semantics.
+Complete #74 and release the next tool patch.
+
+For `cad-ci build update-main`:
+
+- affected current items remain the sparse replacement set;
+- the complete current `process:true` item set is also passed to
+  `lib.py.cad.ci 0.8.4`;
+- the tool does not compare durable manifests, decide deletions or remove paths.
 
 ## Required proof
 
-- caller PR head checkout is shallow;
-- incremental selection fetches only the exact base SHA it needs;
-- full runs/closed cleanup do not perform the base fetch;
-- GHCR login uses Docker CLI directly and remains token-safe;
-- external dependency install avoids dependency recursion and eager bytecode
-  compilation;
-- no persistent GitHub Actions cache is added;
-- complete tool CI is green;
-- released 0.14.1 is externally accepted before Forge adoption;
-- the same simple-box-only Forge measurement is repeated.
+- the exact 0.8.4 library commit is pinned;
+- changed/base-head selection remains unchanged for replacement items;
+- the current processed set comes from released library planning semantics;
+- non-processed items are absent from the current durable-main membership set;
+- both item collections reach `update_main()` distinctly;
+- existing PR/main preparation behavior remains unchanged;
+- complete tool CI is green.
 
 ## Execution order
 
-1. Implement/test #72 in tool.cad.ci.
-2. Release 0.14.1 from exact green main.
-3. Accept exact 0.14.1 in tool.cad.ci.test.
-4. Update Forge PR workflow pin only.
-5. Repeat the one-file simple-box measurement.
-6. Continue runtime optimization only from the new measured remainder.
+1. Pin exact released lib.py.cad.ci 0.8.4.
+2. Expose current processed items to `update_main()`.
+3. Test the thin CLI boundary.
+4. Release the next tool patch.
+5. Pin that release in `tool.cad.ci.test`.
+6. Prove removed-item cleanup black-box.
+7. Only then update Forge and retry durable main cleanup/Pages.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #72 Reduce reusable PR bootstrap overhead | now | Removes measured fixed setup work before CAD-CI starts; no execution semantics change. |
+| #74 Adopt lib.py.cad.ci 0.8.4 for removed durable main items | now | Thin tool exposure of the already released generic build-store contract. |
 
 ## Boundary
 
-`lib.py.cad.ci` remains the sole owner of selection, SCons execution,
-build-store and publication semantics.
-
-`tool.cad.ci` owns reusable GitHub runner orchestration and may minimize
-checkout/authentication/package-bootstrap overhead without adding a second
-planner or persistent build cache.
+`lib.py.cad.ci` remains the sole owner of selection semantics, durable-store
+membership/deletion, ownership safety and publication behavior.
