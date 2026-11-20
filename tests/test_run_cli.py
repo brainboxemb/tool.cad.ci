@@ -1,6 +1,6 @@
 """CLI-level checks that tool.cad.ci exposes the released SCons runner."""
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 import json
 import io
@@ -10,7 +10,7 @@ import unittest
 from cad_ci_tool.cli import main
 
 
-def make_repo(root: Path) -> Path:
+def make_repo(root: Path, *, process: bool = True) -> Path:
     """Create one small two-step consumer repository."""
 
     repo = root / "repo"
@@ -40,9 +40,11 @@ assert (out / "built.txt").read_text()
 """,
         encoding="utf-8",
     )
+    process_line = "" if process else "process: false\n"
     (case / "ci.yml").write_text(
         "id: case-a\n"
-        "watch: [cases/a/**]\n"
+        + process_line
+        + "watch: [cases/a/**]\n"
         "steps:\n"
         "  - id: build\n"
         "    inputs: [cases/a/input.txt, cases/a/build.py]\n"
@@ -96,6 +98,35 @@ class RunCliTests(unittest.TestCase):
                 )
             self.assertIn("current: case-a:build", second.getvalue())
             self.assertIn("current: case-a:verify", second.getvalue())
+
+    def test_process_false_is_delegated_to_released_library(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root, process=False)
+
+            plan = io.StringIO()
+            with redirect_stdout(plan):
+                self.assertEqual(
+                    main(["plan", "--repo", str(repo), "--json"]),
+                    0,
+                )
+            self.assertEqual(json.loads(plan.getvalue()), [])
+
+            error = io.StringIO()
+            with redirect_stderr(error):
+                self.assertEqual(
+                    main(
+                        [
+                            "run",
+                            "--repo",
+                            str(repo),
+                            "--item",
+                            "case-a",
+                        ]
+                    ),
+                    2,
+                )
+            self.assertIn("item is not processed: case-a", error.getvalue())
 
     def test_exact_step_is_forwarded_to_library_semantics(self):
         with tempfile.TemporaryDirectory() as tmp:

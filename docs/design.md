@@ -26,6 +26,10 @@ identifies one exact tool/library stack.
 A generic library feature is not reimplemented here. The tool is updated only
 after the library feature is released and tested in its own repository.
 
+Item-level `process` participation is one such library feature. The tool does
+not parse or interpret `process`; it exposes the released library behavior
+through the existing plan/run commands.
+
 ## Command environment
 
 The reusable workflow may receive optional non-secret `environment_json`
