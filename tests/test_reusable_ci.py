@@ -195,6 +195,16 @@ class ReusableWorkflowTests(unittest.TestCase):
         text = self.read("reusable-run.yml")
         self.assertIn("upload_build:", text)
         self.assertIn("build_artifact_name:", text)
+        self.assertIn("name: Check materialized build output", text)
+        self.assertIn("id: build_output", text)
+        self.assertIn("find build -mindepth 1 -print -quit", text)
+        self.assertEqual(
+            text.count(
+                "if: inputs.upload_build && "
+                "steps.build_output.outputs.available == 'true'"
+            ),
+            2,
+        )
         self.assertIn("actions/upload-artifact@v4", text)
         self.assertIn("path: build/", text)
         self.assertIn("include-hidden-files: true", text)
@@ -206,11 +216,6 @@ class ReusableWorkflowTests(unittest.TestCase):
         )
         self.assertIn(
             "value: ${{ jobs.run.outputs.build_artifact_name }}",
-            text,
-        )
-        self.assertIn("id: build_artifact", text)
-        self.assertIn(
-            "build_artifact_name: ${{ steps.build_artifact.outputs.name }}",
             text,
         )
 
