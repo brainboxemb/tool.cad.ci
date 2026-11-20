@@ -26,6 +26,7 @@
 <h2>Planning</h2>
 <ul>
 <li>Changed-file selection is performed by the library.</li>
+<li>Item-level <code>process</code> participation is parsed and enforced by the library; the tool does not duplicate that selection rule.</li>
 <li><code>cad-ci plan</code> can show selected items and required dependency closure.</li>
 <li>A plan is explanatory and does not claim SCons target freshness.</li>
 </ul>
@@ -36,6 +37,7 @@
 <li><code>--step</code>, <code>--until</code> and <code>--from</code> are mutually exclusive.</li>
 <li>The tool forwards partial selectors to the library without adding its own state rules.</li>
 <li>Run output/evidence layout is defined by the library.</li>
+<li>Explicit execution of a non-processed item fails according to the released library contract.</li>
 </ul>
 <h2>Durable build output</h2>
 <ul>
