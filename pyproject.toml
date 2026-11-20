@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "brainboxemb-cad-ci"
-version = "0.12.3"
+version = "0.13.0"
 description = "Command-line interface for BrainboxEmb CAD CI"
 requires-python = ">=3.11"
 dependencies = [
-  "brainboxemb-cad-ci-lib @ git+https://github.com/brainboxemb/lib.py.cad.ci.git@c031f5dce3a4b0b207d8ce24716b5e11cdd12df2"
+  "brainboxemb-cad-ci-lib @ git+https://github.com/brainboxemb/lib.py.cad.ci.git@e2056c0d5ac361f0d021e58e55025e02c5688acf"
 ]
 
 [project.scripts]
