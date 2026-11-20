@@ -7,8 +7,8 @@ argument parsing, terminal output, documentation/release plumbing and
 CLI-specific tests. It does not implement its own planner, execution engine,
 cache, build store, Pages or Git publication mechanics.
 
-The tool pins `lib.py.cad.ci` 0.5.0 at exact commit
-`345794521fe162eb1908e1e8f38a6eabb02c8290`.
+The tool pins `lib.py.cad.ci` 0.8.3 at exact commit
+`e8e951ed7e50c4fa754cc158729faf2927cccb31`.
 
 ## Consumer layout
 
@@ -101,31 +101,29 @@ below `.cache/cad-ci/`.
 Consumers do not need to copy the generic CAD-CI setup into their own
 workflows. Reference the released reusable workflow at the exact tool commit.
 
-For a normal PR/push run, the consumer keeps only its event trigger,
+For a complete normal PR run, the consumer keeps only its event trigger,
 permissions and one reusable-workflow call:
 
 ```yaml
-name: CI
+name: PR
 
 on:
   pull_request:
-  push:
-    branches: [main]
+    types: [opened, synchronize, reopened, closed]
 
 permissions:
-  contents: read
+  contents: write
   packages: read
 
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@<tool-commit>
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@<tool-commit>
 ```
 
-`reusable-ci.yml` delegates to the generic run workflow from that same tool
-revision. The called workflow:
+`reusable-pr.yml` performs run, durable PR preparation/publication and closed-PR cleanup on one runner. It:
 - checks out the caller repository at its real source commit;
 - checks out `tool.cad.ci` at the same commit that contains the called workflow;
-- installs that exact tool/library stack;
+- resolves the tool's exact pinned library source and exposes both source trees through `PYTHONPATH` without building/installing either BrainboxEmb package;
 - authenticates Docker to `ghcr.io` with the workflow GitHub token;
 - performs exactly one `cad-ci run`;
 
