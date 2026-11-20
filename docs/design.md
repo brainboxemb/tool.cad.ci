@@ -11,7 +11,7 @@ The tool owns:
 
 - CLI argument parsing and exit handling;
 - reusable GitHub Actions setup;
-- installation of the exact called tool revision;
+- exposure of the exact called tool revision and its pinned library source on the runner;
 - GitHub artifact transport requested by a caller;
 - release plumbing and tool-specific tests.
 
@@ -205,3 +205,26 @@ The workflow design avoids avoidable runner-boundary overhead:
 
 Consumer/domain performance remains outside tool.cad.ci. The workflow provides
 the minimal generic orchestration needed to measure end-to-end PR latency.
+
+
+## Direct source bootstrap for pull requests
+
+A consumer PR must not rebuild BrainboxEmb's own released Python projects.
+
+The reusable PR workflow uses the tool revision itself as the stack identity:
+
+```text
+checkout exact tool revision
+  -> read exact lib.py.cad.ci commit from tool pyproject
+  -> checkout exact library revision
+  -> PYTHONPATH=<tool>:<library>
+  -> install only external runtime dependencies
+  -> python -m cad_ci_tool ...
+```
+
+This keeps the existing exact Git pin as the single library-version source of
+truth while removing editable installation, project build isolation, project
+metadata preparation and wheel builds from the consumer critical path.
+
+SCons remains the CAD-CI execution engine on the GitHub runner. SolidCraft
+remains a separate model runtime started only by a selected consumer action.
