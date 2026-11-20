@@ -17,6 +17,7 @@ def write_config(
     item_id: str,
     *,
     needs: tuple[str, ...] = (),
+    process: bool = True,
 ) -> None:
     """Write one source item configuration used by build-store validation."""
 
@@ -29,6 +30,7 @@ def write_config(
     )
     (folder / "ci.yml").write_text(
         f"id: {item_id}\n"
+        f"process: {'true' if process else 'false'}\n"
         f"{needs_yaml}"
         "steps:\n"
         "  - id: test\n"
@@ -146,6 +148,45 @@ class PublicationCliTests(unittest.TestCase):
             self.assertTrue((main_out / "cases/b/result.txt").is_file())
             self.assertTrue((pr_out / "cases/a/result.txt").is_file())
             self.assertFalse((pr_out / "cases/b").exists())
+
+    def test_prepare_main_uses_library_full_run_process_selection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            (repo / "cad-ci.yml").write_text(
+                "schema: 1\nitems: [cases/*]\n",
+                encoding="utf-8",
+            )
+            write_config(repo, "cases/active", "active-case", process=True)
+            write_config(repo, "cases/parked", "parked-case", process=False)
+
+            candidate = root / "candidate"
+            write_candidate(candidate, "cases/active", "active-case", "active")
+
+            out = root / "main"
+            self.assertEqual(
+                main(
+                    [
+                        "build",
+                        "prepare-main",
+                        "--repo",
+                        str(repo),
+                        "--candidate-root",
+                        str(candidate),
+                        "--out",
+                        str(out),
+                        "--source-commit",
+                        "main-processed",
+                    ]
+                ),
+                0,
+            )
+
+            self.assertTrue((out / "cases/active/result.txt").is_file())
+            self.assertFalse((out / "cases/parked").exists())
+            manifest = json.loads((out / "build.json").read_text(encoding="utf-8"))
+            self.assertEqual(tuple(manifest["items"]), ("cases/active",))
 
     def test_prepare_pr_can_derive_selection_from_changed_paths(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -134,3 +134,25 @@ cad-ci run
 The reusable workflow may inspect the filesystem after the released CLI
 returns. This is GitHub transport behavior only. It does not interpret CAD-CI
 selection or build semantics.
+
+## Main candidate selection delegation
+
+The CLI's unselected `build prepare-main` path delegates scope selection to the
+library planner:
+
+```text
+load_repository()
+  -> affected_items(items, None)
+  -> repository-ordered selected Item objects
+  -> build_store.prepare_main()
+```
+
+This keeps the distinction explicit:
+
+- planner/library: owns full-run and `process` semantics;
+- tool: converts CLI arguments to library calls;
+- build store: validates and packages the supplied accepted items.
+
+The tool must not use `items.values()` as a substitute for full-run selection,
+because configured-but-nonprocessed items intentionally have no candidate
+output.
