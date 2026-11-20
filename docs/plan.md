@@ -10,29 +10,26 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 Released `tool.cad.ci` 0.13.3 pins exact `lib.py.cad.ci` 0.8.3 at
 `e8e951ed7e50c4fa754cc158729faf2927cccb31`.
 
-The released stack already provides:
-
-- one SCons-backed repository run;
-- streamed concise operator logging;
-- durable sparse PR build preparation/publication;
-- PR-scope cleanup;
-- high-level run-only reusable CI.
-
 Forge currently performs PR verification and PR publication in two separate
 GitHub jobs/runners. A representative one-model PR measured about 55 seconds
 end-to-end: roughly 38 seconds for verification and 15 seconds for a second
 publication runner.
 
+The current reusable bootstrap also installs tool.cad.ci as an editable
+package. Pip then clones/builds the exact lib.py.cad.ci Git dependency and
+builds both project packages before CAD-CI starts.
+
 ## Current goal
 
-#70 is blocked until an immutable CAD-CI runtime image exists. The proposed
-owner is `docker.cad.ci`; the image must already contain Python, tool.cad.ci,
-lib.py.cad.ci, SCons and PyYAML.
+Complete #70 as tool.cad.ci 0.14.0.
 
-After that image is released, complete #70 as tool.cad.ci 0.14.0 with one
-reusable PR workflow that performs the complete PR lifecycle on one runner:
+The complete normal PR lifecycle must run on one runner:
 
-`run -> prepare-pr -> publish`
+`checkout -> CAD-CI run -> prepare-pr -> publish`
+
+The workflow must use the exact called tool source and its exact pinned
+lib.py.cad.ci source directly through `PYTHONPATH`. It must not build or
+install either BrainboxEmb package during a consumer PR.
 
 For a closed PR the same workflow performs only scope cleanup.
 
@@ -41,36 +38,34 @@ For a closed PR the same workflow performs only scope cleanup.
 - normal PR execution uses exactly one GitHub job/runner;
 - CAD-CI execution still calls the released library once;
 - no artifact upload/download is used between verification and publication;
-- publication uses existing `cad-ci build prepare-pr` and
-  `cad-ci publish build` commands;
-- closed PRs use existing `cad-ci publish build-cleanup`;
-- fork PR verification can run without attempting publication;
-- source freshness/retry/selection semantics remain library-owned;
+- no editable install or wheel build is performed for tool.cad.ci or
+  lib.py.cad.ci;
+- only external runtime dependencies are installed on the clean runner;
+- publication uses existing library-owned build/publication commands;
+- closed PRs cancel superseded work and remove their durable PR scope;
 - tool.cad.ci.test black-box accepts the released workflow before Forge adopts
   it.
 
 ## Execution order
 
-1. Build, test and release the immutable CAD-CI runtime image in its owner
-   repository.
-2. Update #70 workflow design to consume that image without setup-python,
-   pip-install or source clones.
-3. Add `.github/workflows/reusable-pr.yml` and workflow-contract tests.
-4. Release tool.cad.ci 0.14.0 from the exact green main commit.
-5. Add external acceptance in tool.cad.ci.test.
-6. Update Forge to the released reusable PR workflow.
-7. Measure one normal simple-box PR end-to-end against the <=30 s target.
+1. Add the single-runner reusable PR workflow and source bootstrap.
+2. Pass complete tool CI.
+3. Merge #70 and release tool.cad.ci 0.14.0 from the exact green main commit.
+4. Add external acceptance in tool.cad.ci.test.
+5. Update Forge to the released reusable PR workflow.
+6. Measure one normal simple-box PR end-to-end against the <=30 s target.
+7. Only then optimize any remaining measured bootstrap/checkout overhead.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #70 Add single-runner reusable PR build and publication workflow | blocked | Needs a released immutable CAD-CI runtime image first; the PR workflow must not bootstrap Python/tool/library dependencies on every consumer run. |
+| #70 Add single-runner reusable PR build and publication workflow | now | Removes the second PR runner and avoids building/installing our own Python packages during consumer PRs. |
 
 ## Boundary
 
 `lib.py.cad.ci` owns selection, SCons execution, build-store semantics,
 source freshness and generated-branch publication mechanics.
 
-`tool.cad.ci` owns the reusable GitHub Actions orchestration that invokes
-those existing commands on one runner.
+`tool.cad.ci` owns GitHub Actions orchestration and the lightweight bootstrap
+that exposes the exact tool/library source on the runner.
