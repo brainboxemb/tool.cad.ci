@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.3 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.8.3 at exact commit `e8e951ed7e50c4fa754cc158729faf2927cccb31`;
+- expose live streamed CAD-CI execution output and concise SCons action labels through the existing thin CLI;
+- add no tool-owned SCons, logging, selection, cache or publication semantics.
+
 ## 0.13.2 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.8.2 at exact commit `d645b65281064f69f175bb645c6c956f72f3b446`;
