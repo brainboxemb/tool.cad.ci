@@ -118,3 +118,19 @@ repository-local site-generation code.
 
 This is separate from the product's generic Pages/publication commands, which
 remain thin CLI exposure of library-owned behavior.
+
+## Build artifact transport
+
+Artifact transport is conditional on materialized output, not only on caller
+intent.
+
+```text
+cad-ci run
+  -> build/ exists with materialized content?
+     yes -> expose artifact name -> upload build/
+     no  -> empty artifact output -> no upload
+```
+
+The reusable workflow may inspect the filesystem after the released CLI
+returns. This is GitHub transport behavior only. It does not interpret CAD-CI
+selection or build semantics.

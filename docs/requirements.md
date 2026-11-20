@@ -102,3 +102,18 @@ Repository documentation lives in `README.md` and `docs/`.
 
 This requirement does not affect the generic `cad-ci publish pages` feature
 or its generated-branch contract for consumers.
+
+## Optional build artifact transport
+
+When a caller requests `upload_build: true`, artifact transport depends on
+actual materialized build output.
+
+- If `build/` contains materialized output, the reusable workflow exposes the
+  requested `build_artifact_name` and uploads `build/` including hidden
+  `.cad-ci` evidence.
+- If no materialized `build/` output exists, the workflow leaves
+  `build_artifact_name` empty and skips upload.
+- A successful CAD-CI run with no selected/materialized output must remain
+  successful.
+- The tool must not create synthetic empty build output and must not infer why
+  no build output exists.

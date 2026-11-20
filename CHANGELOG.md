@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.2 - 2026-11-20
+
+- keep successful reusable CAD-CI runs successful when `upload_build: true` but no materialized `build/` output exists;
+- expose/upload the build artifact only when materialized build output is present;
+- keep build selection/materialization semantics owned by `lib.py.cad.ci`.
+
 ## 0.12.1 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.7.1 at exact commit `c031f5dce3a4b0b207d8ce24716b5e11cdd12df2`;
