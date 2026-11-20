@@ -253,6 +253,23 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("pip install .cache/cad-ci-tool-source", text)
         self.assertIn('"PyYAML>=6.0" "SCons==4.11.1"', text)
 
+    def test_pr_workflow_uses_shallow_head_and_exact_base_fetch(self):
+        text = self.read("reusable-pr.yml")
+        self.assertNotIn("fetch-depth: 0", text)
+        self.assertIn("name: Fetch exact PR base commit", text)
+        self.assertIn('git fetch --no-tags --depth=1 origin "$CAD_CI_BASE_SHA"', text)
+        self.assertIn("!inputs.full_run", text)
+
+    def test_pr_workflow_uses_direct_ghcr_login(self):
+        text = self.read("reusable-pr.yml")
+        self.assertNotIn("docker/login-action", text)
+        self.assertIn("GHCR_TOKEN: ${{ github.token }}", text)
+        self.assertIn('docker login ghcr.io -u "${{ github.actor }}" --password-stdin', text)
+
+    def test_pr_external_dependencies_skip_resolution_and_precompile(self):
+        text = self.read("reusable-pr.yml")
+        self.assertIn("--no-deps --no-compile", text)
+
     def test_pr_workflow_cancels_superseded_pr_run(self):
         text = self.read("reusable-pr.yml")
         self.assertIn("concurrency:", text)

@@ -228,3 +228,27 @@ metadata preparation and wheel builds from the consumer critical path.
 
 SCons remains the CAD-CI execution engine on the GitHub runner. SolidCraft
 remains a separate model runtime started only by a selected consumer action.
+
+
+## PR bootstrap critical path
+
+The reusable PR workflow treats repository history and runner setup as part of
+the measured critical path.
+
+For incremental PRs:
+
+```text
+checkout exact head, depth 1
+  -> fetch exact base SHA, depth 1
+  -> checkout exact tool + exact pinned library
+  -> install only external runtime packages
+  -> docker login through the existing runner CLI
+  -> cad-ci run
+```
+
+The base fetch exists only to provide the two exact Git objects required by the
+released library's base/head diff. Unrelated caller branches, tags and history
+are not needed.
+
+Direct `docker login --password-stdin` preserves generic GHCR authentication
+while avoiding an additional action download/startup boundary.

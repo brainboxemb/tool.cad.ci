@@ -185,3 +185,20 @@ with `python -m cad_ci_tool`.
 A clean GitHub-hosted runner may install external dependencies such as SCons
 and PyYAML from their published packages. Optimizing those downloads is a
 separate measured step and must not reintroduce CAD/SCons build-cache semantics.
+
+
+## PR bootstrap efficiency
+
+The complete PR workflow minimizes fixed hosted-runner setup work without
+changing CAD-CI semantics.
+
+- The caller source checkout fetches only the exact PR head initially.
+- Incremental runs explicitly fetch only the exact PR base commit required by
+  released base/head selection. They do not fetch all branches, tags or history.
+- Full runs and closed-PR cleanup do not fetch an unused PR base commit.
+- GHCR authentication uses the runner Docker CLI with the workflow token and
+  `--password-stdin`; it does not require a separate Docker login action.
+- External PyYAML and SCons installation skips dependency recursion and eager
+  bytecode compilation.
+- This optimization does not introduce GitHub Actions cache state or alter
+  SCons/cache semantics.
