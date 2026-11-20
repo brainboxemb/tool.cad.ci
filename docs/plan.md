@@ -7,37 +7,41 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current status
 
-The current released tool is 0.11.0. Released `lib.py.cad.ci 0.7.0` is now
-available at exact commit `8955c74055105b06d6af69e0d2f82b6b1fbf575a`.
+`tool.cad.ci 0.12.0` is released at commit
+`05af21546ea71907cd9db4b56f5d5ccd644c0170`.
+
+It pins released `lib.py.cad.ci 0.7.0`, exposes timing evidence through the
+thin CLI and includes high-level superseded-run cancellation.
 
 ## Current goal
 
-Complete one 0.12.0 maintenance release containing:
+Complete #54: remove this repository's own GitHub Pages site and its build /
+publication plumbing.
 
-- #46 central cancellation of superseded high-level runs;
-- adoption of released library 0.7.0 timing evidence.
-
-No generic timing or SCons behavior is reimplemented in this repository.
+This does not remove or change the generic `cad-ci publish pages` command.
 
 ## Execution order
 
-1. Keep concurrency only on high-level `reusable-ci.yml`.
-2. Pin exact library 0.7.0 commit.
-3. Prove the CLI exposes BUILT/CURRENT timing evidence from the library.
-4. Release the combined tool as 0.12.0 after green CI.
-5. Accept that exact release once in `tool.cad.ci.test`, together with its
-   #34/#35 acceptance-overhead housekeeping.
-6. Only after that combined external acceptance update Forge.
+1. Remove repository-local site build/publication code.
+2. Remove the docs publication job and site build from repository CI.
+3. Remove the now-unused docs-only Python dependency.
+4. Keep README/docs as the repository documentation source.
+5. Keep generic Pages/publication CLI behavior and tests unchanged.
+6. Merge after normal repository tests are green.
+7. Do not create a new tool release solely for this housekeeping change.
+8. Remove/disable stale GitHub Pages branch/settings separately if repository
+   tooling permits it.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #46 Cancel superseded normal CAD-CI runs centrally | now | Included in the combined 0.12.0 maintenance release with library 0.7.0 adoption. |
+| #54 Remove the repository's own GitHub Pages site | now | Repository housekeeping; removes redundant docs build/deploy overhead without changing the released CAD-CI Pages feature. |
 
 No other open implementation issues exist in this repository snapshot.
 
 ## Boundary
 
-Workflow concurrency is scheduling only. Timing/evidence, item selection, SCons
-execution and cache semantics remain owned by `lib.py.cad.ci`.
+The repository has Markdown documentation only. Generic Pages and generated-
+branch publication remain library/tool product features and are still tested
+externally.
