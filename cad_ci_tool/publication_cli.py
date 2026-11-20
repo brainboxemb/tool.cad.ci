@@ -142,6 +142,7 @@ def _candidate_items(
     args: argparse.Namespace,
     *,
     require_selection: bool,
+    loaded_items=None,
 ):
     """Resolve the exact top-level Item objects included in a build scope.
 
@@ -150,7 +151,7 @@ def _candidate_items(
     """
 
     repo = args.repo.resolve()
-    items = load_repository(repo)
+    items = load_repository(repo) if loaded_items is None else loaded_items
 
     explicit = getattr(args, "items", None)
     if explicit:
@@ -184,6 +185,17 @@ def _candidate_items(
         )
 
     selected = affected_items(items, changed_paths)
+    return tuple(
+        item
+        for item_id, item in items.items()
+        if item_id in selected
+    )
+
+
+def _current_processed_items(items):
+    """Return repository-ordered current processed items via library semantics."""
+
+    selected = affected_items(items, None)
     return tuple(
         item
         for item_id, item in items.items()
@@ -241,11 +253,17 @@ def _run_build(args: argparse.Namespace) -> int:
             pull_request=args.pull_request,
         )
     elif args.build_command == "update-main":
+        loaded_items = load_repository(args.repo.resolve())
         update_main(
             main=args.main,
             candidate_root=args.candidate_root,
             out=args.out,
-            items=_candidate_items(args, require_selection=True),
+            items=_candidate_items(
+                args,
+                require_selection=True,
+                loaded_items=loaded_items,
+            ),
+            current_items=_current_processed_items(loaded_items),
             source_commit=args.source_commit,
         )
     elif args.build_command == "resolve":

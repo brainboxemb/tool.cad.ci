@@ -252,3 +252,31 @@ are not needed.
 
 Direct `docker login --password-stdin` preserves generic GHCR authentication
 while avoiding an additional action download/startup boundary.
+
+
+## Main update membership delegation
+
+The update-main CLI keeps sparse replacement selection and complete baseline
+membership separate:
+
+```text
+load_repository()
+  |
+  +-> changed/base-head selection
+  |      -> affected current Item objects
+  |      -> update_main(items=...)
+  |
+  +-> affected_items(items, None)
+         -> all current process:true Item objects
+         -> update_main(current_items=...)
+```
+
+The second call is not a second interpretation of `process`: it delegates to
+the same released library planner used by full-run selection.
+
+The tool does not inspect `build/main/build.json` to decide what disappeared.
+That comparison and all owned-path removal remain inside
+`lib.py.cad.ci.update_main()`.
+
+This distinction lets the library preserve an unselected current item while
+removing a previous durable item that is no longer configured.

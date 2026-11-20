@@ -202,3 +202,24 @@ changing CAD-CI semantics.
   bytecode compilation.
 - This optimization does not introduce GitHub Actions cache state or alter
   SCons/cache semantics.
+
+
+## Durable main current-configuration membership
+
+`cad-ci build update-main` exposes the released library's removed-item cleanup
+contract without duplicating it.
+
+The tool passes two distinct item collections:
+
+- affected current items selected by the existing sparse selection path;
+- the complete current processed item set, obtained from released library
+  full-run/process semantics.
+
+The tool must not compare the durable manifest with repository configuration,
+identify removed rows, delete paths or interpret absence from the sparse
+candidate as deletion.
+
+`process: false` items are not members of the current durable main baseline.
+
+A deletion-only or mixed deletion/replacement update must remain a library-owned
+operation once the required source/build inputs reach the command.
