@@ -90,13 +90,24 @@ jobs:
             --base-sha "$CAD_CI_BASE_SHA" \
             --full-run "${{ inputs.full_run }}"
 
+      - name: Check materialized build output
+        id: build_output
+        if: inputs.upload_build
+        shell: bash
+        run: |
+          if [ -d build ] && find build -mindepth 1 -print -quit | grep -q .; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Record build artifact name
         id: build_artifact
-        if: inputs.upload_build
+        if: inputs.upload_build && steps.build_output.outputs.available == 'true'
         run: echo "name=${{ inputs.build_artifact_name }}" >> "$GITHUB_OUTPUT"
 
       - name: Upload CAD CI build output
-        if: inputs.upload_build
+        if: inputs.upload_build && steps.build_output.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.build_artifact_name }}
