@@ -5,6 +5,9 @@ import unittest
 from scripts.publish_release import release_version
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class ReleaseTests(unittest.TestCase):
     def make_root(self, root: Path, version: str, package_version: str | None = None):
         package_version = package_version or version
