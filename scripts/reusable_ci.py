@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tomllib
 
 
 _ENV_NAME = re.compile(r"^[A-Z_][A-Z0-9_]*$")
@@ -78,8 +79,29 @@ def consumer_environment(raw: str) -> dict[str, str]:
     return result
 
 
+def library_revision(tool_root: Path) -> str:
+    """Return the exact lib.py.cad.ci commit pinned by this tool revision."""
+
+    data = tomllib.loads(
+        (tool_root / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    dependencies = data.get("project", {}).get("dependencies", [])
+    prefix = (
+        "brainboxemb-cad-ci-lib @ "
+        "git+https://github.com/brainboxemb/lib.py.cad.ci.git@"
+    )
+    matches = [
+        value[len(prefix):]
+        for value in dependencies
+        if isinstance(value, str) and value.startswith(prefix)
+    ]
+    if len(matches) != 1 or not re.fullmatch(r"[0-9a-f]{40}", matches[0]):
+        raise ValueError("tool pyproject must pin one exact lib.py.cad.ci commit")
+    return matches[0]
+
+
 def _tool_command(*arguments: str) -> list[str]:
-    """Use the installed package belonging to the called workflow revision."""
+    """Use the exact tool/library source exposed on PYTHONPATH."""
 
     return [sys.executable, "-m", "cad_ci_tool.cli", *arguments]
 
@@ -163,6 +185,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
 
+    library = commands.add_parser("library-revision")
+    library.add_argument("--tool-root", type=Path, required=True)
+    library.add_argument("--github-output", type=Path, required=True)
+
     plan = commands.add_parser("plan")
     plan.add_argument("--repo", type=Path, required=True)
     plan.add_argument("--source-sha", default="")
@@ -181,9 +207,17 @@ def main() -> int:
     )
 
     args = parser.parse_args()
-    full_run = parse_bool(args.full_run)
 
     try:
+        if args.command == "library-revision":
+            write_github_output(
+                args.github_output,
+                "revision",
+                library_revision(args.tool_root),
+            )
+            return 0
+
+        full_run = parse_bool(args.full_run)
         if args.command == "plan":
             rows = create_plan(
                 repo=args.repo,
