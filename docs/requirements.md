@@ -41,11 +41,12 @@
 
 ## Reusable GitHub Actions
 
-- `tool.cad.ci` provides one high-level `reusable-ci.yml` workflow for normal consumers plus lower-level reusable planning/execution workflows for consumers that need domain setup between them.
+- `tool.cad.ci` provides `reusable-pr.yml` as the high-level complete pull-request workflow, `reusable-ci.yml` as the high-level run-only workflow, plus lower-level reusable planning/execution workflows for consumers that need domain setup between them.
 - A consumer references those workflows at one exact tool commit SHA.
 - The called workflow checks out its own tool source using `job.workflow_repository` and `job.workflow_sha`; workflow and tool implementation therefore cannot drift.
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
-- `reusable-ci.yml` is the normal consumer entry point and delegates to the generic run workflow from the same tool revision.
+- `reusable-pr.yml` is the normal pull-request entry point when the consumer wants CAD-CI verification plus durable PR publication/cleanup.
+- `reusable-ci.yml` remains the high-level run-only entry point and delegates to the generic run workflow from the same tool revision.
 - `reusable-plan.yml` exposes the compact generic item plan for consumers that need domain setup between planning and execution.
 - `reusable-run.yml` performs exactly one `cad-ci run` and does not restore or save GitHub Actions cache state.
 - A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
@@ -135,3 +136,35 @@ Therefore:
 
 Explicit/changed/base-head selection for sparse build operations remains
 unchanged.
+
+
+## Single-runner pull-request workflow
+
+`reusable-pr.yml` owns GitHub-only orchestration for the complete PR lifecycle.
+
+For `opened`, `synchronize` and `reopened` events it must use one job and
+one runner to:
+
+1. check out the real PR head commit;
+2. check out/install the exact called tool revision;
+3. authenticate generically to GHCR;
+4. perform exactly one `cad-ci run`;
+5. when materialized `build/` output exists and the PR belongs to the caller
+   repository, run `cad-ci build prepare-pr`;
+6. publish that prepared sparse scope with `cad-ci publish build --scope pr`.
+
+There is no artifact transport between execution and publication because both
+stages use the same workspace on the same runner.
+
+For `pull_request.closed`, normal CAD-CI execution is skipped. The same
+reusable workflow checks out the default branch/tool revision and invokes
+`cad-ci publish build-cleanup --pull-request <number>`.
+
+The caller grants `contents: write` and `packages: read`. GitHub may narrow
+those permissions for untrusted/fork events. Durable PR publication is allowed
+only when `github.event.pull_request.head.repo.full_name == github.repository`.
+Verification must remain useful when publication is not allowed.
+
+The workflow does not implement item selection, dependency traversal, build
+validation, source freshness or generated-branch retry logic. Those remain in
+the released library/CLI commands.
