@@ -7,46 +7,40 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current status
 
-Released `tool.cad.ci` 0.12.2 is externally accepted with
-`lib.py.cad.ci` 0.7.1.
+Released `lib.py.cad.ci` 0.8.0 is available at exact commit
+`e2056c0d5ac361f0d021e58e55025e02c5688acf`.
 
-Forge #366 has proven one sparse PR durable-build scope. The next stable-main
-step exposed one CLI translation defect: `build prepare-main` currently passes
-all configured items, including `process: false` items, while the released
-library defines a full run as exactly the processed items.
+Its hosted-runner contract and Git-diff affected-item behavior have already been
+accepted independently in `tool.cad.ci.test` against the previous released
+tool stack.
+
+The current released tool is 0.12.3 and still pins library 0.7.1.
 
 ## Current goal
 
-Complete #60 without adding new selection semantics.
+Complete #62 by publishing a thin tool release that pins exact library 0.8.0.
 
-For unselected `build prepare-main`, translate the request to the released
-library full-run selection:
-
-```text
-affected_items(items, None)
-```
-
-Selectable build operations remain unchanged.
+No CLI, workflow, selection, SCons or publication behavior is added here.
 
 ## Execution order
 
-1. Update requirements/design for full-run main-candidate selection.
-2. Make unselected `prepare-main` use the library full-run selection.
-3. Add a CLI test proving `process: false` output is not required.
-4. Keep all publication/workflow tests green.
-5. Release the next patch version.
-6. Externally accept the exact release in `tool.cad.ci.test`.
-7. Return to Forge #366 stable `build/main` bootstrap.
+1. Pin exact library commit
+   `e2056c0d5ac361f0d021e58e55025e02c5688acf`.
+2. Update tool version/changelog for the feature-capable stack.
+3. Run the complete tool test suite.
+4. Merge only after green CI.
+5. Confirm the release points to the exact tested main commit.
+6. Pin that exact released tool in `tool.cad.ci.test`.
+7. Externally accept local item paths/templates/nested IDs there.
+8. Only then allow Forge reference-item migration.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #60 Make build prepare-main use the library full-run process selection | now | Direct blocker for Forge #366 stable main bootstrap; tool must reuse library-owned full-run semantics. |
+| #62 Adopt lib.py.cad.ci 0.8.0 local item configuration | now | Thin release step required before external acceptance and Forge adoption. |
 
 ## Boundary
 
-The tool does not decide what `process` means.
-
-`lib.py.cad.ci` owns full-run selection. The CLI only delegates to that
-existing semantics when `prepare-main` has no explicit selection source.
+`lib.py.cad.ci` owns all new configuration semantics. The tool only exposes the
+exact released library through its existing CLI/workflow surface.
