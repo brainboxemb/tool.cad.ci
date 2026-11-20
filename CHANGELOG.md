@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1 - 2026-11-20
+
+- cancel superseded high-level reusable CAD-CI runs for the same caller repository, workflow and PR/branch;
+- keep lower-level reusable plan/run workflows independent for split consumers;
+- keep CAD item selection and SCons execution behavior unchanged.
+
 ## 0.11.0 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.6.0 at exact commit `dac8c5b5e1147a401730fda31f9bf9de2278c4ee`;
