@@ -61,6 +61,20 @@ class ReusableCiHelperTests(unittest.TestCase):
                 full_run=False,
             )
 
+    def test_library_revision_reads_exact_pyproject_pin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "pyproject.toml").write_text(
+                '[project]\n'
+                'dependencies = ['
+                '"brainboxemb-cad-ci-lib @ '
+                'git+https://github.com/brainboxemb/lib.py.cad.ci.git@'
+                + "a" * 40
+                + '"]\n',
+                encoding="utf-8",
+            )
+            self.assertEqual(self.helper.library_revision(root), "a" * 40)
+
     def test_consumer_environment_accepts_domain_values(self):
         self.assertEqual(
             self.helper.consumer_environment(
@@ -218,6 +232,32 @@ class ReusableWorkflowTests(unittest.TestCase):
             "value: ${{ jobs.run.outputs.build_artifact_name }}",
             text,
         )
+
+    def test_pr_workflow_runs_and_publishes_on_one_runner(self):
+        text = self.read("reusable-pr.yml")
+        self.assertIn("workflow_call:", text)
+        self.assertEqual(text.count("runs-on: ubuntu-latest"), 1)
+        self.assertIn('scripts/reusable_ci.py" run', text)
+        self.assertIn("python -m cad_ci_tool build prepare-pr", text)
+        self.assertIn("python -m cad_ci_tool publish build", text)
+        self.assertIn("python -m cad_ci_tool publish build-cleanup", text)
+        self.assertNotIn("actions/upload-artifact", text)
+        self.assertNotIn("actions/download-artifact", text)
+
+    def test_pr_workflow_does_not_build_or_install_own_packages(self):
+        text = self.read("reusable-pr.yml")
+        self.assertIn("Checkout called tool revision", text)
+        self.assertIn("Checkout pinned CAD CI library source", text)
+        self.assertIn("PYTHONPATH:", text)
+        self.assertNotIn("pip install -e", text)
+        self.assertNotIn("pip install .cache/cad-ci-tool-source", text)
+        self.assertIn('"PyYAML>=6.0" "SCons==4.11.1"', text)
+
+    def test_pr_workflow_cancels_superseded_pr_run(self):
+        text = self.read("reusable-pr.yml")
+        self.assertIn("concurrency:", text)
+        self.assertIn("github.event.pull_request.number", text)
+        self.assertIn("cancel-in-progress: true", text)
 
 
 if __name__ == "__main__":
