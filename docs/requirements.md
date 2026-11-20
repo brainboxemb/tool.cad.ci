@@ -117,3 +117,21 @@ actual materialized build output.
   successful.
 - The tool must not create synthetic empty build output and must not infer why
   no build output exists.
+
+## Main build candidate selection
+
+An unselected `cad-ci build prepare-main` represents the current repository
+full-run scope.
+
+The tool must obtain that scope from released library selection semantics using
+`affected_items(items, None)`.
+
+Therefore:
+
+- `process: true` items participate in a complete main candidate;
+- `process: false` items do not require candidate output;
+- repository order is preserved when passing selected items to the build store;
+- the tool must not implement a second interpretation of `process`.
+
+Explicit/changed/base-head selection for sparse build operations remains
+unchanged.
