@@ -44,6 +44,7 @@
 - `tool.cad.ci` provides `reusable-pr.yml` as the high-level complete pull-request workflow, `reusable-ci.yml` as the high-level run-only workflow, plus lower-level reusable planning/execution workflows for consumers that need domain setup between them.
 - A consumer references those workflows at one exact tool commit SHA.
 - The called workflow checks out its own tool source using `job.workflow_repository` and `job.workflow_sha`; workflow and tool implementation therefore cannot drift.
+- The complete PR workflow resolves the exact `lib.py.cad.ci` commit from that tool revision's `pyproject.toml`, checks out that source, and exposes both repositories through `PYTHONPATH`.
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
 - `reusable-pr.yml` is the normal pull-request entry point when the consumer wants CAD-CI verification plus durable PR publication/cleanup.
 - `reusable-ci.yml` remains the high-level run-only entry point and delegates to the generic run workflow from the same tool revision.
@@ -146,12 +147,14 @@ For `opened`, `synchronize` and `reopened` events it must use one job and
 one runner to:
 
 1. check out the real PR head commit;
-2. check out/install the exact called tool revision;
-3. authenticate generically to GHCR;
-4. perform exactly one `cad-ci run`;
-5. when materialized `build/` output exists and the PR belongs to the caller
+2. check out the exact called tool revision and its exact pinned library source;
+3. expose both source trees through `PYTHONPATH` without building/installing either BrainboxEmb package;
+4. install only external Python runtime dependencies required by the library;
+5. authenticate generically to GHCR;
+6. perform exactly one `cad-ci run`;
+7. when materialized `build/` output exists and the PR belongs to the caller
    repository, run `cad-ci build prepare-pr`;
-6. publish that prepared sparse scope with `cad-ci publish build --scope pr`.
+8. publish that prepared sparse scope with `cad-ci publish build --scope pr`.
 
 There is no artifact transport between execution and publication because both
 stages use the same workspace on the same runner.
@@ -168,3 +171,17 @@ Verification must remain useful when publication is not allowed.
 The workflow does not implement item selection, dependency traversal, build
 validation, source freshness or generated-branch retry logic. Those remain in
 the released library/CLI commands.
+
+
+## PR bootstrap cost
+
+The complete PR workflow must not run `pip install -e` for tool.cad.ci and
+must not ask pip to clone/build the tool's Git dependency.
+
+The exact tool source and exact pinned library source are executable Python
+sources. The workflow places both roots on `PYTHONPATH` and invokes the CLI
+with `python -m cad_ci_tool`.
+
+A clean GitHub-hosted runner may install external dependencies such as SCons
+and PyYAML from their published packages. Optimizing those downloads is a
+separate measured step and must not reintroduce CAD/SCons build-cache semantics.
