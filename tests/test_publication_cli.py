@@ -54,7 +54,7 @@ def write_candidate(
     evidence.write_text(
         json.dumps(
             {
-                "schema": 1,
+                "schema": 2,
                 "engine": "scons",
                 "engine_schema": 1,
                 "item": item_id,

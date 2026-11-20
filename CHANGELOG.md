@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.1 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.7.1 at exact commit `c031f5dce3a4b0b207d8ce24716b5e11cdd12df2`;
+- pick up the build-store evidence-schema compatibility fix found by external acceptance;
+- make no CLI, workflow or CAD-CI behavior changes in the tool.
+
 ## 0.12.0 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.7.0 at exact commit `8955c74055105b06d6af69e0d2f82b6b1fbf575a`;
