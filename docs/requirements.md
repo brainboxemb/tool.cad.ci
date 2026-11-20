@@ -81,3 +81,13 @@ Different repositories, caller workflows and PRs/branches remain independent.
 Lower-level `reusable-plan.yml` and `reusable-run.yml` must not share this
 high-level concurrency group because split consumers may intentionally use both
 within one caller-owned workflow.
+
+
+## Timing evidence surface
+
+The tool exposes the timing/evidence contract of its exact released library pin
+without parsing, synthesizing or rewriting those fields.
+
+For library 0.7.0 this includes run-level UTC timestamps and consumer-action
+`started_at` / `finished_at` values, with null action timestamps when no
+consumer command executed.
