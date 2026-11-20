@@ -278,6 +278,56 @@ class PublicationCliTests(unittest.TestCase):
                 2,
             )
 
+    def test_update_main_passes_sparse_replacements_and_current_processed_items(self):
+        """The CLI exposes both library item sets without owning deletion logic."""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            (repo / "cad-ci.yml").write_text(
+                "schema: 1\nitems: [cases/*]\n",
+                encoding="utf-8",
+            )
+            write_config(repo, "cases/a", "case-a", process=True)
+            write_config(repo, "cases/b", "case-b", process=True)
+            write_config(repo, "cases/parked", "parked", process=False)
+
+            with patch(
+                "cad_ci_tool.publication_cli.update_main",
+                return_value={},
+            ) as update:
+                result = main(
+                    [
+                        "build",
+                        "update-main",
+                        "--repo",
+                        str(repo),
+                        "--candidate-root",
+                        str(root / "candidate"),
+                        "--main",
+                        str(root / "main"),
+                        "--out",
+                        str(root / "updated"),
+                        "--source-commit",
+                        "main-new",
+                        "--changed",
+                        "cases/a/model.py",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            call = update.call_args.kwargs
+            self.assertEqual(
+                tuple(item.id for item in call["items"]),
+                ("case-a",),
+            )
+            self.assertEqual(
+                tuple(item.id for item in call["current_items"]),
+                ("case-a", "case-b"),
+            )
+            self.assertEqual(call["source_commit"], "main-new")
+
     def test_build_fetch_delegates_to_library(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
