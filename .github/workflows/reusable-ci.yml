@@ -42,6 +42,10 @@ permissions:
   contents: read
   packages: read
 
+concurrency:
+  group: cad-ci-${{ github.repository }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cad_ci:
     uses: ./.github/workflows/reusable-run.yml
