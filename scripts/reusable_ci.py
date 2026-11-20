@@ -151,6 +151,7 @@ def run_ci(
     base_sha: str,
     full_run: bool,
     environment_json: str,
+    jobs: int,
 ) -> None:
     """Run exactly one released cad-ci repository execution."""
 
@@ -163,6 +164,8 @@ def run_ci(
             base_sha=base_sha,
             full_run=full_run,
         ),
+        "--jobs",
+        str(jobs),
     )
     env = dict(os.environ)
     env.update(consumer_environment(environment_json))
@@ -201,6 +204,7 @@ def main() -> int:
     run_parser.add_argument("--source-sha", default="")
     run_parser.add_argument("--base-sha", default="")
     run_parser.add_argument("--full-run", default="false")
+    run_parser.add_argument("--jobs", type=int, default=1)
     run_parser.add_argument(
         "--environment-json",
         default=os.environ.get("CAD_CI_CONSUMER_ENV_JSON", "{}"),
@@ -238,6 +242,7 @@ def main() -> int:
             base_sha=args.base_sha,
             full_run=full_run,
             environment_json=args.environment_json,
+            jobs=args.jobs,
         )
         return 0
     except (OSError, subprocess.CalledProcessError, ValueError) as exc:

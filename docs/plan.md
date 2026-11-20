@@ -7,55 +7,61 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current status
 
-Released `tool.cad.ci 0.14.1` at
-`18812d38e2390c23fd3c431cfde2ce9367bdfd40` is externally accepted and is
-the current Forge stack.
+Released `tool.cad.ci 0.14.2` is the current accepted tool stack.
 
-Released `lib.py.cad.ci 0.8.4` at
-`4e033fd17e911b3feb92b1a34433b884ca788ab6` adds safe durable-main cleanup
-for items that no longer exist in current processed repository configuration.
-
-The generic behavior is complete in the library. The tool only needs to expose
-the new library input.
+Released `lib.py.cad.ci 0.9.0` at exact commit
+`91e4a87315a04b8cfde573e447c2bc4d871edd35` adds explicit bounded SCons
+parallelism and target-private dependency snapshots. The library defaults to
+`jobs=1`; scheduling and safety remain fully library-owned.
 
 ## Current goal
 
-Complete #74 and release the next tool patch.
+Complete #76 and release tool.cad.ci 0.15.0.
 
-For `cad-ci build update-main`:
+The tool only exposes the released library input:
 
-- affected current items remain the sparse replacement set;
-- the complete current `process:true` item set is also passed to
-  `lib.py.cad.ci 0.8.4`;
-- the tool does not compare durable manifests, decide deletions or remove paths.
+- `cad-ci run --jobs N`;
+- reusable-run workflow input `jobs`;
+- high-level reusable-ci workflow forwards `jobs`;
+- reusable-pr workflow accepts/forwards `jobs` so normal Forge PRs can use the
+  feature.
+
+No tool-owned worker pool, target loop, dependency locking or scheduling logic
+is allowed.
 
 ## Required proof
 
-- the exact 0.8.4 library commit is pinned;
-- changed/base-head selection remains unchanged for replacement items;
-- the current processed set comes from released library planning semantics;
-- non-processed items are absent from the current durable-main membership set;
-- both item collections reach `update_main()` distinctly;
-- existing PR/main preparation behavior remains unchanged;
-- complete tool CI is green.
+- exact lib.py.cad.ci 0.9.0 commit is pinned;
+- CLI default forwards `jobs=1`;
+- explicit CLI jobs value forwards unchanged;
+- reusable helper forwards one jobs value to the CLI;
+- reusable-run, reusable-ci and reusable-pr expose/forward the same positive
+  numeric input with default 1;
+- selection, partial selectors, publication and concurrency semantics remain
+  unchanged;
+- complete tool CI is green;
+- release 0.15.0 from the exact green main commit;
+- tool.cad.ci.test proves jobs>1 through the released stack before Forge uses
+  it.
 
 ## Execution order
 
-1. Pin exact released lib.py.cad.ci 0.8.4.
-2. Expose current processed items to `update_main()`.
-3. Test the thin CLI boundary.
-4. Release the next tool patch.
-5. Pin that release in `tool.cad.ci.test`.
-6. Prove removed-item cleanup black-box.
-7. Only then update Forge and retry durable main cleanup/Pages.
+1. Pin exact lib.py.cad.ci 0.9.0.
+2. Add thin CLI/helper/workflow jobs forwarding.
+3. Update tool-specific tests.
+4. Prepare/release tool.cad.ci 0.15.0 in the same logical change.
+5. Pin exact released 0.15.0 in tool.cad.ci.test.
+6. Add black-box shared-dependency parallel acceptance there.
+7. Only after external acceptance, adopt bounded jobs in Forge and remeasure
+   the 10-case reference graph.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #74 Adopt lib.py.cad.ci 0.8.4 for removed durable main items | now | Thin tool exposure of the already released generic build-store contract. |
+| #76 Expose released CAD-CI bounded parallel jobs | now | Thin exposure of released library 0.9.0; no generic execution behavior belongs here. |
 
 ## Boundary
 
-`lib.py.cad.ci` remains the sole owner of selection semantics, durable-store
-membership/deletion, ownership safety and publication behavior.
+`lib.py.cad.ci` remains the sole owner of SCons scheduling, dependency
+snapshots, parallel safety, selection and evidence.

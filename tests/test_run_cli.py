@@ -6,6 +6,7 @@ import json
 import io
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from cad_ci_tool.cli import main
 
@@ -116,6 +117,21 @@ class RunCliTests(unittest.TestCase):
             self.assertIsNone(current_evidence["finished_at"])
             self.assertIsNotNone(current_evidence["run_started_at"])
             self.assertIsNotNone(current_evidence["run_finished_at"])
+
+    def test_jobs_are_forwarded_to_released_library(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root)
+
+            for argv, expected in (
+                (["run", "--repo", str(repo)], 1),
+                (["run", "--repo", str(repo), "--jobs", "3"], 3),
+            ):
+                with self.subTest(expected=expected):
+                    with patch("cad_ci_tool.cli.run_repository") as run:
+                        self.assertEqual(main(argv), 0)
+                    self.assertEqual(run.call_count, 1)
+                    self.assertEqual(run.call_args.kwargs["jobs"], expected)
 
     def test_process_false_is_delegated_to_released_library(self):
         with tempfile.TemporaryDirectory() as tmp:

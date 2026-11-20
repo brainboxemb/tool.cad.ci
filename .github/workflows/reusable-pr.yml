@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      jobs:
+        description: Maximum parallel SCons jobs.
+        required: false
+        type: number
+        default: 1
       environment_json:
         description: Optional non-secret environment values for consumer commands.
         required: false
@@ -93,7 +98,8 @@ jobs:
             --repo . \
             --source-sha "$CAD_CI_SOURCE_SHA" \
             --base-sha "$CAD_CI_BASE_SHA" \
-            --full-run "${{ inputs.full_run }}"
+            --full-run "${{ inputs.full_run }}" \
+            --jobs "${{ inputs.jobs }}"
 
       - name: Check materialized build output
         id: build_output
