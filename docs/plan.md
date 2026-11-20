@@ -7,42 +7,43 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current goal
 
-Complete #49: make the released reusable CAD-CI workflow authenticate Docker
-to GitHub Container Registry before consumer commands run.
+Complete #51: consume the exact released `lib.py.cad.ci 0.6.0` revision so
+item-level `process` participation is available through the released thin tool
+stack.
 
-This is generic GitHub workflow credential setup. The workflow does not know
-which container image a consumer uses and does not move registry behavior into
-`lib.py.cad.ci`.
+The generic behavior is already implemented and released in the library. This
+repository must not add a second parser, planner or execution rule for
+`process`.
 
 ## Execution order
 
-1. Complete #49:
-   - preserve `packages: read` through `reusable-ci.yml` and
-     `reusable-run.yml`;
-   - log Docker into `ghcr.io` with the workflow GitHub token before the CAD-CI
-     command;
-   - keep the token out of consumer environment/configuration;
-   - test the workflow source contract.
-2. Release the updated tool only after this repository CI is green.
-3. Update `tool.cad.ci.test` to the exact released tool revision and prove a
-   real consumer command sees authenticated GHCR Docker configuration.
-4. Only after that black-box acceptance may Forge adopt the new tool revision
-   and resume runtime-dependent verification.
-5. Complete #46 separately; superseded-run cancellation remains independent
-   reusable-workflow behavior.
+1. Pin exact library release commit
+   `dac8c5b5e1147a401730fda31f9bf9de2278c4ee`.
+2. Prove through tool tests that:
+   - the exact library revision is pinned;
+   - plan/run continue to delegate selection/execution to the library;
+   - no local `process` implementation is introduced.
+3. Release the updated tool only after this repository CI is green.
+4. Update `tool.cad.ci.test` to the exact released tool revision and prove
+   staged processing end to end.
+5. Only after black-box acceptance may Forge consume the released `process`
+   behavior.
+6. Complete #46 separately.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #49 Authenticate GHCR in reusable CAD-CI workflow | now | Blocking Forge runtime consumption. Generic workflow credential setup belongs here, not in the CAD-CI library or consumer commands. |
-| #46 Cancel superseded normal CAD-CI runs centrally | next | Independent reusable-workflow behavior; keep separate from registry authentication. |
+| #51 Consume lib.py.cad.ci 0.6.0 process selection | now | Required downstream adoption step for the already released library behavior. Keep the tool thin and release one exact tool/library stack. |
+| #46 Cancel superseded normal CAD-CI runs centrally | next | Independent reusable-workflow behavior. Do not mix it into the process-selection pin/release. |
+
+## Released state
+
+`tool.cad.ci 0.10.0` already includes the completed GHCR authentication work
+from #49. That work is not part of #51 and must remain unchanged.
 
 ## Boundary
 
-`lib.py.cad.ci` remains unchanged. It owns CAD-CI planning/execution behavior,
-not GitHub runner credentials.
-
-The reusable workflow may authenticate the runner to GitHub-owned services with
-the workflow token. It must not know consumer image names or expose credentials
-to CAD-CI configuration.
+`lib.py.cad.ci` owns `process` parsing, validation, Git selection and SCons
+target participation. `tool.cad.ci` only pins the released library and exposes
+its existing CLI/workflow surface.
