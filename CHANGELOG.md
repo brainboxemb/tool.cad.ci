@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.3 - 2026-11-20
+
+- make `cad-ci build prepare-main` use the released library full-run selection;
+- exclude configured `process: false` items from complete main candidates;
+- keep `process` semantics owned by `lib.py.cad.ci`.
+
 ## 0.12.2 - 2026-11-20
 
 - keep successful reusable CAD-CI runs successful when `upload_build: true` but no materialized `build/` output exists;
