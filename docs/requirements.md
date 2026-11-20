@@ -68,3 +68,16 @@
 - Workflow YAML does not contain changed-item loops, domain commands or rebuild logic.
 - Forge and CAD consume only a released tool revision.
 - The released tool/library/workflow combination is proven in `tool.cad.ci.test` before consumer migration.
+
+
+## Superseded high-level runs
+
+The normal high-level `reusable-ci.yml` workflow must cancel an older
+in-progress run when a newer run starts for the same caller repository, caller
+workflow and PR/branch.
+
+Different repositories, caller workflows and PRs/branches remain independent.
+
+Lower-level `reusable-plan.yml` and `reusable-run.yml` must not share this
+high-level concurrency group because split consumers may intentionally use both
+within one caller-owned workflow.
