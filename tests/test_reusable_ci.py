@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,6 +100,22 @@ class ReusableCiHelperTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must be a string"):
             self.helper.consumer_environment('{"COUNT":3}')
 
+    def test_run_helper_forwards_jobs_to_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            with patch.object(self.helper.subprocess, "run") as run:
+                self.helper.run_ci(
+                    repo=repo,
+                    source_sha="b" * 40,
+                    base_sha="a" * 40,
+                    full_run=False,
+                    environment_json="{}",
+                    jobs=4,
+                )
+            command = run.call_args.args[0]
+            self.assertIn("--jobs", command)
+            self.assertEqual(command[command.index("--jobs") + 1], "4")
+
     def test_github_output_supports_compact_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "output"
@@ -138,6 +155,21 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("cache-primary-key", text)
         self.assertNotIn("restore-keys:", text)
 
+
+    def test_reusable_workflows_expose_parallel_jobs(self):
+        run = self.read("reusable-run.yml")
+        self.assertIn("jobs:", run)
+        self.assertIn("type: number", run)
+        self.assertIn("default: 1", run)
+        self.assertIn('--jobs "${{ inputs.jobs }}"', run)
+
+        high = self.read("reusable-ci.yml")
+        self.assertIn("jobs:", high)
+        self.assertIn("jobs: ${{ inputs.jobs }}", high)
+
+        pr = self.read("reusable-pr.yml")
+        self.assertIn("jobs:", pr)
+        self.assertIn('--jobs "${{ inputs.jobs }}"', pr)
 
     def test_reusable_workflows_preserve_package_read_permission(self):
         """GHCR auth permission must survive both reusable workflow layers."""

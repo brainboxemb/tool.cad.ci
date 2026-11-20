@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.9.0 at exact commit
+  `91e4a87315a04b8cfde573e447c2bc4d871edd35`;
+- expose library-owned bounded SCons parallelism as `cad-ci run --jobs N`;
+- forward the same jobs value through reusable-run, reusable-ci and reusable-pr
+  workflows with compatibility default 1;
+- add no tool-owned scheduling, dependency snapshot, target-loop or locking
+  behavior.
+
 ## 0.14.2 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.8.4 at exact commit

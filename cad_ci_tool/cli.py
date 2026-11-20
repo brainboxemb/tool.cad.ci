@@ -48,6 +48,12 @@ def _parser() -> argparse.ArgumentParser:
             partial.add_argument("--step")
             partial.add_argument("--from", dest="start")
             partial.add_argument("--until")
+            command.add_argument(
+                "--jobs",
+                type=int,
+                default=1,
+                help="Maximum parallel SCons jobs; default: 1.",
+            )
 
     add_publication_commands(sub)
     return parser
@@ -141,6 +147,7 @@ def _run_items(args: argparse.Namespace) -> int:
         step=args.step,
         start=args.start,
         until=args.until,
+        jobs=args.jobs,
     )
     return 0
 
