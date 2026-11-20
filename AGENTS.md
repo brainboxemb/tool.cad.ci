@@ -141,3 +141,12 @@ Keep it as a current snapshot, not as historical documentation:
 
 Issues contain detail and history. README and design/requirements documents describe stable purpose and behavior. The plan tells an agent what work is actually current and what should happen next.
 
+
+
+## Repository documentation site
+
+Do not add a repository-specific GitHub Pages site to `tool.cad.ci`.
+README/docs are the repository documentation source.
+
+This rule does not restrict the generic `cad-ci publish pages` product
+feature.
