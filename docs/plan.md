@@ -7,42 +7,47 @@ The repository is the thin CLI and reusable GitHub Actions surface above
 
 ## Current status
 
-`tool.cad.ci 0.12.0` is released at commit
-`05af21546ea71907cd9db4b56f5d5ccd644c0170`.
+The released consumer stack is `tool.cad.ci` 0.12.1 with
+`lib.py.cad.ci` 0.7.1.
 
-Repository-specific Pages publication has been removed from main without a
-separate tool release.
-
-Released `lib.py.cad.ci 0.7.1` is available at exact commit
-`c031f5dce3a4b0b207d8ce24716b5e11cdd12df2`.
+Forge exposed one workflow-artifact transport defect while using
+`upload_build: true`: a valid run that selects no CAD-CI targets produces no
+`build/` directory, but the reusable workflow still advertises an artifact
+name and fails on mandatory upload.
 
 ## Current goal
 
-Complete #56 as the minimal `tool.cad.ci 0.12.1` patch.
+Complete #58 as a workflow-only artifact-transport fix.
 
-The patch changes only the exact released library pin needed for the build-store
-evidence compatibility regression fix.
+The tool must distinguish:
+
+- requested artifact transport;
+- actual materialized build output.
+
+No selection/build semantics move into this repository.
 
 ## Execution order
 
-1. Pin exact lib.py.cad.ci 0.7.1 commit.
-2. Update the exact-pin boundary test.
-3. Set tool version/changelog to 0.12.1.
-4. Run normal tool tests.
-5. Merge/release 0.12.1 after green CI.
-6. Update the already-open tool.cad.ci.test PR #37 to exact 0.12.1 and rerun
-   the same combined external acceptance.
+1. Update reusable-workflow requirements/design for optional materialized output.
+2. Detect whether `build/` actually contains materialized output after
+   `cad-ci run`.
+3. Publish `build_artifact_name` only when output exists.
+4. Upload only when output exists.
+5. Extend workflow contract tests for both output/no-output behavior.
+6. Merge/release the next patch after green CI.
+7. Prove the released stack again in `tool.cad.ci.test`.
+8. Only then update Forge and continue #366.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #56 Pin lib.py.cad.ci 0.7.1 build-store compatibility fix | now | Minimal patch pin required by the failed external 0.12.0 acceptance. |
-
-No other open implementation issues exist in this repository snapshot.
+| #58 Do not fail build-artifact upload when a CAD-CI run produces no build output | now | Generic reusable-workflow artifact-transport defect exposed by a docs-only Forge run. |
 
 ## Boundary
 
-No CLI, workflow, timing or publication behavior changes in this patch.
-Repository Pages housekeeping remains unreleased housekeeping and is not listed
-as a 0.12.1 product change.
+The tool may detect whether a transport source exists. It must not decide which
+CAD-CI items should run or synthesize build output.
+
+`lib.py.cad.ci` remains the owner of selection, execution and materialized
+build semantics.
