@@ -81,7 +81,13 @@ class RunCliTests(unittest.TestCase):
                     / "build/cases/a/.cad-ci/steps/build.json"
                 ).read_text(encoding="utf-8")
             )
+            self.assertEqual(step_evidence["schema"], 3)
             self.assertEqual(step_evidence["output_state"], "UNCHANGED")
+            self.assertTrue(step_evidence["action_executed"])
+            self.assertIsNotNone(step_evidence["run_started_at"])
+            self.assertIsNotNone(step_evidence["run_finished_at"])
+            self.assertIsNotNone(step_evidence["started_at"])
+            self.assertIsNotNone(step_evidence["finished_at"])
             self.assertNotIn("materialization", step_evidence)
 
             self.assertTrue((repo / "build/cases/a/built.txt").is_file())
@@ -98,6 +104,18 @@ class RunCliTests(unittest.TestCase):
                 )
             self.assertIn("current: case-a:build", second.getvalue())
             self.assertIn("current: case-a:verify", second.getvalue())
+
+            current_evidence = json.loads(
+                (
+                    repo
+                    / "build/cases/a/.cad-ci/steps/build.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertFalse(current_evidence["action_executed"])
+            self.assertIsNone(current_evidence["started_at"])
+            self.assertIsNone(current_evidence["finished_at"])
+            self.assertIsNotNone(current_evidence["run_started_at"])
+            self.assertIsNotNone(current_evidence["run_finished_at"])
 
     def test_process_false_is_delegated_to_released_library(self):
         with tempfile.TemporaryDirectory() as tmp:
