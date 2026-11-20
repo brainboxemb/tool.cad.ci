@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.8.0 at exact commit `e2056c0d5ac361f0d021e58e55025e02c5688acf`;
+- expose item-root-relative source paths, root item templates and path-derived nested item IDs through the existing thin CLI;
+- add no tool-owned configuration, selection or cache semantics.
+
 ## 0.12.3 - 2026-11-20
 
 - make `cad-ci build prepare-main` use the released library full-run selection;
