@@ -192,6 +192,17 @@ def _candidate_items(
     )
 
 
+def _current_processed_items(items):
+    """Return repository-ordered current processed items via library semantics."""
+
+    selected = affected_items(items, None)
+    return tuple(
+        item
+        for item_id, item in items.items()
+        if item_id in selected
+    )
+
+
 def _publish_common(parser: argparse.ArgumentParser) -> None:
     """Add arguments every generated-branch publication needs."""
 
@@ -252,11 +263,7 @@ def _run_build(args: argparse.Namespace) -> int:
                 require_selection=True,
                 loaded_items=loaded_items,
             ),
-            current_items=_candidate_items(
-                args,
-                require_selection=False,
-                loaded_items=loaded_items,
-            ),
+            current_items=_current_processed_items(loaded_items),
             source_commit=args.source_commit,
         )
     elif args.build_command == "resolve":
