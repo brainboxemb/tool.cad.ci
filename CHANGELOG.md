@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.1 - 2026-11-20
+
+- fetch only the exact caller PR head and required base commit instead of all
+  branches, tags and history;
+- authenticate GHCR directly through the runner Docker CLI;
+- install external PR runtime dependencies without dependency recursion or
+  eager bytecode compilation;
+- add no persistent Actions cache and change no CAD-CI/SCons semantics.
+
+
 ## 0.14.0 - 2026-11-20
 
 - add one complete reusable PR workflow for run, durable PR preparation,
