@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.7.0 at exact commit `8955c74055105b06d6af69e0d2f82b6b1fbf575a`;
+- expose UTC run/action timing fields and updated public evidence schemas through the existing thin CLI without duplicating timing logic;
+- cancel superseded high-level reusable CAD-CI runs for the same caller repository, workflow and PR/branch;
+- keep lower-level reusable plan/run workflows independent for split consumers;
+- keep CAD item selection, SCons execution and duration semantics owned by the library.
+
 ## 0.11.0 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.6.0 at exact commit `dac8c5b5e1147a401730fda31f9bf9de2278c4ee`;

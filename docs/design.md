@@ -86,3 +86,24 @@ The login is generic runner setup only:
 
 A consumer that does not use GHCR still receives the same CAD-CI behavior; the
 extra authenticated Docker registry entry is otherwise unused.
+
+
+## High-level workflow concurrency
+
+Only `reusable-ci.yml` owns the normal-consumer concurrency group.
+
+The group is derived from caller repository, caller workflow and PR/branch
+context, with `cancel-in-progress` enabled.
+
+The lower-level plan/run workflows deliberately have no matching group. Their
+ordering can be part of a split consumer's caller workflow and must not be
+cancelled against each other by this tool.
+
+
+## Timing evidence boundary
+
+Timing evidence is a library-owned feature. The CLI passes through the released
+library's execution/evidence behavior unchanged.
+
+The tool's tests verify that the exact library pin exposes the expected fields,
+but the tool contains no clock, timestamp formatter or duration calculation.

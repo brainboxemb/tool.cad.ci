@@ -157,6 +157,24 @@ class ReusableWorkflowTests(unittest.TestCase):
             "Optional non-secret environment values for consumer commands.",
             text,
         )
+    def test_high_level_workflow_cancels_same_caller_scope(self):
+        """Only the high-level normal-consumer workflow owns concurrency."""
+
+        high = self.read("reusable-ci.yml")
+        self.assertIn("concurrency:", high)
+        self.assertIn("cancel-in-progress: true", high)
+        self.assertIn("github.repository", high)
+        self.assertIn("github.workflow", high)
+        self.assertIn(
+            "github.event.pull_request.number || github.ref",
+            high,
+        )
+
+        for name in ("reusable-plan.yml", "reusable-run.yml"):
+            with self.subTest(name=name):
+                lower = self.read(name)
+                self.assertNotIn("concurrency:", lower)
+
     def test_high_level_workflow_delegates_to_one_generic_run(self):
         """Normal consumers should not reproduce generic setup locally."""
 

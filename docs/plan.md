@@ -5,45 +5,39 @@ This file is the current source of truth for unfinished work in `tool.cad.ci`.
 The repository is the thin CLI and reusable GitHub Actions surface above
 `lib.py.cad.ci`. Generic CAD-CI behaviour stays in the library.
 
+## Current status
+
+The current released tool is 0.11.0. Released `lib.py.cad.ci 0.7.0` is now
+available at exact commit `8955c74055105b06d6af69e0d2f82b6b1fbf575a`.
+
 ## Current goal
 
-Complete #51: consume the exact released `lib.py.cad.ci 0.6.0` revision so
-item-level `process` participation is available through the released thin tool
-stack.
+Complete one 0.12.0 maintenance release containing:
 
-The generic behavior is already implemented and released in the library. This
-repository must not add a second parser, planner or execution rule for
-`process`.
+- #46 central cancellation of superseded high-level runs;
+- adoption of released library 0.7.0 timing evidence.
+
+No generic timing or SCons behavior is reimplemented in this repository.
 
 ## Execution order
 
-1. Pin exact library release commit
-   `dac8c5b5e1147a401730fda31f9bf9de2278c4ee`.
-2. Prove through tool tests that:
-   - the exact library revision is pinned;
-   - plan/run continue to delegate selection/execution to the library;
-   - no local `process` implementation is introduced.
-3. Release the updated tool only after this repository CI is green.
-4. Update `tool.cad.ci.test` to the exact released tool revision and prove
-   staged processing end to end.
-5. Only after black-box acceptance may Forge consume the released `process`
-   behavior.
-6. Complete #46 separately.
+1. Keep concurrency only on high-level `reusable-ci.yml`.
+2. Pin exact library 0.7.0 commit.
+3. Prove the CLI exposes BUILT/CURRENT timing evidence from the library.
+4. Release the combined tool as 0.12.0 after green CI.
+5. Accept that exact release once in `tool.cad.ci.test`, together with its
+   #34/#35 acceptance-overhead housekeeping.
+6. Only after that combined external acceptance update Forge.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #51 Consume lib.py.cad.ci 0.6.0 process selection | now | Required downstream adoption step for the already released library behavior. Keep the tool thin and release one exact tool/library stack. |
-| #46 Cancel superseded normal CAD-CI runs centrally | next | Independent reusable-workflow behavior. Do not mix it into the process-selection pin/release. |
+| #46 Cancel superseded normal CAD-CI runs centrally | now | Included in the combined 0.12.0 maintenance release with library 0.7.0 adoption. |
 
-## Released state
-
-`tool.cad.ci 0.10.0` already includes the completed GHCR authentication work
-from #49. That work is not part of #51 and must remain unchanged.
+No other open implementation issues exist in this repository snapshot.
 
 ## Boundary
 
-`lib.py.cad.ci` owns `process` parsing, validation, Git selection and SCons
-target participation. `tool.cad.ci` only pins the released library and exposes
-its existing CLI/workflow surface.
+Workflow concurrency is scheduling only. Timing/evidence, item selection, SCons
+execution and cache semantics remain owned by `lib.py.cad.ci`.
