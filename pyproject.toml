@@ -11,9 +11,6 @@ dependencies = [
   "brainboxemb-cad-ci-lib @ git+https://github.com/brainboxemb/lib.py.cad.ci.git@8955c74055105b06d6af69e0d2f82b6b1fbf575a"
 ]
 
-[project.optional-dependencies]
-docs = ["mistune>=3.0"]
-
 [project.scripts]
 cad-ci = "cad_ci_tool.cli:main"
 
