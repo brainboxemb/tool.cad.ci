@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.6.0 at exact commit `dac8c5b5e1147a401730fda31f9bf9de2278c4ee`;
+- expose item-level `process` participation through the existing thin plan/run CLI without duplicating library logic;
+- prove `process: false` is excluded from full planning and rejected for explicit execution;
+- require black-box acceptance in `tool.cad.ci.test` before Forge adoption.
+
 ## 0.10.0 - 2026-11-20
 
 - authenticate Docker to GitHub Container Registry in the reusable run workflow with the workflow GitHub token;
