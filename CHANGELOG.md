@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.0 - 2026-11-20
+
+- add one complete reusable PR workflow for run, durable PR preparation,
+  publication and cleanup on one runner;
+- remove the PR artifact handoff and second publication runner from the generic
+  PR architecture;
+- execute the exact tool and pinned library source directly through PYTHONPATH
+  instead of editable-installing/building the BrainboxEmb packages on every
+  consumer PR;
+- keep SCons execution, selection, build-store and publication semantics in
+  lib.py.cad.ci.
+
+
 ## 0.13.3 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.8.3 at exact commit `e8e951ed7e50c4fa754cc158729faf2927cccb31`;
