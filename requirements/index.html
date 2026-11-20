@@ -86,6 +86,20 @@ environment.</li>
 <li>Forge and CAD consume only a released tool revision.</li>
 <li>The released tool/library/workflow combination is proven in <code>tool.cad.ci.test</code> before consumer migration.</li>
 </ul>
+<h2>Superseded high-level runs</h2>
+<p>The normal high-level <code>reusable-ci.yml</code> workflow must cancel an older
+in-progress run when a newer run starts for the same caller repository, caller
+workflow and PR/branch.</p>
+<p>Different repositories, caller workflows and PRs/branches remain independent.</p>
+<p>Lower-level <code>reusable-plan.yml</code> and <code>reusable-run.yml</code> must not share this
+high-level concurrency group because split consumers may intentionally use both
+within one caller-owned workflow.</p>
+<h2>Timing evidence surface</h2>
+<p>The tool exposes the timing/evidence contract of its exact released library pin
+without parsing, synthesizing or rewriting those fields.</p>
+<p>For library 0.7.0 this includes run-level UTC timestamps and consumer-action
+<code>started_at</code> / <code>finished_at</code> values, with null action timestamps when no
+consumer command executed.</p>
 
   </main>
 </body>
