@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.8.1 at exact commit `ab701bf9ef46892040f4593a74b16805b7187bea`;
+- expose safe parent-relative item-scoped source paths through the existing thin CLI;
+- add no tool-owned path, selection or cache semantics.
+
 ## 0.13.0 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.8.0 at exact commit `e2056c0d5ac361f0d021e58e55025e02c5688acf`;
