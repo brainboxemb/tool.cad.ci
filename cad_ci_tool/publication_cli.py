@@ -176,7 +176,12 @@ def _candidate_items(
                 "selected build operation requires --items, --changed, "
                 "or --base/--head"
             )
-        return tuple(items.values())
+        selected = affected_items(items, None)
+        return tuple(
+            item
+            for item_id, item in items.items()
+            if item_id in selected
+        )
 
     selected = affected_items(items, changed_paths)
     return tuple(
