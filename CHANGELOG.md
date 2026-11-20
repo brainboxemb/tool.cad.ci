@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.2 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.8.2 at exact commit `d645b65281064f69f175bb645c6c956f72f3b446`;
+- expose ownership-safe nested durable build preparation/update through the existing thin CLI;
+- add no tool-owned build-store, selection, SCons or cache semantics.
+
 ## 0.13.1 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.8.1 at exact commit `ab701bf9ef46892040f4593a74b16805b7187bea`;
