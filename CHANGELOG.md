@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.2 - 2026-11-20
+
+- consume `lib.py.cad.ci` 0.8.4 at exact commit
+  `4e033fd17e911b3feb92b1a34433b884ca788ab6`;
+- pass affected replacement items and the complete current processed item set
+  separately to library-owned durable main updates;
+- add no tool-owned manifest comparison, deletion or ownership semantics.
+
 ## 0.14.1 - 2026-11-20
 
 - fetch only the exact caller PR head and required base commit instead of all
