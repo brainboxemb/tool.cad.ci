@@ -49,9 +49,12 @@ The tool must not add a second merge/parser for root variables.
 
 ## Reusable workflows
 
-`reusable-ci.yml` is the normal entry point. Lower-level reusable plan/run
-workflows exist for cases that need repository-specific preparation between
-generic stages.
+`reusable-pr.yml` is the normal complete pull-request entry point when a
+consumer wants verification plus durable PR publication/cleanup.
+
+`reusable-ci.yml` remains the high-level run-only entry point. Lower-level
+reusable plan/run workflows exist for cases that need repository-specific
+preparation between generic stages.
 
 Workflow YAML remains orchestration-only. It does not own changed-item logic,
 SCons decisions, item loops or consumer commands.
@@ -156,3 +159,49 @@ This keeps the distinction explicit:
 The tool must not use `items.values()` as a substitute for full-run selection,
 because configured-but-nonprocessed items intentionally have no candidate
 output.
+
+
+## Single-runner PR architecture
+
+The PR workflow intentionally keeps verification and publication in one GitHub
+job so a normal PR does not pay for a second runner, second checkout, second
+Python setup, tool reinstall or artifact handoff.
+
+```text
+pull_request opened/synchronize/reopened
+  -> one ubuntu runner
+     -> checkout PR head
+     -> checkout/install exact called tool
+     -> GHCR login
+     -> cad-ci run
+     -> build/ has materialized output?
+        no  -> success
+        yes -> same-repository PR?
+               no  -> success without durable publication
+               yes -> cad-ci build prepare-pr
+                      -> cad-ci publish build --scope pr
+```
+
+```text
+pull_request closed
+  -> one ubuntu runner
+     -> checkout default branch
+     -> checkout/install exact called tool
+     -> cad-ci publish build-cleanup --pull-request N
+```
+
+The one-runner workflow changes only GitHub orchestration. It reuses existing
+CLI operations and therefore does not create a second implementation of build
+selection or publication semantics.
+
+## PR performance contract
+
+The workflow design avoids avoidable runner-boundary overhead:
+
+- no `actions/upload-artifact` / `actions/download-artifact` between run and
+  PR publication;
+- no second runner for normal PR publication;
+- no repeated checkout/setup/install phase between verification and publish.
+
+Consumer/domain performance remains outside tool.cad.ci. The workflow provides
+the minimal generic orchestration needed to measure end-to-end PR latency.
