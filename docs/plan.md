@@ -25,8 +25,12 @@ publication runner.
 
 ## Current goal
 
-Complete #70 as tool.cad.ci 0.14.0 by adding one reusable PR workflow that
-performs the complete PR lifecycle on one runner:
+#70 is blocked until an immutable CAD-CI runtime image exists. The proposed
+owner is `docker.cad.ci`; the image must already contain Python, tool.cad.ci,
+lib.py.cad.ci, SCons and PyYAML.
+
+After that image is released, complete #70 as tool.cad.ci 0.14.0 with one
+reusable PR workflow that performs the complete PR lifecycle on one runner:
 
 `run -> prepare-pr -> publish`
 
@@ -47,18 +51,21 @@ For a closed PR the same workflow performs only scope cleanup.
 
 ## Execution order
 
-1. Update requirements/design for the single-runner PR workflow.
-2. Add `.github/workflows/reusable-pr.yml` and workflow-contract tests.
-3. Release tool.cad.ci 0.14.0 from the exact green main commit.
-4. Add external acceptance in tool.cad.ci.test.
-5. Update Forge to the released reusable PR workflow.
-6. Measure one normal simple-box PR end-to-end against the <=30 s target.
+1. Build, test and release the immutable CAD-CI runtime image in its owner
+   repository.
+2. Update #70 workflow design to consume that image without setup-python,
+   pip-install or source clones.
+3. Add `.github/workflows/reusable-pr.yml` and workflow-contract tests.
+4. Release tool.cad.ci 0.14.0 from the exact green main commit.
+5. Add external acceptance in tool.cad.ci.test.
+6. Update Forge to the released reusable PR workflow.
+7. Measure one normal simple-box PR end-to-end against the <=30 s target.
 
 ## Open issue assessment — 2026-11-20
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #70 Add single-runner reusable PR build and publication workflow | now | Removes the second PR publication runner while preserving the normal full PR lifecycle. |
+| #70 Add single-runner reusable PR build and publication workflow | blocked | Needs a released immutable CAD-CI runtime image first; the PR workflow must not bootstrap Python/tool/library dependencies on every consumer run. |
 
 ## Boundary
 
