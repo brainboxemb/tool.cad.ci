@@ -98,3 +98,12 @@ context, with `cancel-in-progress` enabled.
 The lower-level plan/run workflows deliberately have no matching group. Their
 ordering can be part of a split consumer's caller workflow and must not be
 cancelled against each other by this tool.
+
+
+## Timing evidence boundary
+
+Timing evidence is a library-owned feature. The CLI passes through the released
+library's execution/evidence behavior unchanged.
+
+The tool's tests verify that the exact library pin exposes the expected fields,
+but the tool contains no clock, timestamp formatter or duration calculation.
