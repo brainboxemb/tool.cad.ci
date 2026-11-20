@@ -107,3 +107,14 @@ library's execution/evidence behavior unchanged.
 
 The tool's tests verify that the exact library pin exposes the expected fields,
 but the tool contains no clock, timestamp formatter or duration calculation.
+
+
+## Repository documentation delivery
+
+The tool repository itself uses Markdown documentation only.
+
+Its own CI does not build or publish a Pages site and does not maintain
+repository-local site-generation code.
+
+This is separate from the product's generic Pages/publication commands, which
+remain thin CLI exposure of library-owned behavior.

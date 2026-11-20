@@ -91,3 +91,14 @@ without parsing, synthesizing or rewriting those fields.
 For library 0.7.0 this includes run-level UTC timestamps and consumer-action
 `started_at` / `finished_at` values, with null action timestamps when no
 consumer command executed.
+
+
+## Repository documentation
+
+`tool.cad.ci` does not publish a repository-specific GitHub Pages
+documentation site.
+
+Repository documentation lives in `README.md` and `docs/`.
+
+This requirement does not affect the generic `cad-ci publish pages` feature
+or its generated-branch contract for consumers.
