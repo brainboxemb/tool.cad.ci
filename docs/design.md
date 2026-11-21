@@ -313,3 +313,26 @@ consumer post-run commands exist or how domain content is generated.
 This is GitHub-runner orchestration only. Selection, SCons execution,
 build-store membership/deletion, Pages installation and generated-branch
 freshness remain in `lib.py.cad.ci`.
+
+
+## Bounded jobs forwarding architecture
+
+Parallel execution remains inside the released library/SCons engine.
+
+The tool surfaces carry one integer only:
+
+```text
+caller
+  -> jobs = N
+  -> tool CLI/workflow/action validation
+  -> one cad-ci run --jobs N
+  -> lib.py.cad.ci run_repository(..., jobs=N)
+  -> SCons -j N
+```
+
+No intermediate layer expands N into target loops or workers. This keeps
+selection, prerequisite scheduling, dirty/current decisions, dependency
+snapshots and output evidence under one SCons execution graph.
+
+Every public run surface defaults to 1. This preserves existing execution order
+unless a consumer deliberately opts into bounded parallelism.

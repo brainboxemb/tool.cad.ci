@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +27,30 @@ def load_helper():
 class ReusableCiHelperTests(unittest.TestCase):
     def setUp(self):
         self.helper = load_helper()
+
+    def test_positive_jobs_validation(self):
+        self.assertEqual(self.helper.positive_int("1"), 1)
+        self.assertEqual(self.helper.positive_int("4"), 4)
+        for value in ("0", "-1", "no"):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "positive integer"):
+                    self.helper.positive_int(value)
+
+    def test_run_helper_forwards_exact_jobs_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            with patch.object(self.helper.subprocess, "run") as run:
+                self.helper.run_ci(
+                    repo=repo,
+                    source_sha="b" * 40,
+                    base_sha="a" * 40,
+                    full_run=False,
+                    environment_json="{}",
+                    jobs=3,
+                )
+            command = run.call_args.args[0]
+            jobs_index = command.index("--jobs")
+            self.assertEqual(command[jobs_index + 1], "3")
 
     def test_incremental_selection_uses_exact_base_and_source(self):
         self.assertEqual(
@@ -150,6 +175,14 @@ class SameRunnerActionTests(unittest.TestCase):
         self.assertNotIn("publish pages", text)
         self.assertNotIn("publish build", text)
 
+    def test_action_exposes_and_validates_bounded_jobs(self):
+        text = self.read()
+        self.assertIn("jobs:", text)
+        self.assertIn('default: "1"', text)
+        self.assertIn("jobs must be a positive integer", text)
+        self.assertIn('CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}', text)
+        self.assertIn('--jobs "$CAD_CI_JOBS_INPUT"', text)
+
     def test_action_validates_incremental_vs_full_run_contract(self):
         text = self.read()
         self.assertIn("full_run must be true or false", text)
@@ -183,6 +216,23 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("cache-primary-key", text)
         self.assertNotIn("restore-keys:", text)
 
+
+    def test_run_surfaces_expose_and_forward_bounded_jobs(self):
+        run = self.read("reusable-run.yml")
+        self.assertIn("jobs:", run)
+        self.assertIn("type: number", run)
+        self.assertIn("default: 1", run)
+        self.assertIn('--jobs "${{ inputs.jobs }}"', run)
+
+        high = self.read("reusable-ci.yml")
+        self.assertIn("jobs:", high)
+        self.assertIn("jobs: ${{ inputs.jobs }}", high)
+
+        pr = self.read("reusable-pr.yml")
+        self.assertIn("jobs:", pr)
+        self.assertIn("type: number", pr)
+        self.assertIn("default: 1", pr)
+        self.assertIn('--jobs "${{ inputs.jobs }}"', pr)
 
     def test_reusable_workflows_preserve_package_read_permission(self):
         """GHCR auth permission must survive both reusable workflow layers."""

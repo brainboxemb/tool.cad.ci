@@ -6,6 +6,7 @@ import json
 import io
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from cad_ci_tool.cli import main
 
@@ -60,6 +61,49 @@ assert (out / "built.txt").read_text()
 
 
 class RunCliTests(unittest.TestCase):
+    def test_run_forwards_default_and_explicit_jobs_to_library(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo(Path(tmp))
+
+            with patch("cad_ci_tool.cli.run_repository") as run:
+                self.assertEqual(main(["run", "--repo", str(repo)]), 0)
+            self.assertEqual(run.call_args.kwargs["jobs"], 1)
+
+            with patch("cad_ci_tool.cli.run_repository") as run:
+                self.assertEqual(
+                    main(
+                        [
+                            "run",
+                            "--repo",
+                            str(repo),
+                            "--jobs",
+                            "3",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertEqual(run.call_args.kwargs["jobs"], 3)
+
+    def test_run_rejects_non_positive_jobs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo(Path(tmp))
+            for value in ("0", "-1", "no"):
+                with self.subTest(value=value):
+                    error = io.StringIO()
+                    with redirect_stderr(error):
+                        with self.assertRaises(SystemExit) as caught:
+                            main(
+                                [
+                                    "run",
+                                    "--repo",
+                                    str(repo),
+                                    "--jobs",
+                                    value,
+                                ]
+                            )
+                    self.assertEqual(caught.exception.code, 2)
+                    self.assertIn("positive integer", error.getvalue())
+
     def test_run_uses_released_scons_engine_and_reuses_current_targets(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

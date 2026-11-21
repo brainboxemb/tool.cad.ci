@@ -263,3 +263,22 @@ one caller job
 No build artifact is required to cross from the action to the caller because
 there is no runner boundary. The action must not add item loops, changed-path
 logic, consumer commands or publication semantics.
+
+
+## Bounded parallel SCons jobs
+
+The public run surfaces expose the released library-owned SCons `jobs` option
+without implementing parallel execution in this repository.
+
+- `cad-ci run --jobs N` accepts only a positive integer and defaults to 1.
+- The same-runner composite action exposes `jobs`, defaults to 1, validates it
+  as a positive integer, and forwards it unchanged.
+- `reusable-run.yml`, `reusable-ci.yml` and `reusable-pr.yml` expose a
+  numeric `jobs` input with default 1 and forward it to the same generic run.
+- The reusable helper validates `jobs` and emits exactly one
+  `cad-ci run --jobs N`.
+- The tool must not create threads/processes, partition targets, reinterpret the
+  dependency graph or implement its own scheduler.
+- Default behavior remains serial (`jobs=1`) for backward compatibility.
+- Consumers may opt into `jobs > 1` only after the exact released tool stack
+  has external black-box acceptance.
