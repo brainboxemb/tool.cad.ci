@@ -7,65 +7,49 @@ The repository is the thin CLI and GitHub Actions surface above
 
 ## Current status
 
-Released `tool.cad.ci 0.14.2` at
-`4c1016d594368146fb9c16602f01c158e85d9afb` is the current externally
-accepted Forge stack.
+Released `tool.cad.ci 0.15.0` is the current externally accepted stack.
+It exposes the same-runner composite action already consumed by Forge.
 
-It pins released `lib.py.cad.ci 0.8.4` at
-`4e033fd17e911b3feb92b1a34433b884ca788ab6`.
-
-The complete PR lifecycle already has a direct-source single-runner workflow.
-Forge #558 exposed the corresponding main-runner gap: a reusable workflow owns
-its called job, so Forge cannot append its site generator to that same runner
-and currently pays artifact transport plus two extra tool bootstraps.
+Forge #572 now requires long-lived development integration lanes. The generic
+named complete-scope mechanics belong first in `lib.py.cad.ci` #72.
 
 ## Current goal
 
-Complete #78 and release 0.15.0.
+Complete #80 immediately after the exact #72 library release.
 
-The release adds one root composite action for consumers that need
-consumer-owned post-run steps on the same runner. The action is orchestration
-only; it exposes the existing released run/build/publish stack without adding
-generic CAD-CI behaviour.
+Expose only the released library behavior needed to:
+
+- prepare/update/publish one named complete build scope;
+- publish one named Pages subtree;
+- preserve existing `main` and PR interfaces during migration.
+
+Do not implement reconciliation, path safety or Pages preservation locally.
 
 ## Required proof
 
-- exact released action/tool source is the tool source; no second tool checkout;
-- exact pinned library source is shallow-checked out;
-- tool + library remain available through `PYTHONPATH` after the action;
-- only external PyYAML/SCons dependencies are installed;
-- exact source is checked out and only the exact base is fetched for an
-  incremental run;
-- full run skips the base fetch;
-- GHCR authentication is generic and token-safe;
-- exactly one `cad-ci run` is invoked;
-- no artifact transport exists inside the action;
-- no consumer/domain command or publication policy exists inside the action;
-- complete tool CI is green;
-- release 0.15.0 from the exact green merge commit;
-- pin that exact release in `tool.cad.ci.test` and prove same-runner
-  post-run CLI reuse before Forge adoption.
+- the exact released #72 library revision is pinned;
+- CLI arguments are forwarded unchanged into the library;
+- existing main/PR publication commands remain compatible;
+- named build/Page scope commands have clear help and validation errors;
+- complete tool CI remains green;
+- release the exact green tool revision.
 
 ## Execution order
 
-1. [#78] Add and test the root same-runner composite action.
-2. [#78] Release 0.15.0 from the green merge commit.
-3. [#78] Pin 0.15.0 in `tool.cad.ci.test` and add black-box same-runner
-   acceptance.
-4. Close #78 only after external acceptance is green.
-5. Migrate Forge #558 to one main runner using the accepted action.
-6. Continue #76 separately: expose released library 0.9.0 bounded parallel
-   jobs; do not mix scheduling changes into the same-runner migration.
+1. [lib.py.cad.ci #72] Wait for the generic named-scope release.
+2. [#80, now after #72] Pin that exact release.
+3. [#80] Expose the minimal CLI/workflow surface.
+4. [#80] Run complete tool tests and release.
+5. [tool.cad.ci.test #60] Black-box accept sibling-scope isolation.
+6. [Forge #572] Adopt only the externally accepted release.
 
 ## Open issue assessment — 2026-11-21
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #78 Expose same-runner CAD-CI run action for consumer-owned post-run publication | now | Required by Forge #558 to eliminate artifact/runner/bootstrap boundaries while keeping Forge site generation consumer-owned. |
-| #76 Expose released CAD-CI bounded parallel jobs | next | Library 0.9.0 already owns safe parallel execution; expose and externally accept it separately after the orchestration migration. |
+| #80 Expose released named build/Page scopes for long-lived integration lanes | blocked on #72 | Next required step for Forge #572. No generic implementation belongs here. |
+| #76 Expose released CAD-CI bounded parallel jobs | later | Independent scheduling exposure; keep separate from the development-lane migration. |
 
-## Boundary
+Immediate chain:
 
-`lib.py.cad.ci` remains the sole owner of selection semantics, SCons
-execution, durable-store membership/deletion, Pages mechanics and generated
-branch safety.
+`lib #72 -> tool #80 -> acceptance #60 -> Forge #572`.
