@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.1 - 2026-11-21
+
+- consume released `lib.py.cad.ci 0.9.2` at exact commit
+  `3f688243f4ee65b1fa42f82adde5344fe5101775`;
+- restore durable publication compatibility with current SCons engine-schema-2
+  evidence;
+- change no CLI, workflow, named-scope or publication semantics.
+
 ## 0.16.0 - 2026-11-21
 
 - consume released `lib.py.cad.ci 0.9.1` at exact commit
