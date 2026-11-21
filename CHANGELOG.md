@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.0 - 2026-11-21
+
+- consume released `lib.py.cad.ci 0.9.1` at exact commit
+  `8403c426776dbad5beb17c35674562dc916e9a1f`;
+- expose complete caller-named build-scope prepare/update/install/publication
+  commands without adding tool-owned reconciliation semantics;
+- expose isolated named Pages subtree publication and explicit stable-root
+  named-subtree preservation;
+- keep existing main and PR publication commands compatible.
+
 ## 0.15.0 - 2026-11-21
 
 - add a released root composite action for consumers that require

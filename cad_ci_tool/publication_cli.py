@@ -17,8 +17,10 @@ from cad_ci.build_store import (
     BuildStoreError,
     install_scope,
     prepare_main,
+    prepare_named,
     prepare_overlay,
     update_main,
+    update_named,
     promote_overlay,
     remove_pr,
     resolve_view,
@@ -31,7 +33,13 @@ from cad_ci.git_publish import (
     publish_pages_preview_cleanup,
     materialize_generated_branch,
 )
-from cad_ci.pages import PagesError, install_preview, install_stable, remove_preview
+from cad_ci.pages import (
+    PagesError,
+    install_named,
+    install_preview,
+    install_stable,
+    remove_preview,
+)
 
 
 PUBLICATION_ERRORS = (BuildStoreError, PagesError, GitPublishError, GitError)
@@ -46,6 +54,10 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     prepare_main_cmd = build_sub.add_parser("prepare-main")
     _candidate_args(prepare_main_cmd, selectable=False)
 
+    prepare_named_cmd = build_sub.add_parser("prepare-named")
+    _candidate_args(prepare_named_cmd, selectable=False)
+    prepare_named_cmd.add_argument("--name", required=True)
+
     prepare_pr = build_sub.add_parser("prepare-pr")
     _candidate_args(prepare_pr, selectable=True)
     prepare_pr.add_argument("--pull-request", type=int, required=True)
@@ -53,6 +65,11 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     update_main_cmd = build_sub.add_parser("update-main")
     _candidate_args(update_main_cmd, selectable=True)
     update_main_cmd.add_argument("--main", type=Path, required=True)
+
+    update_named_cmd = build_sub.add_parser("update-named")
+    _candidate_args(update_named_cmd, selectable=True)
+    update_named_cmd.add_argument("--named", type=Path, required=True)
+    update_named_cmd.add_argument("--name", required=True)
 
     resolve = build_sub.add_parser("resolve")
     resolve.add_argument("--main", type=Path, required=True)
@@ -68,8 +85,13 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     install = build_sub.add_parser("install")
     install.add_argument("--candidate", type=Path, required=True)
     install.add_argument("--store", type=Path, required=True)
-    install.add_argument("--scope", choices=("main", "pr"), required=True)
+    install.add_argument(
+        "--scope",
+        choices=("main", "named", "pr"),
+        required=True,
+    )
     install.add_argument("--pull-request", type=int)
+    install.add_argument("--scope-name")
 
     fetch = build_sub.add_parser("fetch")
     fetch.add_argument("--repo", type=Path, default=Path.cwd())
@@ -86,6 +108,13 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     stable = pages_sub.add_parser("install-stable")
     stable.add_argument("--site", type=Path, required=True)
     stable.add_argument("--pages-root", type=Path, required=True)
+    stable.add_argument("--preserve-subtree", action="append", default=[])
+
+    named = pages_sub.add_parser("install-named")
+    named.add_argument("--site", type=Path, required=True)
+    named.add_argument("--pages-root", type=Path, required=True)
+    named.add_argument("--name", required=True)
+
     preview = pages_sub.add_parser("install-preview")
     preview.add_argument("--site", type=Path, required=True)
     preview.add_argument("--pages-root", type=Path, required=True)
@@ -100,8 +129,13 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     publish_build = publish_sub.add_parser("build")
     _publish_common(publish_build)
     publish_build.add_argument("--candidate", type=Path, required=True)
-    publish_build.add_argument("--scope", choices=("main", "pr"), required=True)
+    publish_build.add_argument(
+        "--scope",
+        choices=("main", "named", "pr"),
+        required=True,
+    )
     publish_build.add_argument("--pull-request", type=int)
+    publish_build.add_argument("--scope-name")
 
     publish_build_cleanup = publish_sub.add_parser("build-cleanup")
     _publish_common(publish_build_cleanup)
@@ -110,7 +144,14 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     publish_pages_cmd = publish_sub.add_parser("pages")
     _publish_common(publish_pages_cmd)
     publish_pages_cmd.add_argument("--site", type=Path, required=True)
-    publish_pages_cmd.add_argument("--pull-request", type=int)
+    pages_target = publish_pages_cmd.add_mutually_exclusive_group()
+    pages_target.add_argument("--pull-request", type=int)
+    pages_target.add_argument("--name")
+    publish_pages_cmd.add_argument(
+        "--preserve-subtree",
+        action="append",
+        default=[],
+    )
 
     publish_pages_cleanup = publish_sub.add_parser("pages-cleanup")
     _publish_common(publish_pages_cleanup)
@@ -244,6 +285,14 @@ def _run_build(args: argparse.Namespace) -> int:
             items=_candidate_items(args, require_selection=False),
             source_commit=args.source_commit,
         )
+    elif args.build_command == "prepare-named":
+        prepare_named(
+            candidate_root=args.candidate_root,
+            out=args.out,
+            items=_candidate_items(args, require_selection=False),
+            source_commit=args.source_commit,
+            name=args.name,
+        )
     elif args.build_command == "prepare-pr":
         prepare_overlay(
             candidate_root=args.candidate_root,
@@ -266,6 +315,21 @@ def _run_build(args: argparse.Namespace) -> int:
             current_items=_current_processed_items(loaded_items),
             source_commit=args.source_commit,
         )
+    elif args.build_command == "update-named":
+        loaded_items = load_repository(args.repo.resolve())
+        update_named(
+            named=args.named,
+            candidate_root=args.candidate_root,
+            out=args.out,
+            items=_candidate_items(
+                args,
+                require_selection=True,
+                loaded_items=loaded_items,
+            ),
+            current_items=_current_processed_items(loaded_items),
+            source_commit=args.source_commit,
+            name=args.name,
+        )
     elif args.build_command == "resolve":
         resolve_view(main=args.main, overlay=args.overlay, out=args.out)
     elif args.build_command == "promote":
@@ -281,6 +345,7 @@ def _run_build(args: argparse.Namespace) -> int:
             store=args.store,
             scope=args.scope,
             pull_request=args.pull_request,
+            scope_name=args.scope_name,
         )
         print(target)
     elif args.build_command == "remove-pr":
@@ -292,7 +357,19 @@ def _run_pages(args: argparse.Namespace) -> int:
     """Execute filesystem-only Pages installation or cleanup."""
 
     if args.pages_command == "install-stable":
-        install_stable(site=args.site, pages_root=args.pages_root)
+        install_stable(
+            site=args.site,
+            pages_root=args.pages_root,
+            preserve_subtrees=args.preserve_subtree,
+        )
+    elif args.pages_command == "install-named":
+        print(
+            install_named(
+                site=args.site,
+                pages_root=args.pages_root,
+                name=args.name,
+            )
+        )
     elif args.pages_command == "install-preview":
         print(
             install_preview(
@@ -329,6 +406,7 @@ def _run_publish(args: argparse.Namespace) -> int:
             candidate=args.candidate,
             scope=args.scope,
             pull_request=args.pull_request,
+            scope_name=args.scope_name,
             **common,
         )
     elif args.publish_command == "build-cleanup":
@@ -340,6 +418,8 @@ def _run_publish(args: argparse.Namespace) -> int:
         commit = publish_pages(
             site=args.site,
             pull_request=args.pull_request,
+            name=args.name,
+            preserve_subtrees=args.preserve_subtree,
             **common,
         )
     else:
