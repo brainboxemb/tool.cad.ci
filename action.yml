@@ -37,7 +37,6 @@ runs:
       shell: bash
       env:
         CAD_CI_FULL_RUN: ${{ inputs.full_run }}
-        CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
         CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
         CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
       run: |
@@ -122,6 +121,7 @@ runs:
         CAD_CI_SOURCE_SHA_INPUT: ${{ inputs.source_sha }}
         CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
         CAD_CI_FULL_RUN: ${{ inputs.full_run }}
+        CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
       run: |
         python "$GITHUB_ACTION_PATH/scripts/reusable_ci.py" run \
           --repo . \
