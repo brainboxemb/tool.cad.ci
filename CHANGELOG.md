@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.15.0 - 2026-11-21
+
+- add a released root composite action for consumers that require
+  consumer-owned post-run steps on the same hosted runner;
+- use the exact action revision as tool source and shallow-check out only its
+  exact pinned library source;
+- expose the exact tool/library stack through `PYTHONPATH` to subsequent
+  caller steps without installing either BrainboxEmb package;
+- perform the existing generic source/base checkout, external dependency setup,
+  GHCR authentication and one `cad-ci run` without build-artifact transport;
+- keep consumer post-run commands, build-store policy and Pages content outside
+  the action.
+
+
 ## 0.14.2 - 2026-11-20
 
 - consume `lib.py.cad.ci` 0.8.4 at exact commit

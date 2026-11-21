@@ -280,3 +280,36 @@ That comparison and all owned-path removal remain inside
 
 This distinction lets the library preserve an unselected current item while
 removing a previous durable item that is no longer configured.
+
+
+## Same-runner composite action
+
+The root `action.yml` complements reusable workflows; it does not replace the
+library or introduce a second CI engine.
+
+A reusable workflow is appropriate when CAD-CI owns the whole called job. A
+composite action is required when the caller must keep control of the job so it
+can run domain-owned steps afterwards on the same runner.
+
+The action revision is itself the exact tool revision. Therefore no second tool
+checkout is required:
+
+```text
+brainboxemb/tool.cad.ci@<released-sha>
+  -> GITHUB_ACTION_PATH == exact tool source
+  -> read exact lib pin from that source
+  -> shallow checkout exact lib source
+  -> PYTHONPATH=<tool>:<lib>
+  -> install external PyYAML/SCons only
+  -> docker login ghcr.io
+  -> one cad-ci run
+  -> leave PYTHONPATH + workspace available to later caller steps
+```
+
+The caller can then invoke existing `cad-ci build` / `cad-ci publish`
+commands without reinstalling the stack. The tool still does not decide which
+consumer post-run commands exist or how domain content is generated.
+
+This is GitHub-runner orchestration only. Selection, SCons execution,
+build-store membership/deletion, Pages installation and generated-branch
+freshness remain in `lib.py.cad.ci`.
