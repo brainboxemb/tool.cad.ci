@@ -13,6 +13,10 @@ inputs:
     description: Run every configured process:true item instead of using a Git diff.
     required: false
     default: "false"
+  jobs:
+    description: Maximum parallel SCons jobs; must be a positive integer.
+    required: false
+    default: "1"
   environment_json:
     description: Optional non-secret environment values for consumer commands.
     required: false
@@ -33,7 +37,9 @@ runs:
       shell: bash
       env:
         CAD_CI_FULL_RUN: ${{ inputs.full_run }}
+        CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
         CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
+        CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
       run: |
         case "$CAD_CI_FULL_RUN" in
           true|false) ;;
@@ -46,6 +52,12 @@ runs:
           echo "ERROR: incremental CAD CI requires base_sha" >&2
           exit 2
         fi
+        case "$CAD_CI_JOBS_INPUT" in
+          ''|*[!0-9]*|0)
+            echo "ERROR: jobs must be a positive integer" >&2
+            exit 2
+            ;;
+        esac
 
     - name: Checkout caller source
       uses: actions/checkout@v4
@@ -115,4 +127,5 @@ runs:
           --repo . \
           --source-sha "$CAD_CI_SOURCE_SHA_INPUT" \
           --base-sha "$CAD_CI_BASE_SHA_INPUT" \
-          --full-run "$CAD_CI_FULL_RUN"
+          --full-run "$CAD_CI_FULL_RUN" \
+          --jobs "$CAD_CI_JOBS_INPUT"
