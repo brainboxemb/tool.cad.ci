@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
 
+from cad_ci.scons_engine import ENGINE_SCHEMA as SCONS_ENGINE_SCHEMA
 from cad_ci_tool.cli import main
 
 
@@ -58,7 +59,7 @@ def write_candidate(
             {
                 "schema": 2,
                 "engine": "scons",
-                "engine_schema": 1,
+                "engine_schema": SCONS_ENGINE_SCHEMA,
                 "item": item_id,
                 "status": "pass",
                 "final_step": "test",
