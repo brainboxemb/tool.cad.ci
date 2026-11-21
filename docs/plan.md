@@ -7,49 +7,42 @@ The repository is the thin CLI and GitHub Actions surface above
 
 ## Current status
 
-Released `tool.cad.ci 0.15.0` is the current externally accepted stack.
-It exposes the same-runner composite action already consumed by Forge.
+Released `tool.cad.ci 0.16.0` at
+`2b0dbb45b93d5de820d96059d23184891824c030` exposes the released named
+complete build/Page scope API from `lib.py.cad.ci 0.9.1`.
 
-Forge #572 now requires long-lived development integration lanes. The generic
-named complete-scope mechanics belong first in `lib.py.cad.ci` #72.
+External acceptance in `tool.cad.ci.test` #60 exposed a library-only
+compatibility defect: 0.9.1 durable build validation rejects current SCons
+engine-schema-2 evidence. Library issue #74 fixes that without changing the
+tool API.
 
 ## Current goal
 
-Complete #80 immediately after the exact #72 library release.
+Complete #82 immediately after the exact green `lib.py.cad.ci 0.9.2`
+release exists.
 
-Expose only the released library behavior needed to:
-
-- prepare/update/publish one named complete build scope;
-- publish one named Pages subtree;
-- preserve existing `main` and PR interfaces during migration.
-
-Do not implement reconciliation, path safety or Pages preservation locally.
-
-## Required proof
-
-- the exact released #72 library revision is pinned;
-- CLI arguments are forwarded unchanged into the library;
-- existing main/PR publication commands remain compatible;
-- named build/Page scope commands have clear help and validation errors;
-- complete tool CI remains green;
-- release the exact green tool revision.
+This is a dependency-only patch:
+- pin the exact 0.9.2 library commit;
+- update the boundary test/release metadata;
+- change no CLI, workflow or publication semantics;
+- release a patch tool version;
+- resume `tool.cad.ci.test` #60.
 
 ## Execution order
 
-1. [lib.py.cad.ci #72] Wait for the generic named-scope release.
-2. [#80, now after #72] Pin that exact release.
-3. [#80] Expose the minimal CLI/workflow surface.
-4. [#80] Run complete tool tests and release.
-5. [tool.cad.ci.test #60] Black-box accept sibling-scope isolation.
-6. [Forge #572] Adopt only the externally accepted release.
+1. [lib.py.cad.ci #74] Finish/release 0.9.2.
+2. [#82, next] Pin the exact released commit and update boundary evidence.
+3. [#82] Release the exact green tool patch.
+4. [tool.cad.ci.test #60] Repin and rerun complete black-box acceptance.
+5. [Forge #572] Adopt only the accepted stack.
 
 ## Open issue assessment — 2026-11-21
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #80 Expose released named build/Page scopes for long-lived integration lanes | blocked on #72 | Next required step for Forge #572. No generic implementation belongs here. |
+| #82 Adopt lib.py.cad.ci patch for current SCons evidence schema | blocked on lib #74 | Dependency-only patch required to resume external named-scope acceptance. |
 | #76 Expose released CAD-CI bounded parallel jobs | later | Independent scheduling exposure; keep separate from the development-lane migration. |
 
 Immediate chain:
 
-`lib #72 -> tool #80 -> acceptance #60 -> Forge #572`.
+`lib #74 -> tool #82 -> acceptance #60 -> Forge #572`.
