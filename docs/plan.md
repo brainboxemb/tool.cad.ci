@@ -18,8 +18,7 @@ tool API.
 
 ## Current goal
 
-Complete #82 immediately after the exact green `lib.py.cad.ci 0.9.2`
-release exists.
+Complete #82 by pinning exact released `lib.py.cad.ci 0.9.2`.
 
 This is a dependency-only patch:
 - pin the exact 0.9.2 library commit;
@@ -30,17 +29,16 @@ This is a dependency-only patch:
 
 ## Execution order
 
-1. [lib.py.cad.ci #74] Finish/release 0.9.2.
-2. [#82, next] Pin the exact released commit and update boundary evidence.
-3. [#82] Release the exact green tool patch.
-4. [tool.cad.ci.test #60] Repin and rerun complete black-box acceptance.
-5. [Forge #572] Adopt only the accepted stack.
+1. [#82, now] Pin exact released lib.py.cad.ci 0.9.2 and update boundary evidence.
+2. [#82] Release the exact green tool patch.
+3. [tool.cad.ci.test #60] Repin and rerun complete black-box acceptance.
+4. [Forge #572] Adopt only the accepted stack.
 
 ## Open issue assessment — 2026-11-21
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #82 Adopt lib.py.cad.ci patch for current SCons evidence schema | blocked on lib #74 | Dependency-only patch required to resume external named-scope acceptance. |
+| #82 Adopt lib.py.cad.ci patch for current SCons evidence schema | now | lib.py.cad.ci 0.9.2 is released; pin it now and resume external named-scope acceptance. |
 | #76 Expose released CAD-CI bounded parallel jobs | later | Independent scheduling exposure; keep separate from the development-lane migration. |
 
 Immediate chain:
