@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0 - 2026-11-21
+
+- expose released library-owned bounded SCons parallelism through
+  `cad-ci run --jobs N`, defaulting to 1;
+- expose the same positive-integer jobs input through reusable run/high-level
+  CI/PR workflows and the same-runner composite action;
+- forward the exact jobs value to `lib.py.cad.ci` without adding a tool-owned
+  worker pool, target loop, dependency scheduler or cache semantics;
+- retain the exact accepted lib.py.cad.ci 0.9.3 pin.
+
 ## 0.16.2 - 2026-11-21
 
 - consume released `lib.py.cad.ci 0.9.3` at exact commit
