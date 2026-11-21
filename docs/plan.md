@@ -5,51 +5,42 @@ This file is the current source of truth for unfinished work in `tool.cad.ci`.
 The repository is the thin CLI and GitHub Actions surface above
 `lib.py.cad.ci`. Generic CAD-CI behaviour stays in the library.
 
-## Current status
+## Current released state
 
-Released `tool.cad.ci 0.16.1` at exact commit
-`4c6bb8b35009ef5008bd99134cf84b59fddc0b8a` consumes externally accepted
-`lib.py.cad.ci 0.9.2`.
+`tool.cad.ci 0.16.2` is released at exact commit
+`59e4c4d3f377f906b33bb2d1fee808f96c6fb1b9`.
 
-The named-scope chain (#82 / tool.cad.ci.test #60) is complete.
+It pins released `lib.py.cad.ci 0.9.3` at exact commit
+`74486c441f1f2b170ff3dc06e0edcaf662fbec6b`.
 
-`lib.py.cad.ci 0.9.3` is now released at exact commit
-`74486c441f1f2b170ff3dc06e0edcaf662fbec6b`. It reduces selective-run startup
-work by preparing only the active SCons target closure and sharing one source
-inventory per invocation.
+External `tool.cad.ci.test` #62 / PR #63 passed the complete released-stack
+suite, including the selective-startup active-closure case.
 
-Historical PR #77 is closed as stale because it was based on tool 0.14.2 and
-would downgrade current release state. Open issue #76 remains valid future work
-for thin bounded-jobs exposure.
+Historical PR #77 remains closed as stale; it was based on tool 0.14.2 and must
+not be revived or rebased into current main.
 
-## Current goal
+## Current work
 
-Complete #84 by pinning exact released `lib.py.cad.ci 0.9.3`.
+There is no active release migration.
 
-This is a dependency-only patch:
-- pin the exact 0.9.3 library commit;
-- update the boundary test and release metadata;
-- change no CLI, workflow, publication or selection semantics;
-- release tool.cad.ci 0.16.2;
-- black-box the exact released stack before Forge adopts it.
+Open #76 remains valid **later** work: expose the already released library
+`jobs` option through the thin CLI/reusable workflow surface.
+
+#76 must start from current main and must not:
+- downgrade the current tool version/library pin;
+- add a tool-owned worker pool;
+- duplicate selection, scheduling, dependency or SCons logic.
 
 ## Execution order
 
-1. [#84, now] Pin exact lib.py.cad.ci 0.9.3.
-2. [#84] Release exact green tool.cad.ci 0.16.2.
-3. [tool.cad.ci.test] Add one released-stack acceptance issue for the selective
-   startup behavior.
-4. [Forge] Adopt the accepted exact tool revision and remeasure the real
-   selective PR startup interval.
-5. [#76, later] Expose bounded jobs as a separate tool change.
+1. Consumers may adopt the externally accepted 0.16.2 / 0.9.3 stack.
+2. Measure real consumer selective-run startup with that exact released stack.
+3. Activate #76 only as a separate, independently justified tool change.
+4. If #76 is implemented, release the next appropriate tool version and prove
+   `jobs > 1` in tool.cad.ci.test before consumer adoption.
 
 ## Open issue assessment — 2026-11-21
 
 | Issue | Status | Assessment |
 | --- | --- | --- |
-| #84 Adopt lib.py.cad.ci 0.9.3 selective-startup optimization | **now** | Dependency-only repin required to expose the released generic optimization. |
-| #76 Expose released CAD-CI bounded parallel jobs | **later** | Still valid, but deliberately separate so startup optimization can be measured independently. |
-
-Immediate chain:
-
-`lib 0.9.3 -> tool #84 / 0.16.2 -> black-box acceptance -> Forge measurement`.
+| #76 Expose released CAD-CI bounded parallel jobs | **later** | Library support is already released; thin exposure remains useful but is intentionally separate from the accepted startup optimization. |
