@@ -4,10 +4,13 @@
 
 ## Build branch
 
-The durable `build` branch has two scopes:
+The durable `build` branch supports stable, named complete and PR scopes:
 
 ```text
 main/
+  build.json
+  <item source path>/...
+<name>/
   build.json
   <item source path>/...
 pr/
@@ -16,7 +19,9 @@ pr/
     <affected item source path>/...
 ```
 
-`main/` is a complete accepted baseline. A PR scope is a sparse overlay. It contains only items rebuilt by that PR.
+`main/` and caller-named scopes are complete baselines. A PR scope is a
+sparse overlay containing only items rebuilt by that PR. Named scopes use one
+safe top-level path segment and are useful for long-lived integration lanes.
 
 A normal main run does not need to rebuild the full catalog. `build update-main` copies the existing complete baseline, validates the selected fresh item results, replaces only those item directories, and writes a new complete manifest. New selected items may be added when the consumer catalog grows; unrelated baseline items are preserved.
 
@@ -40,7 +45,14 @@ previews/
     provenance.json
 ```
 
-Updating the stable site preserves every preview. Updating or cleaning one preview changes only that preview directory.
+A consumer may also publish complete sites below safe named top-level
+subtrees, for example `dev/`.
+
+Updating one named subtree preserves stable content, every PR preview and every
+sibling named subtree. Updating the stable site preserves every PR preview and
+the explicit named-subtree keep set supplied with
+`--preserve-subtree <name>`. Updating or cleaning one PR preview changes only
+that preview directory.
 
 `provenance.json` is written by the site build and should identify the source commit and build evidence used for that site.
 
@@ -71,3 +83,26 @@ For every write the publisher:
 7. retries from the new branch head when another writer won the race.
 
 This means correctness does not depend on GitHub Actions concurrency behaving like a queue.
+
+## Named scope commands
+
+Complete named build state uses the same released library semantics as
+`main`:
+
+```text
+cad-ci build prepare-named --name <name> ...
+cad-ci build update-named --name <name> --named <existing-scope> ...
+cad-ci publish build --scope named --scope-name <name> ...
+```
+
+Named Pages publication and stable-root preservation are exposed as:
+
+```text
+cad-ci publish pages --name <name> --site <site> ...
+cad-ci publish pages --site <stable-site> \
+  --preserve-subtree <name-a> \
+  --preserve-subtree <name-b> ...
+```
+
+The tool forwards these values to the released library. It does not implement
+scope reconciliation or path-safety rules itself.
