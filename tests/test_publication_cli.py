@@ -360,6 +360,182 @@ class PublicationCliTests(unittest.TestCase):
             )
             self.assertEqual(stream.getvalue().strip(), "abc123")
 
+    def test_prepare_named_defaults_to_complete_processed_item_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root)
+            candidate = make_candidates(root)
+            out = root / "dev-cad"
+
+            self.assertEqual(
+                main(
+                    [
+                        "build",
+                        "prepare-named",
+                        "--repo",
+                        str(repo),
+                        "--candidate-root",
+                        str(candidate),
+                        "--out",
+                        str(out),
+                        "--source-commit",
+                        "dev-1",
+                        "--name",
+                        "dev_cad",
+                    ]
+                ),
+                0,
+            )
+
+            manifest = json.loads(
+                (out / "build.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(manifest["scope"], "named")
+            self.assertEqual(manifest["name"], "dev_cad")
+            self.assertEqual(
+                tuple(manifest["items"]),
+                ("cases/a", "cases/b"),
+            )
+
+    def test_update_named_forwards_sparse_and_current_item_sets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root)
+
+            with patch(
+                "cad_ci_tool.publication_cli.update_named",
+                return_value={},
+            ) as update:
+                result = main(
+                    [
+                        "build",
+                        "update-named",
+                        "--repo",
+                        str(repo),
+                        "--candidate-root",
+                        str(root / "candidate"),
+                        "--named",
+                        str(root / "dev_cad"),
+                        "--out",
+                        str(root / "updated"),
+                        "--source-commit",
+                        "dev-new",
+                        "--name",
+                        "dev_cad",
+                        "--changed",
+                        "cases/a/model.py",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            call = update.call_args.kwargs
+            self.assertEqual(
+                tuple(item.id for item in call["items"]),
+                ("case-a",),
+            )
+            self.assertEqual(
+                tuple(item.id for item in call["current_items"]),
+                ("case-a", "case-b"),
+            )
+            self.assertEqual(call["name"], "dev_cad")
+            self.assertEqual(call["source_commit"], "dev-new")
+
+    def test_publish_named_build_scope_forwards_name_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            stream = io.StringIO()
+
+            with patch(
+                "cad_ci_tool.publication_cli.publish_build_scope",
+                return_value="build123",
+            ) as publish, redirect_stdout(stream):
+                result = main(
+                    [
+                        "publish",
+                        "build",
+                        "--repo",
+                        str(repo),
+                        "--candidate",
+                        str(root / "candidate"),
+                        "--scope",
+                        "named",
+                        "--scope-name",
+                        "dev_ci",
+                        "--message",
+                        "publish dev_ci",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            call = publish.call_args.kwargs
+            self.assertEqual(call["scope"], "named")
+            self.assertEqual(call["scope_name"], "dev_ci")
+            self.assertIsNone(call["pull_request"])
+            self.assertEqual(stream.getvalue().strip(), "build123")
+
+    def test_publish_pages_forwards_named_and_stable_preservation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+
+            with patch(
+                "cad_ci_tool.publication_cli.publish_pages",
+                return_value="page123",
+            ) as publish:
+                self.assertEqual(
+                    main(
+                        [
+                            "publish",
+                            "pages",
+                            "--repo",
+                            str(repo),
+                            "--site",
+                            str(root / "site"),
+                            "--name",
+                            "dev_cad",
+                            "--message",
+                            "preview",
+                        ]
+                    ),
+                    0,
+                )
+            named_call = publish.call_args.kwargs
+            self.assertEqual(named_call["name"], "dev_cad")
+            self.assertEqual(named_call["preserve_subtrees"], [])
+
+            with patch(
+                "cad_ci_tool.publication_cli.publish_pages",
+                return_value="page456",
+            ) as publish:
+                self.assertEqual(
+                    main(
+                        [
+                            "publish",
+                            "pages",
+                            "--repo",
+                            str(repo),
+                            "--site",
+                            str(root / "site"),
+                            "--preserve-subtree",
+                            "dev_cad",
+                            "--preserve-subtree",
+                            "dev_ci",
+                            "--message",
+                            "stable",
+                        ]
+                    ),
+                    0,
+                )
+            stable_call = publish.call_args.kwargs
+            self.assertIsNone(stable_call["name"])
+            self.assertEqual(
+                stable_call["preserve_subtrees"],
+                ["dev_cad", "dev_ci"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
