@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.2 - 2026-11-21
+
+- consume released `lib.py.cad.ci 0.9.3` at exact commit
+  `74486c441f1f2b170ff3dc06e0edcaf662fbec6b`;
+- expose the library-owned selective-startup optimization without adding
+  tool-owned selection, source scanning or SCons behavior;
+- change no CLI, workflow, publication or bounded-jobs semantics.
+
 ## 0.16.1 - 2026-11-21
 
 - consume released `lib.py.cad.ci 0.9.2` at exact commit
