@@ -50,6 +50,19 @@
 - `reusable-ci.yml` remains the high-level run-only entry point and delegates to the generic run workflow from the same tool revision.
 - `reusable-plan.yml` exposes the compact generic item plan for consumers that need domain setup between planning and execution.
 - `reusable-run.yml` performs exactly one `cad-ci run` and does not restore or save GitHub Actions cache state.
+- The released root `action.yml` is the same-runner run surface for a caller
+  that must execute consumer-owned steps after CAD-CI without crossing a runner
+  boundary.
+- The composite action checks out the exact caller source, fetches only the
+  exact incremental base when needed, uses its own released action source as
+  the exact tool source, checks out the exact pinned library source, exposes
+  both through `PYTHONPATH`, installs only external runtime dependencies,
+  performs generic GHCR login and invokes exactly one `cad-ci run`.
+- Environment entries written by the action keep the same exact CLI stack
+  available to later caller steps in that job.
+- The composite action does not own consumer-specific post-run commands,
+  durable-build policy, site generation or Pages content. Those later steps
+  call the already released generic CLI where appropriate.
 - A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
 - Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.
 - Caller `environment_json` values are inherited process environment only; root `cad-ci.yml:variables` are parsed by the released library and override a caller value with the same name.
@@ -223,3 +236,30 @@ candidate as deletion.
 
 A deletion-only or mixed deletion/replacement update must remain a library-owned
 operation once the required source/build inputs reach the command.
+
+
+## Same-runner consumer action
+
+A reusable workflow owns its called job, so a caller cannot append
+consumer-owned steps to that same runner. The root composite action exists for
+that case.
+
+The caller owns the one job, its permissions and its high-level concurrency.
+The action owns only generic CAD-CI setup and one run:
+
+```text
+one caller job
+  -> tool.cad.ci composite action
+       -> exact source checkout
+       -> exact base fetch when incremental
+       -> exact tool action source + pinned library source
+       -> external runtime dependencies
+       -> GHCR login
+       -> exactly one cad-ci run
+  -> caller-owned post-run steps on the same workspace
+       -> may use python -m cad_ci_tool ...
+```
+
+No build artifact is required to cross from the action to the caller because
+there is no runner boundary. The action must not add item loops, changed-path
+logic, consumer commands or publication semantics.

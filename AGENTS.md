@@ -92,11 +92,15 @@ End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
 ## GitHub Actions
 
-Generic consumer setup belongs in reusable workflows in this repository. A
-normal consumer should call the single high-level `reusable-ci.yml` workflow
+Generic consumer setup belongs in reusable workflows or the released root
+composite action in this repository. A normal run-only consumer should call the
+single high-level `reusable-ci.yml` workflow
 at one exact tool.cad.ci commit SHA instead of copying
-checkout/Python/tool-install/plan/run steps. Lower-level plan/run
-workflows exist only for consumers that need domain preparation between them.
+checkout/Python/tool-install/plan/run steps. Lower-level plan/run workflows exist only for consumers that need domain
+preparation between them. A consumer that needs domain-owned work after the
+CAD-CI run on the **same runner** uses the root composite action; the action may
+own generic checkout/Python/library-source/GHCR/run setup but never consumer
+commands, build-store policy or Pages content.
 
 The reusable workflow revision is also the tool revision. Checkout the workflow
 repository using `job.workflow_repository` and `job.workflow_sha`, then install

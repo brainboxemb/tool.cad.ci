@@ -7,8 +7,8 @@ argument parsing, terminal output, documentation/release plumbing and
 CLI-specific tests. It does not implement its own planner, execution engine,
 cache, build store, Pages or Git publication mechanics.
 
-The tool pins `lib.py.cad.ci` 0.8.3 at exact commit
-`e8e951ed7e50c4fa754cc158729faf2927cccb31`.
+The tool pins `lib.py.cad.ci` 0.8.4 at exact commit
+`4e033fd17e911b3feb92b1a34433b884ca788ab6`.
 
 ## Consumer layout
 
@@ -142,6 +142,39 @@ after caller environment. Secrets remain normal GitHub Actions
 secrets/permissions. A caller that needs GHCR packages grants
 `packages: read`; the reusable workflow uses that token permission for the
 generic Docker login and does not expose the token to CAD-CI commands.
+
+When consumer-owned work must happen **after** CAD-CI on the same hosted runner,
+use the released root composite action instead of a reusable workflow:
+
+```yaml
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - uses: brainboxemb/tool.cad.ci@<tool-commit>
+        with:
+          source_sha: ${{ github.sha }}
+          base_sha: ${{ github.event.before }}
+          github_token: ${{ github.token }}
+
+      - name: Consumer-owned post-run step
+        run: python -m cad_ci_tool --help
+```
+
+The action checks out the caller source and exact pinned library source, exposes
+the action/tool source plus library source through `PYTHONPATH`, installs only
+external runtime dependencies, authenticates GHCR and performs exactly one
+`cad-ci run`. The same `python -m cad_ci_tool` stack remains available to
+later steps in that job. It does not contain consumer commands or publication
+policy.
+
+This surface is intended for consumers such as Forge where a domain-owned site
+generator must run between generic build-store/publication commands. It avoids
+artifact transport or a second runner merely to keep using CAD-CI after the
+verification run.
 
 When a downstream consumer job must publish or transform generated output, set
 `upload_build: true`. The run workflow uploads the complete materialized

@@ -112,6 +112,51 @@ class ReusableCiHelperTests(unittest.TestCase):
             self.assertIn('[{"id":"case-a"}]', text)
 
 
+class SameRunnerActionTests(unittest.TestCase):
+    def read(self) -> str:
+        return (ROOT / "action.yml").read_text(encoding="utf-8")
+
+    def test_action_runs_exact_source_stack_once_and_leaves_cli_available(self):
+        text = self.read()
+        self.assertIn("using: composite", text)
+        self.assertIn("name: Checkout caller source", text)
+        self.assertIn("ref: ${{ inputs.source_sha }}", text)
+        self.assertIn("fetch-depth: 1", text)
+        self.assertIn("git fetch --no-tags --depth=1 origin", text)
+        self.assertIn("library-revision", text)
+        self.assertIn("repository: brainboxemb/lib.py.cad.ci", text)
+        self.assertIn("ref: ${{ steps.library.outputs.revision }}", text)
+        self.assertIn("CAD_CI_TOOL_ROOT=$GITHUB_ACTION_PATH", text)
+        self.assertIn("CAD_CI_LIB_ROOT=$GITHUB_WORKSPACE/.cache/cad-ci-lib-source", text)
+        self.assertIn("PYTHONPATH=", text)
+        self.assertEqual(text.count('scripts/reusable_ci.py" run'), 1)
+
+    def test_action_does_not_install_own_packages_or_transport_build_artifacts(self):
+        text = self.read()
+        self.assertNotIn("pip install -e", text)
+        self.assertNotIn("pip install .", text)
+        self.assertIn("--no-deps --no-compile", text)
+        self.assertIn('"PyYAML>=6.0" "SCons==4.11.1"', text)
+        self.assertNotIn("actions/upload-artifact", text)
+        self.assertNotIn("actions/download-artifact", text)
+
+    def test_action_owns_only_generic_setup_authentication_and_run(self):
+        text = self.read()
+        self.assertIn("github_token:", text)
+        self.assertIn("docker login ghcr.io", text)
+        self.assertIn("CAD_CI_CONSUMER_ENV_JSON", text)
+        self.assertNotIn("FORGE_RUNTIME_IMAGE", text)
+        self.assertNotIn("site/build.py", text)
+        self.assertNotIn("publish pages", text)
+        self.assertNotIn("publish build", text)
+
+    def test_action_validates_incremental_vs_full_run_contract(self):
+        text = self.read()
+        self.assertIn("full_run must be true or false", text)
+        self.assertIn("incremental CAD CI requires base_sha", text)
+        self.assertIn("if: ${{ inputs.full_run == 'false' }}", text)
+
+
 class ReusableWorkflowTests(unittest.TestCase):
     def read(self, name: str) -> str:
         return (
