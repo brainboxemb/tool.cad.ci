@@ -12,6 +12,18 @@ from cad_ci.git import GitError, changed_files
 from cad_ci.planner import affected_items, build_plan
 from cad_ci.runner import RunError, run_repository
 
+def _positive_int(value: str) -> int:
+    """Parse one strictly positive integer CLI value."""
+
+    try:
+        result = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer") from exc
+    if result < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return result
+
+
 from .publication_cli import (
     PUBLICATION_ERRORS,
     add_publication_commands,
@@ -48,6 +60,12 @@ def _parser() -> argparse.ArgumentParser:
             partial.add_argument("--step")
             partial.add_argument("--from", dest="start")
             partial.add_argument("--until")
+            command.add_argument(
+                "--jobs",
+                type=_positive_int,
+                default=1,
+                help="Maximum parallel SCons jobs; defaults to 1.",
+            )
 
     add_publication_commands(sub)
     return parser
@@ -141,6 +159,7 @@ def _run_items(args: argparse.Namespace) -> int:
         step=args.step,
         start=args.start,
         until=args.until,
+        jobs=args.jobs,
     )
     return 0
 
