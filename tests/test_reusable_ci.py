@@ -333,11 +333,11 @@ class SameRunnerActionTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIn(name, text)
         self.assertIn(
-            "value: \${{ steps.durable_publish.outputs.build_commit }}",
+            "value: ${{ steps.durable_publish.outputs.build_commit }}",
             text,
         )
         self.assertIn(
-            "value: \${{ steps.durable_publish.outputs.prepared_scope }}",
+            "value: ${{ steps.durable_publish.outputs.prepared_scope }}",
             text,
         )
 
