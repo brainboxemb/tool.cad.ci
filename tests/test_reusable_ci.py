@@ -516,5 +516,87 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: true", text)
 
 
+    def test_durable_state_delegates_to_library(self):
+        from cad_ci.durable import DurableScopeState
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            generated = root / "generated"
+            with patch(
+                "cad_ci.durable.fetch_durable_scope_state",
+                return_value=DurableScopeState(
+                    scope="dev-ci",
+                    base_sha="a" * 40,
+                    full_run=False,
+                    exists=True,
+                ),
+            ) as resolve:
+                result = self.helper.durable_state(
+                    repo=repo,
+                    generated_build=generated,
+                    scope="dev-ci",
+                    source_sha="b" * 40,
+                )
+
+        self.assertEqual(
+            result,
+            {
+                "scope": "dev-ci",
+                "base_sha": "a" * 40,
+                "full_run": False,
+                "exists": True,
+            },
+        )
+        resolve.assert_called_once()
+
+    def test_durable_publish_delegates_build_then_pages(self):
+        from cad_ci.durable import DurableScopeState
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            generated = root / "generated"
+            prepared = root / "prepared"
+            candidate = root / "build"
+
+            with (
+                patch(
+                    "cad_ci.durable.publish_durable_scope",
+                    return_value="c" * 40,
+                ) as build,
+                patch(
+                    "cad_ci.durable.publish_durable_pages",
+                    return_value="d" * 40,
+                ) as pages,
+            ):
+                result = self.helper.durable_publish(
+                    repo=repo,
+                    generated_build=generated,
+                    prepared_scope=prepared,
+                    candidate_root=candidate,
+                    scope="main",
+                    base_sha="a" * 40,
+                    full_run=False,
+                    exists=True,
+                    source_sha="b" * 40,
+                    source_ref="main",
+                )
+
+        self.assertEqual(result, ("c" * 40, "d" * 40))
+        state = build.call_args.kwargs["state"]
+        self.assertIsInstance(state, DurableScopeState)
+        self.assertEqual(state.scope, "main")
+        self.assertEqual(state.base_sha, "a" * 40)
+        self.assertFalse(state.full_run)
+        self.assertTrue(state.exists)
+        self.assertEqual(
+            pages.call_args.kwargs["build_commit"],
+            "c" * 40,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
