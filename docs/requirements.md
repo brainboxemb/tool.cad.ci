@@ -356,6 +356,38 @@ Lane-to-lane, temporary-to-lane, temporary-to-stable and other ordinary
 supported pull requests remain squash merges unless a separate future contract
 explicitly changes them.
 
+## Reviewed conflict resolution for permanent refs
+
+A genuinely conflicted permanent-ref promotion or synchronization must not be
+replaced by a temporary squash merge or force-push.
+
+The owner merge API therefore supports a separate reviewed
+`/merge-resolved` recovery command with these requirements:
+
+- only exact configured `lane -> stable` promotion or `stable -> lane`
+  synchronization is eligible;
+- the original PR must still be open, non-draft and `mergeable: false`;
+- the command records the reviewed base SHA and head SHA explicitly and refuses
+  either parent if it moved;
+- a separate same-repository resolution PR must target the same base, be
+  normally mergeable, and have independent green checks/statuses;
+- the command records that resolution PR number, its exact head ref/commit SHA
+  and the exact Git tree SHA;
+- the resolution ref must use the configured reserved prefix (default
+  `resolve/`);
+- immediately before ref mutation, the original PR, review PR, permanent refs
+  and resolution ref are re-read and must still match the reviewed evidence;
+- the resulting Git commit must use exactly the reviewed tree and exactly two
+  parents in order: current base first, current permanent head second;
+- the base ref is advanced without force; promotion/synchronization lifecycle
+  and integration dispatch then use the same rules as a normal permanent merge;
+- the conflicted PR and resolution review PR are closed after success and the
+  unchanged resolution ref is deleted;
+- any API failure after the irreversible base-ref update is reported as an
+  uncertain/partial post-merge outcome rather than a pre-merge refusal;
+- the resolved path is not available for ordinary temporary PRs and does not
+  accept an arbitrary merge method.
+
 ## Merge-command check isolation
 
 The reusable merge policy must evaluate PR validation independently from
