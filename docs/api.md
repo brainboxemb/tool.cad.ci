@@ -189,7 +189,8 @@ An evidence cell marked **GAP** is incomplete, not passed.
 | GOV-001 | Shared merge-policy workflow / branch classifier | `scripts/merge_policy.py`, `reusable-merge-policy.yml` | `tests/test_merge_policy.py` | Forge `/merge` consumer, existing external source-contract check | Ownership review |
 | GOV-002 | Stable-to-lane extension / cleanup boundary | `scripts/merge_policy.py`, `scripts/merge_command.py` | `tests/test_merge_policy.py`, `tests/test_merge_command.py` | **GAP:** real lane/ref lifecycle with new implementation | Draft fix |
 | GOV-003 | Irreversible merge and post-merge reporting | `scripts/merge_command.py` | `tests/test_merge_command.py` mocked failures | **GAP:** live partial-failure recovery proof | Draft fix |
-| GOV-004 | Command-run check isolation | `scripts/merge_command.py` | `tests/test_merge_command.py` fixtures | v0.27.1 live stable-to-lane evidence in `tool.cad.ci.test` PR #190 | Accepted |\n| GOV-005 | Reviewed permanent-ref conflict recovery | `scripts/merge_command.py`, `scripts/merge_resolution.py` | `tests/test_merge_command.py`, `tests/test_merge_resolution.py` | **GAP until released:** conflicted permanent sync/promotion in `tool.cad.ci.test` | Candidate |
+| GOV-004 | Command-run check isolation | `scripts/merge_command.py` | `tests/test_merge_command.py` fixtures | v0.27.1 live stable-to-lane evidence in `tool.cad.ci.test` PR #190 | Accepted |
+| GOV-005 | Reviewed permanent-ref conflict recovery | `scripts/merge_command.py`, `scripts/merge_resolution.py` | `tests/test_merge_command.py`, `tests/test_merge_resolution.py` | **GAP until released:** conflicted permanent sync/promotion in `tool.cad.ci.test` | Candidate |
 | SEC-001 | Trusted tool bootstrap and permission boundary | `reusable-merge-policy.yml` | `tests/test_merge_policy.py` source assertions | **GAP:** permission / denial / race matrix in external tests | Incomplete |
 
 ### Release/compatibility decisions still required
