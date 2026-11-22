@@ -56,11 +56,13 @@ Entry point: `workflow_call`. Inputs: `source_sha` (string, default triggering s
 
 ### `reusable-run.yml`
 
-Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, `jobs` (number, default 1), `environment_json` (nonsecret JSON string, default `{}`), `upload_build` (boolean, default false), `build_artifact_name` (string, default `cad-ci-build`). Output: `build_artifact_name` (empty when nothing uploaded). Requires `contents: read` and `packages: read`. Side effects: checkout, install, GHCR login, exactly one CAD-CI run; optional Actions artifact upload including hidden `.cad-ci` evidence. No durable build-branch publication.
+Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, optional `pr_policy_json`, `jobs` (number, default 1), `environment_json` (nonsecret JSON string, default `{}`), `upload_build` (boolean, default false), `build_artifact_name` (string, default `cad-ci-build`). Output: `build_artifact_name` (empty when nothing uploaded). Requires `contents: read` and `packages: read`. Side effects: shallow caller checkout/base fetch, optional lane-policy preflight, then tool/library/Python/GHCR bootstrap and exactly one CAD-CI run when not skipped; optional Actions artifact upload. No durable build-branch publication.
 
 ### `reusable-ci.yml`
 
-Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`. Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
+Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`, plus optional `pr_policy_json` (default empty). Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
+
+When `pr_policy_json` is set on a pull request, the existing single runner may apply stable/lane/docs-only policy before Python/library/GHCR bootstrap. The policy supports `stable_ref`, `lane_refs`, and `docs_only_prefixes`. Exact configured lane→stable promotion forces full CI; a non-empty development-lane diff entirely below configured docs prefixes succeeds without CAD-CI bootstrap; all other/unknown cases fail safe to running CI. No second classifier job is created.
 
 ### `reusable-pr.yml`
 
