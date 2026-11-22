@@ -26,14 +26,31 @@ Issue #95 is complete and closed.
 
 ## Current work
 
-No tool implementation is active.
+Issue #103 — **now**: provide the reusable dev-lane merge/lifecycle policy as a
+released GitHub Actions workflow surface.
 
-Issue #99 is released and externally accepted. Consumers may adopt the exact
-0.18.1 / 0.11.0 pair.
+Required order:
+
+1. freeze the public workflow contract in requirements/design;
+2. preserve current Forge acceptance semantics exactly;
+3. implement the generic reusable workflow without Forge-specific names;
+4. test merge-method, head/check verification, permanent-ref protection,
+   temporary-branch cleanup and post-promotion lane preservation;
+5. release a new tool.cad.ci version;
+6. externally accept it in tool.cad.ci.test;
+7. qualify released equivalence in Forge before removing Forge-local policy.
+
+No lib.py.cad.ci change is expected: this is workflow orchestration, not generic
+planning/execution semantics.
+
+Issue #99 remains released and externally accepted; consumers may continue using
+0.18.1 / 0.11.0 while #103 is developed.
 
 ## Open issue assessment — 2026-11-22
 
-No open tool issues remain after #99 is closed.
+| Issue | Status | Current interpretation |
+| --- | --- | --- |
+| #103 reusable dev-lane merge policy workflow | **now** | Tool-owned reusable GitHub Actions surface; preserve Forge behavior, release, black-box accept, then migrate consumers. |
 
 ## Next trigger
 

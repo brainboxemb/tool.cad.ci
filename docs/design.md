@@ -438,3 +438,64 @@ A long-lived consumer push job should reduce to roughly:
 ```
 
 The site builder and Pages content remain consumer-owned.
+
+
+## Shared merge-policy workflow
+
+Issue #103 adds one reusable GitHub Actions workflow surface above GitHub's PR,
+checks/status and refs APIs. It is deliberately separate from the CAD-CI
+library/execution graph.
+
+Conceptual flow:
+
+```text
+consumer /merge trigger
+  -> reusable tool.cad.ci merge-policy workflow
+       -> load exact PR/base/head
+       -> reject draft/stale/unmergeable/non-green
+       -> classify exact base/head pair
+       -> merge with selected method
+       -> preserve/advance configured long-lived lane when promoted
+       -> optionally delete allow-listed temporary head
+       -> optionally dispatch configured consumer integration workflow
+```
+
+### Public configuration boundary
+
+The reusable workflow should accept repository-neutral configuration for:
+
+- stable branch name (default may be `main`);
+- long-lived lane names;
+- temporary cleanup prefix allow-list;
+- optional post-merge integration workflow identifier/ref inputs.
+
+The caller must not pass an arbitrary merge method. Merge method is derived by
+the shared policy from exact configured base/head roles.
+
+### Safety boundary
+
+The shared implementation owns:
+
+- merge-method decision;
+- current-head verification;
+- check/status gate;
+- temporary-branch cleanup allow-list enforcement;
+- long-lived lane preservation after promotion.
+
+The consumer owns:
+
+- deciding to expose/use the `/merge` trigger;
+- permissions;
+- lane names/configuration;
+- optional integration workflow dispatch target.
+
+The implementation must never infer cleanup safety from branch age or naming
+outside the explicit allow-list. Generated/build/Pages/backup refs are outside
+the cleanup domain.
+
+### Ownership
+
+No `lib.py.cad.ci` change is required unless implementation exposes a genuine
+planning/execution requirement. The first release should be implemented and
+tested entirely in tool.cad.ci, then black-box accepted in tool.cad.ci.test and
+finally qualified from Forge #674.

@@ -1,0 +1,198 @@
+name: Reusable merge policy
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        description: Explicit caller command; must be exactly /merge.
+        required: true
+        type: string
+      pull_request_number:
+        description: Pull request number in the caller repository.
+        required: true
+        type: number
+      stable_ref:
+        description: Stable integration branch.
+        required: false
+        type: string
+        default: main
+      lane_refs_json:
+        description: JSON list of long-lived development lane refs.
+        required: true
+        type: string
+      permanent_refs_json:
+        description: JSON list of additional permanent/generated refs that cleanup must never delete.
+        required: false
+        type: string
+        default: '["build","gh-pages"]'
+      temporary_prefixes_json:
+        description: JSON allow-list of temporary branch prefixes eligible for post-merge deletion.
+        required: false
+        type: string
+        default: '["issue/","fix/","feature/","accept/","promote/","docs/","chore/"]'
+      integration_workflow:
+        description: Optional caller workflow file/name to dispatch after merge; empty disables dispatch.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+  statuses: read
+  actions: write
+
+jobs:
+  merge:
+    if: inputs.command == '/merge' && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    concurrency:
+      group: merge-policy-${{ github.repository }}-${{ inputs.pull_request_number }}
+      cancel-in-progress: false
+    env:
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: ${{ inputs.pull_request_number }}
+      TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
+      STABLE_REF: ${{ inputs.stable_ref }}
+      LANE_REFS_JSON: ${{ inputs.lane_refs_json }}
+      PERMANENT_REFS_JSON: ${{ inputs.permanent_refs_json }}
+      TEMPORARY_PREFIXES_JSON: ${{ inputs.temporary_prefixes_json }}
+      INTEGRATION_WORKFLOW: ${{ inputs.integration_workflow }}
+    steps:
+      - name: Checkout called tool revision
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .cache/cad-ci-tool-source
+          fetch-depth: 1
+
+      - name: Merge through shared repository policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          refuse() {
+            reason="$1"
+            echo "merge refused: $reason" >&2
+            gh api -X POST               "repos/$REPOSITORY/issues/$PR_NUMBER/comments"               -f body="Merge refused by shared repository policy: $reason"               >/dev/null
+            exit 1
+          }
+
+          PR_JSON="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
+          STATE="$(jq -r '.state' <<<"$PR_JSON")"
+          DRAFT="$(jq -r '.draft' <<<"$PR_JSON")"
+          MERGEABLE="$(jq -r 'if .mergeable == null then "unknown" else (.mergeable|tostring) end' <<<"$PR_JSON")"
+          BASE_REF="$(jq -r '.base.ref' <<<"$PR_JSON")"
+          HEAD_REF="$(jq -r '.head.ref' <<<"$PR_JSON")"
+          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR_JSON")"
+          HEAD_REPO="$(jq -r '.head.repo.full_name // ""' <<<"$PR_JSON")"
+
+          [ "$STATE" = "open" ] || refuse "pull request is not open"
+          [ "$DRAFT" = "false" ] || refuse "pull request is still a draft"
+          [ "$MERGEABLE" = "true" ] || refuse "pull request is not currently mergeable ($MERGEABLE)"
+
+          CHECKS_JSON="$(
+            gh api               -H "Accept: application/vnd.github+json"               "repos/$REPOSITORY/commits/$HEAD_SHA/check-runs?per_page=100"
+          )"
+          LATEST_CHECKS="$(
+            jq -c '
+              [.check_runs[]]
+              | sort_by(.name, (.started_at // ""), .id)
+              | group_by(.name)
+              | map(last)
+            ' <<<"$CHECKS_JSON"
+          )"
+          CHECK_COUNT="$(jq -r 'length' <<<"$LATEST_CHECKS")"
+          [ "$CHECK_COUNT" -gt 0 ] || refuse "no completed PR checks exist on the current head"
+
+          BAD_CHECKS="$(
+            jq -r '
+              [
+                .[]
+                | select(
+                    .status != "completed"
+                    or (
+                      .conclusion != "success"
+                      and .conclusion != "neutral"
+                      and .conclusion != "skipped"
+                    )
+                  )
+                | .name + "=" + .status + "/" + (.conclusion // "none")
+              ]
+              | join(", ")
+            ' <<<"$LATEST_CHECKS"
+          )"
+          [ -z "$BAD_CHECKS" ] || refuse "checks are not green: $BAD_CHECKS"
+
+          STATUS_JSON="$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA/status")"
+          STATUS_COUNT="$(jq -r '.statuses | length' <<<"$STATUS_JSON")"
+          STATUS_STATE="$(jq -r '.state' <<<"$STATUS_JSON")"
+          if [ "$STATUS_COUNT" -gt 0 ] && [ "$STATUS_STATE" != "success" ]; then
+            refuse "commit status contexts are not green ($STATUS_STATE)"
+          fi
+
+          POLICY="$(
+            python "$TOOL_ROOT/scripts/merge_policy.py"               --base "$BASE_REF"               --head "$HEAD_REF"               --stable-ref "$STABLE_REF"               --lane-refs-json "$LANE_REFS_JSON"               --permanent-refs-json "$PERMANENT_REFS_JSON"               --temporary-prefixes-json "$TEMPORARY_PREFIXES_JSON"
+          )"
+          METHOD="$(jq -r '.merge_method' <<<"$POLICY")"
+          DIRECT_PROMOTION="$(jq -r '.direct_lane_promotion' <<<"$POLICY")"
+          CLEANUP_HEAD="$(jq -r '.cleanup_head' <<<"$POLICY")"
+          INTEGRATE_BASE="$(jq -r '.integrate_base' <<<"$POLICY")"
+
+          if [ "$DIRECT_PROMOTION" = "true" ] && [ "$HEAD_REPO" != "$REPOSITORY" ]; then
+            refuse "long-lived lane promotion must originate from this repository"
+          fi
+
+          MERGE_JSON="$(
+            gh api -X PUT               "repos/$REPOSITORY/pulls/$PR_NUMBER/merge"               -f sha="$HEAD_SHA"               -f merge_method="$METHOD"
+          )"
+          MERGED="$(jq -r '.merged' <<<"$MERGE_JSON")"
+          [ "$MERGED" = "true" ] || refuse "GitHub declined merge: $(jq -r '.message' <<<"$MERGE_JSON")"
+          MERGE_SHA="$(jq -r '.sha' <<<"$MERGE_JSON")"
+
+          LIFECYCLE_RESULT="not-requested"
+          if [ "$DIRECT_PROMOTION" = "true" ]; then
+            sleep 1
+            if gh api "repos/$REPOSITORY/git/ref/heads/$HEAD_REF" >/dev/null 2>&1; then
+              gh api -X PATCH                 "repos/$REPOSITORY/git/refs/heads/$HEAD_REF"                 -f sha="$MERGE_SHA"                 -F force=false                 >/dev/null
+              LIFECYCLE_RESULT="long-lived lane advanced to merge commit"
+            else
+              gh api -X POST                 "repos/$REPOSITORY/git/refs"                 -f ref="refs/heads/$HEAD_REF"                 -f sha="$MERGE_SHA"                 >/dev/null
+              LIFECYCLE_RESULT="long-lived lane recreated at merge commit"
+            fi
+          elif [ "$CLEANUP_HEAD" = "true" ] && [ "$HEAD_REPO" = "$REPOSITORY" ]; then
+            if gh api "repos/$REPOSITORY/git/ref/heads/$HEAD_REF" >/dev/null 2>&1; then
+              gh api -X DELETE                 "repos/$REPOSITORY/git/refs/heads/$HEAD_REF"                 >/dev/null
+              LIFECYCLE_RESULT="temporary head deleted"
+            else
+              LIFECYCLE_RESULT="temporary head already absent"
+            fi
+          fi
+
+          DISPATCHED=()
+          if [ -n "$INTEGRATION_WORKFLOW" ]; then
+            if [ "$INTEGRATE_BASE" = "true" ]; then
+              gh api -X POST                 "repos/$REPOSITORY/actions/workflows/$INTEGRATION_WORKFLOW/dispatches"                 -f ref="$BASE_REF"                 >/dev/null
+              DISPATCHED+=("$BASE_REF")
+            fi
+            if [ "$DIRECT_PROMOTION" = "true" ]; then
+              gh api -X POST                 "repos/$REPOSITORY/actions/workflows/$INTEGRATION_WORKFLOW/dispatches"                 -f ref="$HEAD_REF"                 >/dev/null
+              DISPATCHED+=("$HEAD_REF")
+            fi
+          fi
+
+          if [ "${#DISPATCHED[@]}" -gt 0 ]; then
+            INTEGRATION_RESULT="$(IFS=', '; echo "${DISPATCHED[*]}")"
+          else
+            INTEGRATION_RESULT="none"
+          fi
+
+          COMMENT_BODY="$(
+            printf 'Merged by shared repository policy: `%s -> %s` using **%s** at `%s`. Branch lifecycle: %s. Integration dispatched: %s.'               "$HEAD_REF" "$BASE_REF" "$METHOD" "$MERGE_SHA" "$LIFECYCLE_RESULT" "$INTEGRATION_RESULT"
+          )"
+          gh api -X POST             "repos/$REPOSITORY/issues/$PR_NUMBER/comments"             -f body="$COMMENT_BODY"             >/dev/null
