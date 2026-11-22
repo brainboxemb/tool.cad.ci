@@ -119,7 +119,6 @@ class ConsumerTemplateTests(unittest.TestCase):
         )
         self.assertEqual(job["with"]["stable_ref"], "main")
         self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
-        self.assertIn("/merge-resolved", job["if"])
         self.assertEqual(
             job["uses"],
             "brainboxemb/tool.cad.ci/.github/workflows/"
@@ -157,6 +156,7 @@ class ConsumerTemplateTests(unittest.TestCase):
         )
         self.assertEqual(job["with"]["stable_ref"], "main")
         self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
+        self.assertIn("/merge-resolved", job["if"])
         self.assertEqual(
             job["uses"],
             "brainboxemb/tool.cad.ci/.github/workflows/"
