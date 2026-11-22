@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
+from types import SimpleNamespace
 from pathlib import Path
 import tempfile
 import unittest
@@ -86,6 +88,14 @@ class ReusableCiHelperTests(unittest.TestCase):
                 full_run=False,
             )
 
+    def test_incremental_selection_rejects_non_sha_revisions(self):
+        for base, head in (("main", "b" * 40), ("a" * 40, "HEAD")):
+            with self.subTest(base=base, head=head):
+                with self.assertRaisesRegex(ValueError, "exactly 40"):
+                    self.helper.selection_args(
+                        source_sha=head, base_sha=base, full_run=False
+                    )
+
     def test_library_revision_reads_exact_pyproject_pin(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -100,137 +110,103 @@ class ReusableCiHelperTests(unittest.TestCase):
             )
             self.assertEqual(self.helper.library_revision(root), "a" * 40)
 
-    def test_resolve_existing_main_scope_is_incremental(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            manifest = root / "main" / "build.json"
-            manifest.parent.mkdir(parents=True)
-            manifest.write_text(
-                json.dumps({"source_commit": "a" * 40}),
-                encoding="utf-8",
-            )
-            state = self.helper.resolve_durable_state(
-                generated_build=root,
-                scope="main",
-                source_sha="b" * 40,
-            )
-            self.assertEqual(state.scope, "main")
-            self.assertEqual(state.base_sha, "a" * 40)
-            self.assertFalse(state.full_run)
-            self.assertTrue(state.scope_exists)
+    def test_durable_semantics_are_owned_by_library(self):
+        text = (ROOT / "scripts" / "reusable_ci.py").read_text(encoding="utf-8")
+        self.assertIn("from cad_ci.durable import", text)
+        for forbidden in (
+            "build.json",
+            "def durable_scope(value",
+            "def resolve_durable_state",
+            "def fetch_durable_state",
+            '"update-main"',
+            '"update-named"',
+            '"prepare-named"',
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, text)
 
-    def test_missing_named_scope_is_initial_full_run(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            state = self.helper.resolve_durable_state(
-                generated_build=Path(tmp),
-                scope="dev-ci",
-                source_sha="b" * 40,
-            )
-            self.assertEqual(state.scope, "dev-ci")
-            self.assertEqual(state.base_sha, "b" * 40)
-            self.assertTrue(state.full_run)
-            self.assertFalse(state.scope_exists)
+    def test_durable_resolve_command_delegates_to_library(self):
+        state = SimpleNamespace(
+            scope="main",
+            base_sha="a" * 40,
+            full_run=False,
+            exists=True,
+        )
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(
+                 self.helper,
+                 "fetch_durable_scope_state",
+                 return_value=state,
+             ) as resolve, \
+             patch.object(self.helper, "write_github_output") as output, \
+             patch.object(
+                 sys,
+                 "argv",
+                 [
+                     "reusable_ci.py",
+                     "durable-resolve",
+                     "--repo", tmp,
+                     "--scope", "main",
+                     "--source-sha", "b" * 40,
+                     "--generated-build", str(Path(tmp) / "generated"),
+                     "--github-output", str(Path(tmp) / "output"),
+                 ],
+             ):
+            self.assertEqual(self.helper.main(), 0)
 
-    def test_missing_main_scope_is_rejected(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaisesRegex(ValueError, "main scope is missing"):
-                self.helper.resolve_durable_state(
-                    generated_build=Path(tmp),
-                    scope="main",
-                    source_sha="b" * 40,
-                )
+        resolve.assert_called_once_with(
+            repo=Path(tmp),
+            generated_build=Path(tmp) / "generated",
+            scope="main",
+            source_sha="b" * 40,
+        )
+        values = {call.args[1]: call.args[2] for call in output.call_args_list}
+        self.assertEqual(values["scope"], "main")
+        self.assertEqual(values["base_sha"], "a" * 40)
+        self.assertEqual(values["full_run"], "false")
+        self.assertEqual(values["scope_exists"], "true")
 
-    def test_durable_scope_rejects_paths_and_reserved_namespace(self):
-        for value in ("../dev", "dev/ci", ".cad-ci", ""):
-            with self.subTest(value=value):
-                with self.assertRaisesRegex(ValueError, "safe simple"):
-                    self.helper.durable_scope(value)
+    def test_durable_publish_command_delegates_to_library(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(
+                 self.helper,
+                 "publish_durable_scope",
+                 return_value="c" * 40,
+             ) as publish, \
+             patch.object(self.helper, "write_github_output") as output, \
+             patch.object(
+                 sys,
+                 "argv",
+                 [
+                     "reusable_ci.py",
+                     "durable-publish",
+                     "--repo", tmp,
+                     "--scope", "dev-cad",
+                     "--source-sha", "b" * 40,
+                     "--source-ref", "dev-cad",
+                     "--base-sha", "a" * 40,
+                     "--scope-exists", "true",
+                     "--full-run", "false",
+                     "--generated-build", str(Path(tmp) / "generated"),
+                     "--candidate-root", str(Path(tmp) / "build"),
+                     "--prepared-scope", str(Path(tmp) / "prepared"),
+                     "--github-output", str(Path(tmp) / "output"),
+                 ],
+             ):
+            self.assertEqual(self.helper.main(), 0)
 
-    def test_publish_existing_main_uses_update_main_then_publish(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            generated = repo / "generated-build"
-            (generated / "main").mkdir(parents=True)
-            prepared = repo / "prepared-scope"
-            candidate = repo / "build"
-            candidate.mkdir()
-            calls = [
-                self.helper.subprocess.CompletedProcess([], 0),
-                self.helper.subprocess.CompletedProcess(
-                    [], 0, stdout="c" * 40 + "\n"
-                ),
-            ]
-            with patch.object(
-                self.helper.subprocess,
-                "run",
-                side_effect=calls,
-            ) as run:
-                commit = self.helper.publish_durable_scope(
-                    repo=repo,
-                    generated_build=generated,
-                    prepared_scope=prepared,
-                    candidate_root=candidate,
-                    resolution=self.helper.DurableResolution(
-                        scope="main",
-                        base_sha="a" * 40,
-                        full_run=False,
-                        scope_exists=True,
-                    ),
-                    source_sha="b" * 40,
-                    source_ref="main",
-                )
-            self.assertEqual(commit, "c" * 40)
-            prepare = run.call_args_list[0].args[0]
-            self.assertIn("update-main", prepare)
-            self.assertIn(str((generated / "main").resolve()), prepare)
-            self.assertIn("a" * 40, prepare)
-            publish = run.call_args_list[1].args[0]
-            self.assertIn("publish", publish)
-            self.assertIn("build", publish)
-            self.assertIn("--scope", publish)
-            self.assertIn("main", publish)
-            self.assertIn("--expected-source", publish)
-            self.assertIn("b" * 40, publish)
-
-    def test_publish_initial_named_scope_uses_prepare_named(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            generated = repo / "generated-build"
-            generated.mkdir()
-            candidate = repo / "build"
-            candidate.mkdir()
-            with patch.object(
-                self.helper.subprocess,
-                "run",
-                side_effect=[
-                    self.helper.subprocess.CompletedProcess([], 0),
-                    self.helper.subprocess.CompletedProcess(
-                        [], 0, stdout="d" * 40 + "\n"
-                    ),
-                ],
-            ) as run:
-                self.helper.publish_durable_scope(
-                    repo=repo,
-                    generated_build=generated,
-                    prepared_scope=repo / "prepared-scope",
-                    candidate_root=candidate,
-                    resolution=self.helper.DurableResolution(
-                        scope="dev-cad",
-                        base_sha="b" * 40,
-                        full_run=True,
-                        scope_exists=False,
-                    ),
-                    source_sha="b" * 40,
-                    source_ref="dev-cad",
-                )
-            prepare = run.call_args_list[0].args[0]
-            self.assertIn("prepare-named", prepare)
-            self.assertIn("--name", prepare)
-            self.assertIn("dev-cad", prepare)
-            self.assertNotIn("--base", prepare)
-            publish = run.call_args_list[1].args[0]
-            self.assertIn("--scope-name", publish)
-            self.assertIn("dev-cad", publish)
+        kwargs = publish.call_args.kwargs
+        self.assertEqual(kwargs["repo"], Path(tmp))
+        self.assertEqual(kwargs["source_sha"], "b" * 40)
+        self.assertEqual(kwargs["source_ref"], "dev-cad")
+        state = kwargs["state"]
+        self.assertEqual(state.scope, "dev-cad")
+        self.assertEqual(state.base_sha, "a" * 40)
+        self.assertFalse(state.full_run)
+        self.assertTrue(state.exists)
+        values = {call.args[1]: call.args[2] for call in output.call_args_list}
+        self.assertEqual(values["build_commit"], "c" * 40)
+        self.assertEqual(values["prepared_scope"], str((Path(tmp) / "prepared").resolve()))
 
     def test_consumer_environment_accepts_domain_values(self):
         self.assertEqual(
@@ -255,6 +231,11 @@ class ReusableCiHelperTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "must be a string"):
             self.helper.consumer_environment('{"COUNT":3}')
+        for name in ("CAD_CI_OUTPUT", "PYTHONPATH", "PATH", "DOCKER_CONFIG",
+                     "GH_TOKEN", "PIP_INDEX_URL", "LD_PRELOAD"):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "reserved"):
+                self.helper.consumer_environment(json.dumps({name: "override"}))
+
 
     def test_github_output_supports_compact_json(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -361,6 +342,17 @@ class SameRunnerActionTests(unittest.TestCase):
         self.assertIn('CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}', text)
         self.assertIn('--jobs "$CAD_CI_JOBS_INPUT"', text)
 
+    def test_action_clears_git_token_before_run_only_consumer_commands(self):
+        text = self.read()
+        fetch = "name: Fetch exact base commit"
+        scrub = "name: Remove Git checkout credentials before run-only execution"
+        run = "name: Run selected CAD CI graph"
+        self.assertIn(scrub, text)
+        self.assertIn("if: inputs.durable_scope == ''", text)
+        self.assertLess(text.index(fetch), text.index(scrub))
+        self.assertLess(text.index(scrub), text.index(run))
+        self.assertIn("persist-credentials: false", text)
+
     def test_action_validates_incremental_vs_full_run_contract(self):
         text = self.read()
         self.assertIn("full_run must be true or false", text)
@@ -431,20 +423,48 @@ class ReusableWorkflowTests(unittest.TestCase):
                 self.assertIn("packages: read", text)
 
     def test_run_workflow_authenticates_ghcr_before_consumer_run(self):
-        """Docker receives the workflow token without exposing image policy."""
+        """No separate login action bootstrap; token arrives in step env."""
 
         text = self.read("reusable-run.yml")
-        login = "uses: docker/login-action@v3"
+        login = "name: Authenticate Docker to GHCR"
         run_step = "name: Run selected CAD CI graph"
-
         self.assertIn(login, text)
-        self.assertIn("registry: ghcr.io", text)
-        self.assertIn("username: ${{ github.actor }}", text)
-        self.assertIn("password: ${{ github.token }}", text)
-        self.assertLess(text.index(login), text.index(run_step))
-
-        # Generic authentication must not select one consumer runtime image.
+        self.assertIn("GHCR_TOKEN: ${{ github.token }}", text)
+        self.assertIn('docker login ghcr.io -u "${{ github.actor }}" --password-stdin', text)
+        self.assertNotIn("docker/login-action@", text)
+        self.assertLess(text.index(login), text.index(run_step)
+        )
         self.assertNotIn("FORGE_RUNTIME_IMAGE", text)
+
+    def test_plan_and_run_use_exact_shallow_tool_and_library(self):
+        """Both lower-level workflows share the released source-stack contract."""
+
+        for name in ("reusable-plan.yml", "reusable-run.yml"):
+            with self.subTest(name=name):
+                text = self.read(name)
+                self.assertIn("job.workflow_sha", text)
+                self.assertIn("library-revision", text)
+                self.assertIn("ref: ${{ steps.library.outputs.revision }}", text)
+                self.assertIn("PYTHONPATH:", text)
+                self.assertIn("Fetch exact base revision for incremental selection", text)
+                self.assertIn("git fetch --no-tags --depth=1 origin", text)
+                self.assertIn("--no-deps --no-compile", text)
+                self.assertIn("persist-credentials: true", text)
+                self.assertIn("persist-credentials: false", text)
+                self.assertIn("Drop caller Git credentials before consumer execution", text)
+                self.assertLess(
+                    text.index("Fetch exact base revision for incremental selection"),
+                    text.index("Drop caller Git credentials before consumer execution"),
+                )
+                self.assertLess(
+                    text.index("Drop caller Git credentials before consumer execution"),
+                    text.index(
+                        "Record source revisions" if name == "reusable-plan.yml"
+                        else "Authenticate Docker to GHCR"
+                    ),
+                )
+                self.assertNotIn("pip install -e", text)
+                self.assertNotIn("fetch-depth: 0", text)
 
     def test_free_environment_input_is_documented_as_non_secret(self):
         text = self.read("reusable-run.yml")
@@ -500,7 +520,7 @@ class ReusableWorkflowTests(unittest.TestCase):
             ),
             2,
         )
-        self.assertIn("actions/upload-artifact@v4", text)
+        self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", text)
         self.assertIn("path: build/", text)
         self.assertIn("include-hidden-files: true", text)
         self.assertIn("id: build_artifact", text)
@@ -514,16 +534,25 @@ class ReusableWorkflowTests(unittest.TestCase):
             text,
         )
 
-    def test_pr_workflow_runs_and_publishes_on_one_runner(self):
+    def test_pr_workflow_uses_one_runner_for_verification_and_publication(self):
+        """One job/workspace, no artifact transfer or repeated Python setup."""
+
         text = self.read("reusable-pr.yml")
         self.assertIn("workflow_call:", text)
         self.assertEqual(text.count("runs-on: ubuntu-latest"), 1)
-        self.assertIn('scripts/reusable_ci.py" run', text)
+        self.assertIn("  pr:", text)
+        self.assertNotIn("  publish:", text)
+        self.assertNotIn("  verify:", text)
+        self.assertNotIn("actions/upload-artifact@", text)
+        self.assertNotIn("actions/download-artifact@", text)
+        self.assertEqual(text.count("Run selected CAD CI graph"), 1)
+        self.assertEqual(text.count("Checkout called tool revision"), 1)
+        self.assertEqual(text.count("Install external CAD CI runtime dependencies"), 1)
         self.assertIn("python -m cad_ci_tool build prepare-pr", text)
         self.assertIn("python -m cad_ci_tool publish build", text)
         self.assertIn("python -m cad_ci_tool publish build-cleanup", text)
-        self.assertNotIn("actions/upload-artifact", text)
-        self.assertNotIn("actions/download-artifact", text)
+        self.assertIn("publish_build:", text)
+        self.assertIn("default: true", text)
 
     def test_pr_workflow_does_not_build_or_install_own_packages(self):
         text = self.read("reusable-pr.yml")

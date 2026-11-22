@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.21.0 - 2026-11-22
+
+- consume released `lib.py.cad.ci 0.11.1` at exact commit
+  `fa6bf244381dde609a0b04de673d774911c52fea` and move durable complete-scope
+  state/resolution/publication semantics back into that library;
+- keep `scripts/reusable_ci.py` as a workflow adapter only: exact pin
+  bootstrap, argument/environment validation, one graph invocation and GitHub
+  output serialization;
+- define and document the public CLI/action/workflow API surface and local
+  workflow/script ownership, while preserving the one-job/one-runner PR
+  lifecycle with no artifact handoff;
+- replace the large inline merge-policy Bash implementation with a thin
+  workflow plus testable Python GitHub API adapter, including complete check
+  pagination, bounded mergeability polling and explicit post-merge outcomes;
+- use immutable GitHub Action revisions, shallow exact-source bootstrap and
+  tighter checkout credential handling without adding runner boundaries;
+- tighten public integer/SHA/release validation and make repository CI test the
+  exact pinned source stack before publication.
+
+
 ## 0.20.1 - 2026-11-22
 
 - exclude same-head GitHub Actions runs triggered by `issue_comment` from the

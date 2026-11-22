@@ -102,14 +102,14 @@ runs:
         fi
 
     - name: Checkout caller source
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
         ref: ${{ inputs.source_sha }}
         fetch-depth: 1
         fetch-tags: false
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
       with:
         python-version: "3.12"
 
@@ -122,13 +122,14 @@ runs:
           --github-output "$GITHUB_OUTPUT"
 
     - name: Checkout pinned CAD CI library source
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
         repository: brainboxemb/lib.py.cad.ci
         ref: ${{ steps.library.outputs.revision }}
         path: .cache/cad-ci-lib-source
         fetch-depth: 1
         fetch-tags: false
+        persist-credentials: false
 
     - name: Expose exact CAD CI source stack
       shell: bash
@@ -186,6 +187,14 @@ runs:
         if ! git cat-file -e "$CAD_CI_BASE_SHA_INPUT^{commit}" 2>/dev/null; then
           git fetch --no-tags --depth=1 origin "$CAD_CI_BASE_SHA_INPUT"
         fi
+
+    - name: Remove Git checkout credentials before run-only execution
+      if: inputs.durable_scope == ''
+      shell: bash
+      run: |
+        # Keep the exact-base fetch authenticated for private repositories.
+        # Run-only consumer code never requires the checkout's Git token.
+        git config --local --unset-all http.https://github.com/.extraheader || :
 
     - name: Authenticate Docker to GHCR
       shell: bash

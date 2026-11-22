@@ -2,7 +2,9 @@
 
 ## Purpose
 
-`tool.cad.ci` is the thin CLI above the released `lib.py.cad.ci` library.
+`tool.cad.ci` provides the released CLI and GitHub Actions adapters above
+`lib.py.cad.ci`. Its optional merge-governance workflow is a **separate,
+explicitly documented GitHub API surface**, not part of CAD-CI execution.
 
 Keep this repository narrow:
 - command-line parsing;
@@ -11,9 +13,14 @@ Keep this repository narrow:
 - CLI documentation;
 - release plumbing;
 - reusable GitHub Actions workflows that expose the released CLI stack;
-- CLI/workflow-specific tests.
+- CLI/workflow-specific tests;
+- GitHub merge-governance policy adapter and its own tests, pending the
+  explicit ownership decision in issue #110.
 
-Do not implement generic CI behaviour here.
+Do not implement generic CI behaviour here. Every public surface must map to
+requirements, a documented API, design and observable acceptance evidence.
+See `docs/api.md`. A new workflow or script is not justified only because a
+consumer needs a temporary workaround.
 
 ## Library boundary
 
@@ -112,6 +119,19 @@ credentials and GitHub-required artifact transport.
 Do not put changed-path rules, item loops, consumer commands, rebuild decisions
 or execution timeout policy in workflow YAML. Consumer-specific runtime/image
 or publication work stays in the consumer until it has its own generic contract.
+
+## PR lifecycle architectural invariant
+
+`reusable-pr.yml` performs verification, optional sparse publication and
+closed-PR cleanup on **exactly one runner in one job**. This is an explicit
+performance and public API constraint. Do **not** add a second publisher job,
+artifact handoff, repeated checkout/Python setup, or second CAD-CI graph to
+address a local issue. Tests and documentation must enforce this boundary.
+
+Treat same-repository PR publication and durable composite publication as
+trusted-source caller contracts. For strict read-only PR verification use
+`reusable-ci.yml`. Do not create a second runner or artifact handoff to
+"solve" this; keep the public topology stable.
 
 ## Language and comments
 

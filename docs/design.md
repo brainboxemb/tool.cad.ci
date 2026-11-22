@@ -161,51 +161,42 @@ because configured-but-nonprocessed items intentionally have no candidate
 output.
 
 
-## Single-runner PR architecture
+## One-runner PR architecture
 
-The PR workflow intentionally keeps verification and publication in one GitHub
-job so a normal PR does not pay for a second runner, second checkout, second
-Python setup, tool reinstall or artifact handoff.
-
-```text
-pull_request opened/synchronize/reopened
-  -> one ubuntu runner
-     -> checkout PR head
-     -> checkout/install exact called tool
-     -> GHCR login
-     -> cad-ci run
-     -> build/ has materialized output?
-        no  -> success
-        yes -> same-repository PR?
-               no  -> success without durable publication
-               yes -> cad-ci build prepare-pr
-                      -> cad-ci publish build --scope pr
-```
+The complete `reusable-pr.yml` remains a **single job on one runner**
+for its entire PR lifecycle. That was the established performance and
+architecture requirement. It does not download/upload build artifacts or
+repeat checkout/Python setup between verification and publication.
 
 ```text
-pull_request closed
-  -> one ubuntu runner
-     -> checkout default branch
-     -> checkout/install exact called tool
-     -> cad-ci publish build-cleanup --pull-request N
+PR opened/synchronize/reopened
+  -> one runner
+      -> exact PR head / exact tool and library
+      -> GHCR authentication
+      -> one CAD-CI run
+      -> if materialized output and eligible same-repo PR:
+           prepare PR build scope
+           -> publish build scope in the same workspace
+
+PR closed
+  -> one runner
+      -> trusted/default branch and pinned tool/library
+      -> cleanup PR scope (same-repo only)
 ```
 
-The one-runner workflow changes only GitHub orchestration. It reuses existing
-CLI operations and therefore does not create a second implementation of build
-selection or publication semantics.
+An optional `publish_build: false` flag suppresses publication/cleanup
+while preserving the same one-runner verification behavior. A second
+privileged publication runner is **not** an acceptable implementation
+of this API. Security review must work within this architectural boundary,
+and unresolved trust restrictions must be visible rather than silently
+rewriting the product topology.
 
 ## PR performance contract
 
-The workflow design avoids avoidable runner-boundary overhead:
-
-- no `actions/upload-artifact` / `actions/download-artifact` between run and
-  PR publication;
-- no second runner for normal PR publication;
-- no repeated checkout/setup/install phase between verification and publish.
-
-Consumer/domain performance remains outside tool.cad.ci. The workflow provides
-the minimal generic orchestration needed to measure end-to-end PR latency.
-
+The workflow does not introduce artifact handoff, extra runners, repeated
+tool/library checkout, or a second SCons graph to facilitate publication.
+Any credential-security solution requires explicit evaluation of the
+same-runner trade-off rather than replacing this contract.
 
 ## Direct source bootstrap for pull requests
 
@@ -366,27 +357,20 @@ consumer job / one ubuntu runner
 
 ### Helper ownership
 
-`scripts/reusable_ci.py` gains two orchestration helpers:
+`scripts/reusable_ci.py` owns only workflow adaptation:
 
-`durable-resolve`
+- parse/validate GitHub-facing arguments;
+- bootstrap the exact library revision;
+- call `cad_ci.durable.fetch_durable_scope_state` after bootstrap;
+- serialize `scope`, `base_sha`, `full_run`, `scope_exists` and paths
+  to GitHub outputs;
+- construct the library `DurableScopeState` and call
+  `cad_ci.durable.publish_durable_scope`;
+- serialize the resulting build commit and prepared-scope path.
 
-- invokes the existing `cad_ci_tool build fetch` command;
-- reads only `<scope>/build.json` from that fetched tree;
-- validates the durable `source_commit`;
-- returns `scope`, `base_sha`, `full_run`, `scope_exists` and the
-  generated-build path through GitHub outputs.
-
-`durable-publish`
-
-- receives the resolved durable state and current materialized `build/`;
-- calls exactly one existing build preparation command:
-  `update-main`, `update-named` or `prepare-named`;
-- calls the existing `publish build` command once;
-- captures the exact published build commit;
-- returns `build_commit` and absolute prepared-scope path.
-
-The helper does not parse Git diffs for CAD selection and does not reproduce
-build-store merge logic. Those remain in lib/tool CLI owners.
+It does **not** parse `build.json`, validate complete-scope names, select
+first/full versus incremental state, choose update-main/update-named/
+prepare-named, or implement publication semantics. Those are library-owned.
 
 ### Composite action flow
 
@@ -583,3 +567,52 @@ Commit status contexts are evaluated exactly as before.
 
 The filter remains in the reusable workflow because the command-run identity is
 GitHub orchestration state, not CAD-CI planning behavior.
+
+## Merge command implementation boundary (issue #110)
+
+The public `reusable-merge-policy.yml` is a GitHub runner adapter: it
+declares the `workflow_call` API, permissions, trusted tool checkout and one
+command execution. Branch classification stays in the pure
+`scripts/merge_policy.py`; API interactions, readiness gates and irreversible
+merge outcome recording live in `scripts/merge_command.py`.
+
+This is a **separate governance adapter**, not part of the
+`lib.py.cad.ci` execution engine. Do not move CAD-CI planner/build-cache
+concepts into merge handling. The broader question of the governance product's
+repository ownership remains open.
+
+Failure boundaries:
+
+```text
+PR state + source/base/head + independent validation checks
+  -> reject before mutation (fail closed)
+  -> PUT merge with exact validated head SHA
+      | 2xx merged=true + SHA -> irreversible success
+      | API failure/uncertain response -> outcome UNKNOWN; never call it a refusal
+  -> branch lifecycle (best effort, recorded)
+  -> dispatch appropriate durable refs (best effort, recorded)
+  -> report accepted merge SHA and per-phase outcomes in PR comment and logs
+```
+
+A failed lane update must not prevent an independent stable-base dispatch;
+a failed lane update also must **not** dispatch the stale lane. All post-merge
+phase failures keep a nonzero job outcome, without claiming the accepted merge
+was rolled back.
+
+The existing token owner-only authorization is retained for compatibility
+as the current intentional policy. The check exclusion retains issue #108's command-workflow
+model, including **old** `issue_comment` attempts sharing the checked head.
+Check identity now uses (GitHub App ID, check name) to avoid collisions.
+API pagination must be complete; unknown mergeability retries are bounded.
+
+A live GitHub test repository is still necessary to establish the mutation
+and recovery contract. Unit fixtures cover this state machine but cannot
+simulate GitHub branch-protection, token permission, eventual-consistency or
+server-side branch deletion races.
+
+## PR source trust
+
+The one-runner design is intentional. Same-repository PR publication uses the
+same runner by contract; fork PRs do not publish. Consumers needing a strict
+read-only path use `reusable-ci.yml`. This trust assumption is documented so
+future fixes do not reintroduce extra runners or artifact handoff.

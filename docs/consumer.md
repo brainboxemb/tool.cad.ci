@@ -14,6 +14,12 @@ jobs:
 
 The reusable workflow owns generic checkout, Python/tool setup and one repository run. The consumer does not duplicate those steps.
 
+**Credential rule:** For untrusted PR-head verification, use a read-only
+workflow such as `reusable-ci.yml`. Never give untrusted item commands a
+write-scoped token or invoke the durable composite action on arbitrary PR-head
+source. The durable action is for trusted branch source. For untrusted/read-only PR
+verification, use `reusable-ci.yml`.
+
 A long-lived branch that needs later domain-owned work on the **same runner**
 uses the root composite action in durable mode rather than splitting the flow
 across reusable-workflow jobs:
@@ -51,10 +57,11 @@ workspace. It does not upload/download build artifacts and does not start a
 second CAD-CI job. Consumer site generation and Pages content remain outside the
 action.
 
-A consumer that needs domain preparation between planning and execution may
-instead use `reusable-plan.yml` and `reusable-run.yml` at that same exact
-tool commit. Forge's immutable runtime-image preparation is an example of such
-domain work.
+A consumer that needs **selection only** may call the public advanced
+`reusable-plan.yml` at an exact released tool SHA. Do not call
+`reusable-run.yml` directly; `reusable-ci.yml` owns the supported run-only
+workflow. If domain setup and CAD-CI execution must share a runner, use the
+root composite action.
 
 Local/manual use still invokes the released CLI directly:
 
