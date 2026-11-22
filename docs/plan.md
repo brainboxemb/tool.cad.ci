@@ -4,27 +4,29 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
 ## Released baseline
 
-- `tool.cad.ci v0.27.0` @
-  `bf9b2dff915e257a1229b156fdd024b062293218`;
+- `tool.cad.ci v0.27.1` @
+  `716d22ce79551155b68413bd50fe3bf9d15d2254`;
 - `lib.py.cad.ci 0.12.0` @
   `64656db8df528a5c0de799e62c0f028fd0133486`;
-- v0.27.0 branch cleanup and exact-SHA retirement are live-qualified in
-  `tool.cad.ci.test`;
+- v0.27.1 fixed and live-qualified the merge-command self-check race on
+  `tool.cad.ci.test` PR #190;
+- v0.27.0 branch cleanup and exact-SHA retirement remain live-qualified;
 - root `action.yml` and root `cad-ci.py` are no longer current public
   entrypoints.
 
 ## Current work
 
-### #142 — current merge-command self-check race
+### #124 — reviewed conflict resolution for permanent lanes
 
-`tool.cad.ci.test` PR #190 reproduced a stable-to-lane `/merge` refusal
-because the current command check became visible before the Actions-runs API
-indexed the matching `issue_comment` run. The v0.27.1 candidate passes
-`github.run_id` explicitly into the merge command so the active command run
-is excluded without relying on eventual API indexing.
+A second real consumer conflict is now reproduced by
+`tool.cad.ci.test` PR #200 (`main -> dev-cad`). The v0.28.0 candidate adds
+an owner-reviewed `/merge-resolved` path that preserves exact permanent
+parents, uses a separate green resolution PR as the reviewed tree carrier and
+advances the permanent base without force.
 
-After release, re-run PR #190 through the normal owner `/merge` path before
-resuming consumer work.
+Release only after unit/API contracts are green. Then adopt the immutable
+release in `tool.cad.ci.test` and use PR #200 as the live black-box
+qualification before continuing the `dev-cad -> main` promotion proof.
 
 Consumer migration remains owned by the consumers:
 
@@ -35,7 +37,7 @@ Consumer migration remains owned by the consumers:
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #142 Exclude current merge command from check validation | **now** | Release v0.27.1 and re-run `tool.cad.ci.test` PR #190 through `/merge`. |
+| #124 Define conflict-resolution contract for permanent-lane merge policy | **now** | Release v0.28.0 and live-qualify reviewed conflict recovery on `tool.cad.ci.test` PR #200. |
 | #138 Reusable conservative stale-branch cleanup | **complete** | Released in v0.26.0 and live-qualified in `tool.cad.ci.test` #180; keep the automatic policy conservative. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
