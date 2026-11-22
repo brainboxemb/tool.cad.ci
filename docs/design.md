@@ -336,3 +336,105 @@ snapshots and output evidence under one SCons execution graph.
 
 Every public run surface defaults to 1. This preserves existing execution order
 unless a consumer deliberately opts into bounded parallelism.
+
+
+## Same-runner durable-lane orchestration
+
+The existing root composite action remains the only same-runner public action.
+Durable behavior is an optional mode inside that action; it is not a second
+reusable workflow job.
+
+```text
+consumer job / one ubuntu runner
+  -> tool.cad.ci/action.yml@exact-release
+       -> checkout source once
+       -> setup Python once
+       -> resolve/check out exact pinned library once
+       -> install external runtime deps once
+       -> resolve durable scope/base (durable mode only)
+       -> fetch exact incremental base when needed
+       -> authenticate GHCR once
+       -> scripts/reusable_ci.py run
+            -> one cad-ci/SCons graph
+       -> scripts/reusable_ci.py durable-publish
+            -> existing build update/prepare CLI
+            -> existing publish build CLI
+       -> action outputs
+  -> consumer-owned site generation
+  -> generic cad_ci_tool publish pages
+```
+
+### Helper ownership
+
+`scripts/reusable_ci.py` gains two orchestration helpers:
+
+`durable-resolve`
+
+- invokes the existing `cad_ci_tool build fetch` command;
+- reads only `<scope>/build.json` from that fetched tree;
+- validates the durable `source_commit`;
+- returns `scope`, `base_sha`, `full_run`, `scope_exists` and the
+  generated-build path through GitHub outputs.
+
+`durable-publish`
+
+- receives the resolved durable state and current materialized `build/`;
+- calls exactly one existing build preparation command:
+  `update-main`, `update-named` or `prepare-named`;
+- calls the existing `publish build` command once;
+- captures the exact published build commit;
+- returns `build_commit` and absolute prepared-scope path.
+
+The helper does not parse Git diffs for CAD selection and does not reproduce
+build-store merge logic. Those remain in lib/tool CLI owners.
+
+### Composite action flow
+
+For run-only mode the action preserves the existing validation/fetch/run
+sequence.
+
+For durable mode:
+
+1. validate `source_sha`, `durable_scope`, `source_ref`, jobs and that no
+   manual base/full-run override conflicts with durable resolution;
+2. checkout caller source;
+3. bootstrap exact tool/library source;
+4. run `durable-resolve`;
+5. fetch the resolved base commit only when `full_run=false`;
+6. authenticate once;
+7. execute the existing run helper exactly once using the resolved selection;
+8. execute `durable-publish` in the same workspace;
+9. expose outputs and return without cleaning the prepared scope or tool stack.
+
+### Performance boundary
+
+No durable phase may be moved into a second job merely for reuse aesthetics.
+A job boundary would force one or more of:
+
+- second runner startup;
+- second checkout/bootstrap;
+- second image/tool setup;
+- artifact transport;
+- reconstructed workspace state.
+
+The reusable unit is therefore the composite action, not a sequence of jobs.
+
+### Consumer workflow target
+
+A long-lived consumer push job should reduce to roughly:
+
+```yaml
+- id: cad
+  uses: brainboxemb/tool.cad.ci@<exact release>
+  with:
+    source_sha: ...
+    durable_scope: ...
+    source_ref: ...
+    jobs: "2"
+
+- run: <consumer site builder using steps.cad.outputs.prepared_scope>
+
+- run: python -m cad_ci_tool publish pages ...
+```
+
+The site builder and Pages content remain consumer-owned.
