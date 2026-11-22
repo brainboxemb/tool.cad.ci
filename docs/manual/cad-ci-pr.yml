@@ -1,0 +1,24 @@
+# template: tool.cad.ci/cad-ci-pr
+# template-version: 1
+# tool-release: 0.23.0
+# tool-release-sha: bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+#
+# Copy this file to:
+#   .github/workflows/cad-ci-pr.yml
+#
+# Complete one-runner PR lifecycle, including optional durable PR publication
+# and cleanup. Use only when that complete lifecycle is wanted.
+
+name: CAD CI PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  cad-ci:
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
