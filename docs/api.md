@@ -24,6 +24,7 @@ reinterpret that configuration.
 | `cad-ci pages ...` | Public CLI, local Pages installation/cleanup | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py` | Retain, document arguments |
 | `cad-ci publish ...` | Public CLI, generated branches and Pages | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py`; external acceptance | Retain, audit subcommand contracts |
 | `reusable-ci.yml` | **Public stable** run-only workflow | `.github/workflows/reusable-ci.yml` | `tests/test_reusable_ci.py`; `tool.cad.ci.test` | Retain |
+| `reusable-durable.yml` | **Public candidate** one-runner permanent-branch durable lifecycle | `.github/workflows/reusable-durable.yml` | unit/schema; external acceptance required in test #141 | Add for action-free durable consumer migration |
 | `reusable-pr.yml` | **Public stable** complete PR verification/publication lifecycle | `.github/workflows/reusable-pr.yml` | `tests/test_reusable_ci.py`; candidate acceptance | Retain |
 | `reusable-plan.yml` | **Public advanced** selection-only workflow | `.github/workflows/reusable-plan.yml` | unit/schema + external candidate plan output | Retain as explicit plan-only API; not default |
 | `reusable-run.yml` | **Internal workflow implementation** delegated from `reusable-ci.yml` | `.github/workflows/reusable-run.yml` | unit/schema via public `reusable-ci.yml` | Not a supported direct consumer API |
@@ -67,6 +68,23 @@ Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, opti
 Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`, plus optional `pr_policy_json` (default empty). Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
 
 When `pr_policy_json` is set on a pull request, the existing single runner may apply stable/lane/docs-only policy before Python/library/GHCR bootstrap. The policy supports `stable_ref`, `lane_refs`, and `docs_only_prefixes`. Exact configured lane→stable promotion forces full CI; a non-empty development-lane diff entirely below configured docs prefixes succeeds without CAD-CI bootstrap; all other/unknown cases fail safe to running CI. No second classifier job is created.
+
+### `reusable-durable.yml`
+
+Public `workflow_call` entry point for permanent source branches. Required
+inputs are `source_sha`, `source_ref` and `scope`; optional inputs are
+`jobs` (positive number, default 1) and `environment_json` (default
+`{}`). Outputs are the published build commit and optional Pages commit.
+
+Exactly one job/runner resolves the existing complete scope through the pinned
+library, fetches only the exact stored source base when incremental, runs one
+CAD-CI graph, publishes the complete build scope, then publishes the root
+`cad-ci.yml:publication.pages` output when configured.
+
+The workflow does not accept builder commands, site paths, named-subtree keep
+lists or consumer publication steps. Stable/named Pages semantics and durable
+scope inventory are library-owned. It requires `contents: write` and
+`packages: read`.
 
 ### `reusable-pr.yml`
 
