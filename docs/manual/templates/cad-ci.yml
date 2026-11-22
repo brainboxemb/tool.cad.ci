@@ -1,8 +1,11 @@
 # template: tool.cad.ci/cad-ci
 # template-version: 1
+# tool-release: v0.23.0
 #
-# Public run-only CAD-CI workflow.
-# Replace TOOL_CAD_CI_RELEASE_SHA with one immutable released tool.cad.ci SHA.
+# Copy this file to:
+#   .github/workflows/cad-ci.yml
+#
+# Normal read-only CAD-CI for repositories without permanent-lane policy.
 
 name: CAD CI
 
@@ -16,7 +19,7 @@ permissions:
 
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@TOOL_CAD_CI_RELEASE_SHA
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.23.0
     with:
       source_sha: ${{ github.event.pull_request.head.sha }}
       base_sha: ${{ github.event.pull_request.base.sha }}

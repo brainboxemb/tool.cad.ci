@@ -4,7 +4,7 @@ Status: implementation under review on issue #110, with defect tracking #112–#
 
 ## Caller contract
 
-A caller exposes an owner-only `/merge` comment trigger and invokes `reusable-merge-policy.yml` at an **immutable released SHA**. Inputs are documented in [API inventory](api.md). The workflow runs `scripts/merge_command.py` from that same immutable tool revision; it never executes PR-head code.
+A caller exposes an owner-only `/merge` comment trigger and invokes `reusable-merge-policy.yml` at an **immutable released SHA**. Inputs are documented in [API inventory](../api.md). The workflow runs `scripts/merge_command.py` from that same immutable tool revision; it never executes PR-head code.
 
 Example consumer wrapper (replace the placeholder with an **immutable released**
 40-character tool commit, never `main`):

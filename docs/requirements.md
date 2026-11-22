@@ -42,7 +42,7 @@
 ## Reusable GitHub Actions
 
 - `tool.cad.ci` provides `reusable-pr.yml` as the public complete pull-request workflow and `reusable-ci.yml` as the public run-only workflow. `reusable-plan.yml` is an advanced public plan-only API. `reusable-run.yml` is internal implementation behind `reusable-ci.yml`.
-- A consumer references those workflows at one exact tool commit SHA.
+- A consumer references those workflows at one exact released tool version tag.
 - The called workflow checks out its own tool source using `job.workflow_repository` and `job.workflow_sha`; workflow and tool implementation therefore cannot drift.
 - The complete PR workflow resolves the exact `lib.py.cad.ci` commit from that tool revision's `pyproject.toml`, checks out that source, and exposes both repositories through `PYTHONPATH`.
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
@@ -460,21 +460,23 @@ generic workflow design.
 Requirements:
 
 - ship canonical templates for normal run-only CI, complete PR lifecycle,
-  same-runner root action use and merge governance;
+  and merge governance;
 - every template has a stable template id and positive integer template
-  version, duplicated in a machine-readable manifest;
-- templates use only documented public `tool.cad.ci` surfaces and one
-  explicit immutable release-SHA marker;
+  version in its copy-ready file header;
+- templates use only documented public `tool.cad.ci` surfaces and pin one
+  exact released tool version tag;
 - templates contain only trigger, permission and repository-owned policy
   configuration; they do not copy generic checkout/bootstrap, PR-file
   pagination, changed-path classification, SCons/CAD-CI execution, durable
   state or merge implementation;
 - existing consumer/repository names and workflow filenames are not encoded in
   the generic templates;
-- a new-repository guide explains configuration, template selection, immutable
-  pinning, allowed local customization and verification order;
-- template structure is release-versioned and covered by automated tests so a
-  copied consumer can identify its provenance and compare versions.
+- `docs/manual/README.md` is the consumer documentation index;
+- `docs/manual/manual.md` explains repository setup, template selection,
+  allowed local customization and verification order;
+- copy-ready workflow templates live only under `docs/manual/templates/`;
+- template structure is versioned and covered by automated tests so a copied
+  consumer can identify its provenance directly from the file.
 
 The templates are a consumer contract above the public Actions APIs, not a new
 execution engine.

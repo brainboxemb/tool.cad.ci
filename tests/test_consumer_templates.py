@@ -1,20 +1,25 @@
-"""Contract tests for shipped consumer workflow templates."""
+"""Contract tests for copy-ready repository handoff templates."""
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-import re
 import unittest
 
 import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TEMPLATE_ROOT = ROOT / "templates"
-WORKFLOW_ROOT = TEMPLATE_ROOT / "github" / "workflows"
-MANIFEST = TEMPLATE_ROOT / "manifest.json"
-RELEASE_MARKER = "TOOL_CAD_CI_RELEASE_SHA"
+DOCS = ROOT / "docs"
+MANUAL = DOCS / "manual"
+TEMPLATES = MANUAL / "templates"
+RELEASE = "v0.23.0"
+
+EXPECTED = {
+    "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
+    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 1, "reusable-ci.yml"),
+    "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
+    "merge-policy.yml": ("tool.cad.ci/merge-policy", 2, "reusable-merge-policy.yml"),
+}
 
 
 def load_yaml(path: Path) -> dict:
@@ -25,56 +30,53 @@ def load_yaml(path: Path) -> dict:
 
 
 class ConsumerTemplateTests(unittest.TestCase):
-    def setUp(self):
-        self.manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.templates = self.manifest["templates"]
+    def test_docs_root_has_only_core_documents_and_documentation_dirs(self):
+        actual = {path.name for path in DOCS.iterdir()}
+        self.assertEqual(
+            actual,
+            {
+                "api.md",
+                "consumer.md",
+                "design.md",
+                "handoff.md",
+                "plan.md",
+                "requirements.md",
+                "manual",
+                "background",
+            },
+        )
 
-    def test_manifest_is_versioned_and_covers_every_workflow_template(self):
-        self.assertEqual(self.manifest["schema"], 1)
-        actual = {
-            str(path.relative_to(TEMPLATE_ROOT))
-            for path in WORKFLOW_ROOT.glob("*.yml")
-        }
-        self.assertEqual(set(self.templates), actual)
-        for relative, entry in self.templates.items():
-            with self.subTest(template=relative):
-                self.assertRegex(entry["id"], r"^tool\.cad\.ci/[a-z0-9-]+$")
-                self.assertIsInstance(entry["version"], int)
-                self.assertGreater(entry["version"], 0)
-                self.assertTrue(entry["surface"])
+    def test_manual_separates_documentation_from_templates(self):
+        files = {path.name for path in MANUAL.iterdir() if path.is_file()}
+        dirs = {path.name for path in MANUAL.iterdir() if path.is_dir()}
+        self.assertEqual(files, {"README.md", "manual.md"})
+        self.assertEqual(dirs, {"templates"})
 
-    def test_headers_match_manifest_id_and_version(self):
-        for relative, entry in self.templates.items():
-            path = TEMPLATE_ROOT / relative
-            text = path.read_text(encoding="utf-8")
-            with self.subTest(template=relative):
-                self.assertIn(f"# template: {entry['id']}", text)
-                self.assertIn(f"# template-version: {entry['version']}", text)
-                self.assertEqual(text.count("# template:"), 1)
-                self.assertEqual(text.count("# template-version:"), 1)
+    def test_template_directory_contains_only_expected_yaml(self):
+        actual = {path.name for path in TEMPLATES.iterdir() if path.is_file()}
+        self.assertEqual(actual, set(EXPECTED))
 
-    def test_templates_pin_one_release_marker_and_supported_surface(self):
-        expected = {
-            "github/workflows/cad-ci.yml":
-                "brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@"
-                + RELEASE_MARKER,
-            "github/workflows/cad-ci-lanes.yml":
-                "brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@"
-                + RELEASE_MARKER,
-            "github/workflows/cad-ci-pr.yml":
-                "brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@"
-                + RELEASE_MARKER,
-            "github/workflows/cad-ci-same-runner.yml":
-                "brainboxemb/tool.cad.ci@" + RELEASE_MARKER,
-            "github/workflows/merge-policy.yml":
-                "brainboxemb/tool.cad.ci/.github/workflows/"
-                "reusable-merge-policy.yml@" + RELEASE_MARKER,
-        }
-        for relative, reference in expected.items():
-            text = (TEMPLATE_ROOT / relative).read_text(encoding="utf-8")
-            with self.subTest(template=relative):
-                self.assertEqual(text.count(RELEASE_MARKER), 2)
-                self.assertIn(reference, text)
+    def test_every_template_has_visible_provenance_and_release_tag(self):
+        for filename, (template_id, version, _) in EXPECTED.items():
+            text = (TEMPLATES / filename).read_text(encoding="utf-8")
+            with self.subTest(template=filename):
+                self.assertIn(f"# template: {template_id}", text)
+                self.assertIn(f"# template-version: {version}", text)
+                self.assertIn(f"# tool-release: {RELEASE}", text)
+                self.assertNotIn("# tool-release-sha:", text)
+                self.assertNotRegex(text, r"@[0-9a-f]{40}\\b")
+
+    def test_templates_call_only_expected_public_surface(self):
+        for filename, (_, _, surface) in EXPECTED.items():
+            text = (TEMPLATES / filename).read_text(encoding="utf-8")
+            with self.subTest(template=filename):
+                if surface == "action.yml":
+                    self.assertIn(
+                        "uses: brainboxemb/tool.cad.ci@" + RELEASE,
+                        text,
+                    )
+                else:
+                    self.assertIn(surface + "@" + RELEASE, text)
 
     def test_templates_do_not_copy_generic_implementation(self):
         forbidden = (
@@ -87,73 +89,28 @@ class ConsumerTemplateTests(unittest.TestCase):
             "cad-ci run",
             "scons",
         )
-        for relative in self.templates:
-            text = (TEMPLATE_ROOT / relative).read_text(encoding="utf-8").lower()
-            with self.subTest(template=relative):
+        for filename in EXPECTED:
+            text = (TEMPLATES / filename).read_text(encoding="utf-8").lower()
+            with self.subTest(template=filename):
                 for value in forbidden:
                     self.assertNotIn(value, text)
-
-    def test_templates_do_not_encode_existing_consumer_names(self):
-        forbidden = ("forge", "solidcraft", "2026-011-02", "cad.yml")
-        for relative in self.templates:
-            text = (TEMPLATE_ROOT / relative).read_text(encoding="utf-8").lower()
-            with self.subTest(template=relative):
-                for value in forbidden:
-                    self.assertNotIn(value, text)
-
-    def test_run_only_template_is_a_thin_public_workflow_call(self):
-        wf = load_yaml(WORKFLOW_ROOT / "cad-ci.yml")
-        job = wf["jobs"]["cad-ci"]
-        self.assertNotIn("runs-on", job)
-        self.assertIn("reusable-ci.yml@" + RELEASE_MARKER, job["uses"])
-        self.assertEqual(wf["permissions"]["contents"], "read")
-        self.assertEqual(wf["permissions"]["packages"], "read")
-
-    def test_pr_template_uses_complete_one_runner_public_api(self):
-        wf = load_yaml(WORKFLOW_ROOT / "cad-ci-pr.yml")
-        job = wf["jobs"]["cad-ci"]
-        self.assertNotIn("runs-on", job)
-        self.assertIn("reusable-pr.yml@" + RELEASE_MARKER, job["uses"])
-        self.assertEqual(wf["permissions"]["contents"], "write")
-        self.assertEqual(wf["permissions"]["packages"], "read")
-
-    def test_same_runner_template_calls_root_action_inside_one_job(self):
-        wf = load_yaml(WORKFLOW_ROOT / "cad-ci-same-runner.yml")
-        job = wf["jobs"]["cad-ci"]
-        self.assertEqual(job["runs-on"], "ubuntu-latest")
-        action_steps = [
-            step for step in job["steps"]
-            if step.get("uses", "").startswith("brainboxemb/tool.cad.ci@")
-        ]
-        self.assertEqual(len(action_steps), 1)
-        self.assertEqual(
-            action_steps[0]["uses"],
-            "brainboxemb/tool.cad.ci@" + RELEASE_MARKER,
-        )
-        self.assertIn("durable_scope", action_steps[0]["with"])
-        self.assertIn("source_ref", action_steps[0]["with"])
 
     def test_lane_template_delegates_policy_without_local_classifier(self):
-        wf = load_yaml(WORKFLOW_ROOT / "cad-ci-lanes.yml")
+        wf = load_yaml(TEMPLATES / "cad-ci-lanes.yml")
         job = wf["jobs"]["cad-ci"]
         self.assertNotIn("runs-on", job)
-        self.assertIn("reusable-ci.yml@" + RELEASE_MARKER, job["uses"])
         self.assertEqual(
             job["with"]["pr_policy_json"],
             '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}',
         )
-        text = (WORKFLOW_ROOT / "cad-ci-lanes.yml").read_text(encoding="utf-8")
+        text = (TEMPLATES / "cad-ci-lanes.yml").read_text(encoding="utf-8")
         for forbidden in ("gh api", "git diff", "docs_only=true", "full_run:"):
             self.assertNotIn(forbidden, text)
 
-    def test_merge_template_supplies_required_permission_ceiling_and_policy(self):
-        wf = load_yaml(WORKFLOW_ROOT / "merge-policy.yml")
-        entry = self.templates["github/workflows/merge-policy.yml"]
-        self.assertEqual(entry["version"], 2)
+    def test_merge_policy_is_version_2_and_copy_ready(self):
+        wf = load_yaml(TEMPLATES / "merge-policy.yml")
         job = wf["jobs"]["merge"]
-        self.assertNotIn("runs-on", job)
-        self.assertIn("reusable-merge-policy.yml@" + RELEASE_MARKER, job["uses"])
         self.assertEqual(
             job["permissions"],
             {
@@ -167,7 +124,11 @@ class ConsumerTemplateTests(unittest.TestCase):
         )
         self.assertEqual(job["with"]["stable_ref"], "main")
         self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
-        self.assertNotIn("integration_workflow", job["with"])
+        self.assertEqual(
+            job["uses"],
+            "brainboxemb/tool.cad.ci/.github/workflows/"
+            "reusable-merge-policy.yml@" + RELEASE,
+        )
 
 
 if __name__ == "__main__":

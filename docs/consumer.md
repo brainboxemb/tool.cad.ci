@@ -1,9 +1,8 @@
 # Using tool.cad.ci from a consumer repository
 
 Every consumer uses one exact released `tool.cad.ci` revision. Do not consume
-moving `main`. For a new repository, start with
-[`new-repository.md`](new-repository.md) and the versioned templates under
-[`templates/github/workflows/`](../templates/github/workflows/README.md).
+moving `main`. For a new repository, start with the [consumer manual](manual/README.md) and
+copy a versioned workflow from [`manual/templates/`](manual/templates/).
 
 A normal run-only consumer starts from the canonical `cad-ci.yml` template
 and keeps only its trigger, permissions and the exact released tool commit:
@@ -159,11 +158,12 @@ Copied workflow files keep their canonical header:
 # template-version: <integer>
 ```
 
-The authoritative mapping is `templates/manifest.json`. A consumer may change
-documented repository-owned values, but it must not silently grow generic
-checkout/bootstrap, changed-path, CAD-CI execution, durable-state or merge API
-logic. When the canonical template version changes, consumers can compare their
-header against the released template before adopting it.
+The template header is the authoritative provenance record. A consumer may
+change documented repository-owned values, but it must not silently grow
+generic checkout/bootstrap, changed-path, CAD-CI execution, durable-state or
+merge API logic. When the canonical template version changes, consumers compare
+their copied header with the released file under `docs/manual/templates/` before
+adopting it.
 
 
 ## Permanent development lanes

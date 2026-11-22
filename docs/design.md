@@ -50,20 +50,20 @@ The tool must not add a second merge/parser for root variables.
 ## Consumer template architecture
 
 The public reusable workflows and root composite action are the executable API.
-The files under `templates/github/workflows/` are canonical **consumer
-wrappers** for those APIs.
+The files under `docs/manual/templates/` are canonical **copy-ready consumer wrappers**
+for those APIs.
 
 ```text
 new repository
   -> copy one versioned template
-  -> replace TOOL_CAD_CI_RELEASE_SHA with an immutable release
+  -> keep the exact released tool version tag recorded in the template
   -> change repository-owned trigger/policy values only
   -> call released public workflow/action
 ```
 
-`templates/manifest.json` is the machine-readable source for template id,
-integer version and public surface. The same id/version are present in each
-template header so copied files preserve provenance without another tool.
+Each copy-ready YAML file carries its stable template id, integer template
+version, tool release and exact release SHA in the header. No separate manifest
+is required to understand or copy a template.
 
 Templates deliberately do not contain generic runner bootstrap or CAD-CI
 implementation. If a consumer needs generic behavior not expressible through a
@@ -72,8 +72,8 @@ template version rather than adding a consumer-local workaround.
 
 Template versioning is independent of semantic product versioning: increment a
 template's integer when the copied consumer structure or required local
-configuration changes. Pure comments that do not alter the copied contract do
-not require a template-version bump.
+configuration changes. Update the pinned tool release/SHA when the handoff
+baseline advances. Pure comments do not require a template-version bump.
 
 ## Reusable workflows
 
@@ -314,7 +314,7 @@ The action revision is itself the exact tool revision. Therefore no second tool
 checkout is required:
 
 ```text
-brainboxemb/tool.cad.ci@<released-sha>
+brainboxemb/tool.cad.ci@<released-version>
   -> GITHUB_ACTION_PATH == exact tool source
   -> read exact lib pin from that source
   -> shallow checkout exact lib source
