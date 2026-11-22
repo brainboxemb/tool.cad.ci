@@ -5,7 +5,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LIB_COMMIT = "64656db8df528a5c0de799e62c0f028fd0133486"
+LIB_COMMIT = "8f0516a484e3eac11758b498ca181d5e39ed1efe"
 
 
 class LibraryBoundaryTests(unittest.TestCase):
@@ -42,12 +42,16 @@ class LibraryBoundaryTests(unittest.TestCase):
             self.assertNotIn("builder.yml", text)
             self.assertNotIn("CAD_CI_BUILDER_PATH", text)
 
-    def test_workflow_helper_does_not_own_durable_state(self):
+    def test_workflow_helper_only_delegates_durable_state(self):
         helper = (ROOT / "scripts/reusable_ci.py").read_text(encoding="utf-8")
-        self.assertNotIn("cad_ci.durable", helper)
+        self.assertIn("from cad_ci.durable import", helper)
+        self.assertIn("fetch_durable_scope_state", helper)
+        self.assertIn("publish_durable_scope", helper)
+        self.assertIn("publish_durable_pages", helper)
         self.assertNotIn("build.json", helper)
-        self.assertNotIn("durable-resolve", helper)
-        self.assertNotIn("durable-publish", helper)
+        self.assertNotIn("from cad_ci.build_store", helper)
+        self.assertNotIn("from cad_ci.pages", helper)
+        self.assertNotIn("from cad_ci.git_publish", helper)
 
 
 if __name__ == "__main__":
