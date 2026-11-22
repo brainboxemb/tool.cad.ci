@@ -118,13 +118,23 @@ def verify_fresh_pr(repo: str, number: int, previous: dict) -> None:
         raise Refused("PR became unmergeable during validation")
 
 
-def validated_checks(checks: list[dict], commands: list[dict]) -> list[dict]:
+def validated_checks(
+    checks: list[dict],
+    commands: list[dict],
+    current_run_id: str = "",
+) -> list[dict]:
     """Remove command-workflow checks, not normal PR validation checks.
 
-    All issue_comment runs on the checked SHA are excluded, including older
-    command attempts, to avoid the deadlock addressed in #108.
+    All indexed issue_comment runs on the checked SHA are excluded, including
+    older command attempts. The current command run is excluded explicitly by
+    run id as well, because its check can become visible before the Actions
+    runs API indexes the corresponding issue_comment run.
     """
     command_ids = {str(run["id"]) for run in commands if "id" in run}
+    if current_run_id:
+        if not current_run_id.isdigit():
+            raise Refused("current_run_id must be a numeric GitHub Actions run id")
+        command_ids.add(current_run_id)
     pattern = re.compile(r"/actions/runs/(\d+)(?:/|$|[?#])")
     by_identity: dict[tuple[str, str], dict] = {}
     for check in checks:
@@ -260,7 +270,7 @@ def run(args) -> int:
         f"repos/{repository}/actions/runs?head_sha={head_sha}&event=issue_comment",
         "workflow_runs",
     )
-    validated_checks(checks, command_runs)
+    validated_checks(checks, command_runs, getattr(args, "current_run_id", ""))
     statuses = api("GET", f"repos/{repository}/commits/{head_sha}/status")
     if statuses.get("statuses") and statuses.get("state") != "success":
         raise Refused(f"commit status contexts are not green ({statuses.get('state')})")
@@ -321,6 +331,7 @@ def main() -> int:
     parser.add_argument("--permanent-refs-json", default='["build","gh-pages"]')
     parser.add_argument("--temporary-prefixes-json", required=True)
     parser.add_argument("--integration-workflow", default="")
+    parser.add_argument("--current-run-id", default="")
     args = parser.parse_args()
     try:
         return run(args)
