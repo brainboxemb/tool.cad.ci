@@ -462,19 +462,19 @@ Requirements:
 - ship canonical templates for normal run-only CI, complete PR lifecycle,
   same-runner root action use and merge governance;
 - every template has a stable template id and positive integer template
-  version, duplicated in a machine-readable manifest;
-- templates use only documented public `tool.cad.ci` surfaces and one
-  explicit immutable release-SHA marker;
+  version in its copy-ready file header;
+- templates use only documented public `tool.cad.ci` surfaces and pin one
+  explicit immutable released tool SHA;
 - templates contain only trigger, permission and repository-owned policy
   configuration; they do not copy generic checkout/bootstrap, PR-file
   pagination, changed-path classification, SCons/CAD-CI execution, durable
   state or merge implementation;
 - existing consumer/repository names and workflow filenames are not encoded in
   the generic templates;
-- a new-repository guide explains configuration, template selection, immutable
-  pinning, allowed local customization and verification order;
-- template structure is release-versioned and covered by automated tests so a
-  copied consumer can identify its provenance and compare versions.
+- `docs/manual/README.md` explains repository handoff, template selection,
+  allowed local customization and verification order;
+- template structure is versioned and covered by automated tests so a copied
+  consumer can identify its provenance directly from the file.
 
 The templates are a consumer contract above the public Actions APIs, not a new
 execution engine.
