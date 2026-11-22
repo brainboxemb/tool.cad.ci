@@ -11,12 +11,24 @@ That GitHub API capability is separate from CAD-CI execution and its long-term
 product ownership is under review. Its presence does not authorise merge-policy
 logic in the CAD-CI library.
 
-**Public interfaces:** [API contract and current qualification gaps](docs/api.md).
+**New repository setup:** [consumer onboarding](docs/new-repository.md).
+**Versioned workflow templates:** [templates](templates/github/workflows/README.md).
+**Public interfaces:** [API contract](docs/api.md).
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The tool pins `lib.py.cad.ci` 0.11.0 at exact commit
-`e621daf6e309bdd0e3f643a12007f1b66490696d`.
+The released 0.21.0 tool pins `lib.py.cad.ci` 0.11.1 at exact commit
+`fa6bf244381dde609a0b04de673d774911c52fea`.
+
+## Starting a consumer repository
+
+Do not invent a generic GitHub Actions workflow in a consumer. Start from the
+versioned templates shipped in [`templates/github/workflows/`](templates/github/workflows/README.md)
+and follow [the new-repository guide](docs/new-repository.md).
+
+Each copied template keeps a `template` id and integer `template-version`.
+The consumer replaces only `TOOL_CAD_CI_RELEASE_SHA` with one immutable
+released tool commit and changes documented repository-owned policy values.
 
 ## Consumer layout
 
@@ -106,8 +118,9 @@ below `.cache/cad-ci/`.
 
 ## Reusable GitHub Actions
 
-Consumers do not need to copy the generic CAD-CI setup into their own
-workflows. Reference the released reusable workflow at the exact tool commit.
+Consumers do not copy generic CAD-CI setup into their own workflows. Copy the
+matching canonical consumer template, then pin the released reusable workflow
+or root action at the exact tool commit.
 
 For a complete normal PR run, the consumer keeps only its event trigger,
 permissions and one reusable-workflow call:
