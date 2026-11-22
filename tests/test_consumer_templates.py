@@ -18,7 +18,8 @@ EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
     "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 1, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
-    "merge-policy.yml": ("tool.cad.ci/merge-policy", 2, "reusable-merge-policy.yml"),\n    "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 1, "reusable-branch-cleanup.yml"),
+    "merge-policy.yml": ("tool.cad.ci/merge-policy", 2, "reusable-merge-policy.yml"),
+    "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 1, "reusable-branch-cleanup.yml"),
 }
 
 
