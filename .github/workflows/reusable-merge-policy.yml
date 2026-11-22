@@ -99,9 +99,27 @@ jobs:
           CHECKS_JSON="$(
             gh api               -H "Accept: application/vnd.github+json"               "repos/$REPOSITORY/commits/$HEAD_SHA/check-runs?per_page=100"
           )"
+          COMMAND_RUNS_JSON="$(
+            gh api               -H "Accept: application/vnd.github+json"               "repos/$REPOSITORY/actions/runs?head_sha=$HEAD_SHA&event=issue_comment&per_page=100"
+          )"
+          COMMAND_RUN_IDS="$(jq -c '[.workflow_runs[].id | tostring]' <<<"$COMMAND_RUNS_JSON")"
           LATEST_CHECKS="$(
-            jq -c '
-              [.check_runs[]]
+            jq -c --argjson command_run_ids "$COMMAND_RUN_IDS" '
+              [
+                .check_runs[]
+                | . as $check
+                | select(
+                    (
+                      any(
+                        $command_run_ids[];
+                        . as $run_id
+                        | (($check.details_url // "")
+                           | contains("/actions/runs/" + $run_id + "/"))
+                      )
+                    )
+                    | not
+                  )
+              ]
               | sort_by(.name, (.started_at // ""), .id)
               | group_by(.name)
               | map(last)

@@ -197,7 +197,10 @@ permanent branch roles; callers do not choose a method manually.
 
 Both permanent-direction operations require the source head to belong to the
 caller repository. The same exact-head/check/status gate is applied immediately
-before every merge. Optional consumer integration dispatch runs for the updated
+before every merge. Same-head GitHub Actions runs triggered by
+`issue_comment` are command workflows, not PR validation, so their check-runs
+are excluded from the validation set; at least one separate validation check
+must remain green. Optional consumer integration dispatch runs for the updated
 durable base; a promotion additionally dispatches the retained lane.
 
 ## Durable build output
