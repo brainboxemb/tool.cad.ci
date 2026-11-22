@@ -499,3 +499,48 @@ No `lib.py.cad.ci` change is required unless implementation exposes a genuine
 planning/execution requirement. The first release should be implemented and
 tested entirely in tool.cad.ci, then black-box accepted in tool.cad.ci.test and
 finally qualified from Forge #674.
+
+## Stable-to-lane merge-policy extension
+
+Issue #106 extends the shared merge-policy classifier without changing CAD-CI
+planning or execution.
+
+The policy distinguishes explicit permanent-lane direction:
+
+```text
+lane -> stable
+  method: merge
+  class: promotion
+  after merge: advance/recreate the lane at the stable merge commit
+  integration: stable + retained lane
+
+stable -> lane
+  method: merge
+  class: lane synchronization
+  after merge: no source-ref mutation; the PR merge updates the lane base
+  integration: updated lane
+
+all other supported PRs
+  method: squash
+  class: ordinary
+  after merge: cleanup only when the head matches the configured temporary
+               allow-list
+  integration: durable base when configured
+```
+
+The classifier should return explicit booleans (or one equivalent explicit
+classification) for promotion and lane synchronization. The reusable workflow
+must not infer synchronization from branch naming outside `stable_ref` and
+`lane_refs_json`.
+
+Permanent-direction PRs require the head repository to equal the caller
+repository. This prevents a fork branch named `main` or like a configured lane
+from being treated as a trusted permanent ref.
+
+The existing promotion-only lane-advance operation remains promotion-only.
+Stable-to-lane synchronization must not patch/recreate the stable source ref:
+the normal PR merge already writes the lane base and preserves both histories.
+
+The existing `integrate_base` rule remains appropriate for synchronization
+because the base is a configured durable lane. Promotion additionally dispatches
+the retained lane exactly as in 0.19.0.
