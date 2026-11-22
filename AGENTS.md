@@ -141,15 +141,16 @@ new-session entrypoint, not a second plan; current status stays in GitHub and
 
 ## GitHub Actions
 
-Generic consumer setup belongs in reusable workflows or the released root
-composite action in this repository. A normal run-only consumer should call the
-single high-level `reusable-ci.yml` workflow
-at one exact tool.cad.ci commit SHA instead of copying
-checkout/Python/tool-install/plan/run steps. Lower-level plan/run workflows exist only for consumers that need domain
-preparation between them. A consumer that needs domain-owned work after the
-CAD-CI run on the **same runner** uses the root composite action; the action may
-own generic checkout/Python/library-source/GHCR/run setup but never consumer
-commands, build-store policy or Pages content.
+Generic consumer setup belongs in released reusable workflows. A normal
+consumer calls the high-level `reusable-ci.yml` workflow at one exact
+tool.cad.ci version tag instead of copying checkout/Python/tool-install/plan/run
+steps. Lower-level plan/run workflows exist only for explicitly documented
+advanced use.
+
+Repository-specific build, verification, site or publication preparation belongs
+in root `cad-ci.yml` and item `ci.yml` configuration where the generic
+library contract can express it. Do not add a second GitHub Actions execution
+route merely to preserve a runner for consumer-owned post steps.
 
 The reusable workflow revision is also the tool revision. Checkout the workflow
 repository using `job.workflow_repository` and `job.workflow_sha`, then install

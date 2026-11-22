@@ -49,7 +49,7 @@ The tool must not add a second merge/parser for root variables.
 
 ## Consumer template architecture
 
-The public reusable workflows and root composite action are the executable API.
+The public reusable workflows are the GitHub Actions execution API.
 The files under `docs/manual/templates/` are canonical **copy-ready consumer wrappers**
 for those APIs.
 
@@ -58,11 +58,11 @@ new repository
   -> copy one versioned template
   -> keep the exact released tool version tag recorded in the template
   -> change repository-owned trigger/policy values only
-  -> call released public workflow/action
+  -> call released public workflow
 ```
 
 Each copy-ready YAML file carries its stable template id, integer template
-version, tool release and exact release SHA in the header. No separate manifest
+version and exact released tool version tag in the header. No separate manifest
 is required to understand or copy a template.
 
 Templates deliberately do not contain generic runner bootstrap or CAD-CI
@@ -72,8 +72,7 @@ template version rather than adding a consumer-local workaround.
 
 Template versioning is independent of semantic product versioning: increment a
 template's integer when the copied consumer structure or required local
-configuration changes. Update the pinned tool release/SHA when the handoff
-baseline advances. Pure comments do not require a template-version bump.
+configuration changes. Update the pinned tool release tag when the handoff baseline advances. Pure comments do not require a template-version bump.
 
 ## Reusable workflows
 
@@ -224,7 +223,7 @@ rewriting the product topology.
 The workflow does not introduce artifact handoff, extra runners, repeated
 tool/library checkout, or a second SCons graph to facilitate publication.
 Any credential-security solution requires explicit evaluation of the
-same-runner trade-off rather than replacing this contract.
+one-job PR trade-off rather than replacing this contract.
 
 ## Direct source bootstrap for pull requests
 
@@ -301,39 +300,6 @@ This distinction lets the library preserve an unselected current item while
 removing a previous durable item that is no longer configured.
 
 
-## Same-runner composite action
-
-The root `action.yml` complements reusable workflows; it does not replace the
-library or introduce a second CI engine.
-
-A reusable workflow is appropriate when CAD-CI owns the whole called job. A
-composite action is required when the caller must keep control of the job so it
-can run domain-owned steps afterwards on the same runner.
-
-The action revision is itself the exact tool revision. Therefore no second tool
-checkout is required:
-
-```text
-brainboxemb/tool.cad.ci@<released-version>
-  -> GITHUB_ACTION_PATH == exact tool source
-  -> read exact lib pin from that source
-  -> shallow checkout exact lib source
-  -> PYTHONPATH=<tool>:<lib>
-  -> install external PyYAML/SCons only
-  -> docker login ghcr.io
-  -> one cad-ci run
-  -> leave PYTHONPATH + workspace available to later caller steps
-```
-
-The caller can then invoke existing `cad-ci build` / `cad-ci publish`
-commands without reinstalling the stack. The tool still does not decide which
-consumer post-run commands exist or how domain content is generated.
-
-This is GitHub-runner orchestration only. Selection, SCons execution,
-build-store membership/deletion, Pages installation and generated-branch
-freshness remain in `lib.py.cad.ci`.
-
-
 ## Bounded jobs forwarding architecture
 
 Parallel execution remains inside the released library/SCons engine.
@@ -343,7 +309,7 @@ The tool surfaces carry one integer only:
 ```text
 caller
   -> jobs = N
-  -> tool CLI/workflow/action validation
+  -> tool CLI/workflow validation
   -> one cad-ci run --jobs N
   -> lib.py.cad.ci run_repository(..., jobs=N)
   -> SCons -j N
@@ -355,101 +321,6 @@ snapshots and output evidence under one SCons execution graph.
 
 Every public run surface defaults to 1. This preserves existing execution order
 unless a consumer deliberately opts into bounded parallelism.
-
-
-## Same-runner durable-lane orchestration
-
-The existing root composite action remains the only same-runner public action.
-Durable behavior is an optional mode inside that action; it is not a second
-reusable workflow job.
-
-```text
-consumer job / one ubuntu runner
-  -> tool.cad.ci/action.yml@exact-release
-       -> checkout source once
-       -> setup Python once
-       -> resolve/check out exact pinned library once
-       -> install external runtime deps once
-       -> resolve durable scope/base (durable mode only)
-       -> fetch exact incremental base when needed
-       -> authenticate GHCR once
-       -> scripts/reusable_ci.py run
-            -> one cad-ci/SCons graph
-       -> scripts/reusable_ci.py durable-publish
-            -> existing build update/prepare CLI
-            -> existing publish build CLI
-       -> action outputs
-  -> consumer-owned site generation
-  -> generic cad_ci_tool publish pages
-```
-
-### Helper ownership
-
-`scripts/reusable_ci.py` owns only workflow adaptation:
-
-- parse/validate GitHub-facing arguments;
-- bootstrap the exact library revision;
-- call `cad_ci.durable.fetch_durable_scope_state` after bootstrap;
-- serialize `scope`, `base_sha`, `full_run`, `scope_exists` and paths
-  to GitHub outputs;
-- construct the library `DurableScopeState` and call
-  `cad_ci.durable.publish_durable_scope`;
-- serialize the resulting build commit and prepared-scope path.
-
-It does **not** parse `build.json`, validate complete-scope names, select
-first/full versus incremental state, choose update-main/update-named/
-prepare-named, or implement publication semantics. Those are library-owned.
-
-### Composite action flow
-
-For run-only mode the action preserves the existing validation/fetch/run
-sequence.
-
-For durable mode:
-
-1. validate `source_sha`, `durable_scope`, `source_ref`, jobs and that no
-   manual base/full-run override conflicts with durable resolution;
-2. checkout caller source;
-3. bootstrap exact tool/library source;
-4. run `durable-resolve`;
-5. fetch the resolved base commit only when `full_run=false`;
-6. authenticate once;
-7. execute the existing run helper exactly once using the resolved selection;
-8. execute `durable-publish` in the same workspace;
-9. expose outputs and return without cleaning the prepared scope or tool stack.
-
-### Performance boundary
-
-No durable phase may be moved into a second job merely for reuse aesthetics.
-A job boundary would force one or more of:
-
-- second runner startup;
-- second checkout/bootstrap;
-- second image/tool setup;
-- artifact transport;
-- reconstructed workspace state.
-
-The reusable unit is therefore the composite action, not a sequence of jobs.
-
-### Consumer workflow target
-
-A long-lived consumer push job should reduce to roughly:
-
-```yaml
-- id: cad
-  uses: brainboxemb/tool.cad.ci@<exact release>
-  with:
-    source_sha: ...
-    durable_scope: ...
-    source_ref: ...
-    jobs: "2"
-
-- run: <consumer site builder using steps.cad.outputs.prepared_scope>
-
-- run: python -m cad_ci_tool publish pages ...
-```
-
-The site builder and Pages content remain consumer-owned.
 
 
 ## Shared merge-policy workflow
@@ -645,7 +516,7 @@ same runner by contract; fork PRs do not publish. Consumers needing a strict
 read-only path use `reusable-ci.yml`. This trust assumption is documented so
 future fixes do not reintroduce extra runners or artifact handoff.
 
-## Same-runner lane PR preflight
+## Reusable lane PR preflight
 
 The optional lane policy is implemented inside the existing internal
 `reusable-run.yml` job:

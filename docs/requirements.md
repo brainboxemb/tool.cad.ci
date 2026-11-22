@@ -50,19 +50,6 @@
 - `reusable-ci.yml` remains the high-level run-only entry point and delegates to the generic run workflow from the same tool revision.
 - `reusable-plan.yml` exposes the compact generic item plan without executing the graph.
 - `reusable-run.yml` performs exactly one `cad-ci run` for `reusable-ci.yml`; direct external use is not a supported public contract.
-- The released root `action.yml` is the same-runner run surface for a caller
-  that must execute consumer-owned steps after CAD-CI without crossing a runner
-  boundary.
-- The composite action checks out the exact caller source, fetches only the
-  exact incremental base when needed, uses its own released action source as
-  the exact tool source, checks out the exact pinned library source, exposes
-  both through `PYTHONPATH`, installs only external runtime dependencies,
-  performs generic GHCR login and invokes exactly one `cad-ci run`.
-- Environment entries written by the action keep the same exact CLI stack
-  available to later caller steps in that job.
-- The composite action does not own consumer-specific post-run commands,
-  durable-build policy, site generation or Pages content. Those later steps
-  call the already released generic CLI where appropriate.
 - A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
 - Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.
 - Caller `environment_json` values are inherited process environment only; root `cad-ci.yml:variables` are parsed by the released library and override a caller value with the same name.
@@ -236,41 +223,12 @@ A deletion-only or mixed deletion/replacement update must remain a library-owned
 operation once the required source/build inputs reach the command.
 
 
-## Same-runner consumer action
-
-A reusable workflow owns its called job, so a caller cannot append
-consumer-owned steps to that same runner. The root composite action exists for
-that case.
-
-The caller owns the one job, its permissions and its high-level concurrency.
-The action owns only generic CAD-CI setup and one run:
-
-```text
-one caller job
-  -> tool.cad.ci composite action
-       -> exact source checkout
-       -> exact base fetch when incremental
-       -> exact tool action source + pinned library source
-       -> external runtime dependencies
-       -> GHCR login
-       -> exactly one cad-ci run
-  -> caller-owned post-run steps on the same workspace
-       -> may use python -m cad_ci_tool ...
-```
-
-No build artifact is required to cross from the action to the caller because
-there is no runner boundary. The action must not add item loops, changed-path
-logic, consumer commands or publication semantics.
-
-
 ## Bounded parallel SCons jobs
 
 The public run surfaces expose the released library-owned SCons `jobs` option
 without implementing parallel execution in this repository.
 
 - `cad-ci run --jobs N` accepts only a positive integer and defaults to 1.
-- The same-runner composite action exposes `jobs`, defaults to 1, validates it
-  as a positive integer, and forwards it unchanged.
 - `reusable-run.yml`, `reusable-ci.yml` and `reusable-pr.yml` expose a
   numeric `jobs` input with default 1 and forward it to the same generic run.
 - The reusable helper validates `jobs` and emits exactly one
@@ -280,72 +238,6 @@ without implementing parallel execution in this repository.
 - Default behavior remains serial (`jobs=1`) for backward compatibility.
 - Consumers may opt into `jobs > 1` only after the exact released tool stack
   has external black-box acceptance.
-
-
-## Same-runner durable-lane action
-
-The root composite `action.yml` supports two modes.
-
-### Run-only mode
-
-This remains the existing public behavior:
-
-- caller supplies `source_sha`;
-- caller supplies `base_sha` for incremental selection or `full_run=true`;
-- action checks out/bootstrap/authenticates once;
-- action runs exactly one CAD-CI graph;
-- later caller steps may use the exposed tool/library stack on the same runner.
-
-### Durable mode
-
-The caller additionally supplies:
-
-- `durable_scope`: one safe scope name; `main` selects stable-main semantics,
-  every other safe name selects named-scope semantics;
-- `source_ref`: the caller source ref recorded in durable publication
-  provenance.
-
-When `durable_scope` is non-empty:
-
-- caller must not supply a manual `base_sha`;
-- caller must not force `full_run=true`;
-- after exact tool/library bootstrap, the action calls the library durable
-  scope API to materialize the current generated `build` branch and resolve
-  existing/missing state;
-- the library owns scope validation, manifest parsing, stored
-  `source_commit`, first-run/full-run and missing-main semantics;
-- the action fetches the library-resolved base commit only for incremental runs;
-- the action executes exactly one CAD-CI graph;
-- the same runner/workspace calls the library durable publication API, which
-  composes existing planner/build-store/generated-branch publication mechanics;
-- no artifact upload/download or second runner is used.
-
-Durable mode exposes:
-
-- `scope`;
-- resolved `base_sha`;
-- effective `full_run`;
-- `scope_exists`;
-- exact published `build_commit`;
-- absolute `prepared_scope` path;
-- existing exact `library_revision`.
-
-The action does not build consumer sites and does not publish Pages. Consumer
-site generation remains domain-owned and may run immediately after the action
-on the same runner. Generic Pages publication remains a normal tool CLI call
-from that same job.
-
-The action must not implement a second selection engine, build-store format,
-freshness model or publication mechanism. It orchestrates existing released
-tool/library contracts only.
-
-The caller job needs `contents: write` for durable publication and
-`packages: read` for runtime image authentication.
-
-Durable scope names use the library's complete-scope contract. `main` is the
-stable complete scope; caller-named complete scopes must satisfy the same
-build-store validation and may not use reserved `pr`. The tool must not carry
-a second scope validator.
 
 
 ## Reusable dev-lane merge policy
@@ -444,13 +336,6 @@ synchronization because the stable PR head is also the commit on which the
 issue-comment command workflow executes.
 
 
-## Composite-action source trust
-
-The root same-runner action supports run-only use and durable publication on
-trusted branch source. Durable mode is not a generic untrusted PR execution
-surface. This is a documented caller constraint, not a separate architecture
-workstream.
-
 ## Versioned consumer templates and onboarding
 
 The released tool is responsible for telling a new repository how to consume
@@ -494,9 +379,9 @@ an implementation exists.
 | API-001 | An immutable tool release defines one CLI version and one exact pinned `lib.py.cad.ci` revision. Moving branch references are not accepted release identities. |
 | API-002 | `cad-ci plan` explains selected items/dependencies without asserting target freshness; `cad-ci run` delegates exactly one graph to the library/SCons. |
 | API-003 | `cad-ci build`, `pages` and `publish` expose only released library-backed preparation/publication mechanics; generated outputs preserve evidence and source-freshness checks. |
-| API-004 | Normal run-only consumers have one high-level reusable workflow; consumers needing subsequent domain work on the same runner have one composite-action entry point. No extra job boundary is added only for apparent reuse. |
+| API-004 | Normal consumers use released reusable workflows; repository-specific work belongs in `cad-ci.yml`/item configuration rather than a second root action execution route. |
 | API-005 | One-job/one-runner PR workflow executes exactly one graph, optionally publishes sparse same-repository PR output and handles cleanup without artifact handoff. Fork PRs cannot publish. |
-| API-006 | `reusable-plan.yml` is public advanced plan-only; `reusable-run.yml` is internal behind the stable `reusable-ci.yml`. Support levels, inputs/outputs and permissions are explicit and do not silently replace the root same-runner action. |
+| API-006 | `reusable-plan.yml` is public advanced plan-only; `reusable-run.yml` is internal behind the stable `reusable-ci.yml`. Support levels, inputs/outputs and permissions are explicit. |
 | GOV-001 | Merge governance is an **optional, separately identified** API, not CAD-CI planning. The caller supplies branch-role configuration but not an arbitrary merge method. Owner-controlled merges check current PR state and independent validation. |
 | GOV-002 | Permanent lane promotion/synchronization preserve histories and permanent refs. Temporary cleanup is allow-listed, same-repository only, and must not knowingly delete a head that moved after validation. |
 | GOV-003 | Every successful merge has a distinct, auditable post-merge outcome. Failure of a lifecycle/dispatch/comment action cannot turn a completed merge into a claimed refusal. An ambiguous merge API result must be reported as **unknown**, not as a refusal. |
