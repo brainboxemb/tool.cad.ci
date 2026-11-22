@@ -4,40 +4,37 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
 ## Released baseline
 
-- `tool.cad.ci v0.23.0`;
-- `lib.py.cad.ci 0.11.1` @
+- current released baseline: `tool.cad.ci v0.23.0`;
+- candidate release: `tool.cad.ci v0.24.0`;
+- both use `lib.py.cad.ci 0.11.1` @
   `fa6bf244381dde609a0b04de673d774911c52fea`;
-- `tool.cad.ci.test` #93 / PR #94 now proves the v0.23.0 stack through one
-  normal `reusable-ci.yml` consumer path.
+- `tool.cad.ci.test` #93 / PR #94 proves the v0.23.0 stack through one normal
+  `reusable-ci.yml` consumer path.
 
 ## Current work
 
-### #126 — remove the root composite action
+### #128 — release workflow-only consumer surface as v0.24.0
 
-The root `action.yml` created a second public CAD-CI execution route beside
-the reusable workflows. Remove it from future tool releases.
-
-1. remove root `action.yml`;
-2. remove action-only `durable-resolve` / `durable-publish` adapter commands;
-3. remove action-specific tests and same-runner API/design/requirements text;
-4. keep generic durable mechanics in `lib.py.cad.ci`;
-5. keep `reusable-ci.yml` as the normal consumer workflow;
-6. do not replace the action with another consumer wrapper or hook;
-7. track Forge/CAD migration separately because their existing immutable older
-   release pins continue to contain the historical action.
+1. bump the tool version to `0.24.0`;
+2. publish the action-free consumer surface introduced by #126 / PR #127;
+3. update copy-ready templates to `@v0.24.0` without changing template versions;
+4. merge only after tool CI is green;
+5. let the normal main release job publish `v0.24.0`;
+6. externally qualify that exact release in `tool.cad.ci.test`;
+7. only then migrate Forge and the CAD repository from their historical root
+   action pins to the released workflow/config model.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #126 Remove root composite action | **now** | Finish removal, tests and release boundary. |
+| #128 Release tool.cad.ci 0.24.0 | **now** | Merge after green CI, then external qualification. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **later / governance** | Separate from CAD-CI execution cleanup. |
-| #121 Complete canonical lane consumer templates | **effectively released** | v0.23.0 shipped and external workflow acceptance is green; reconcile/close separately. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
 ## Boundary
 
-The target consumer architecture is config-first:
+The supported consumer architecture is config-first:
 
 ```text
 consumer workflow

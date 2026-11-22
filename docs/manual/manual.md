@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.23.0**
+- tool release: **v0.24.0**
 
 Each YAML template contains:
 

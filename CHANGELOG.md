@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.24.0 - 2026-11-22
+
+- remove the root `action.yml` composite-action execution route and its
+  action-only durable resolve/publish adapter commands;
+- make released reusable workflows the single GitHub Actions consumer path,
+  with repository-specific work configured through root `cad-ci.yml` and item
+  `ci.yml` rather than consumer-owned post-step orchestration;
+- remove obsolete same-runner/action contract tests and documentation while
+  retaining generic durable build/Page behavior in `lib.py.cad.ci`;
+- keep the existing `lib.py.cad.ci 0.11.1` pin and all reusable workflow/CLI
+  execution semantics unchanged;
+- update copy-ready consumer templates to the exact `v0.24.0` release tag
+  without changing their template versions.
+
 ## 0.23.0 - 2026-11-22
 
 - add optional owner-managed permanent-lane PR policy to the existing
