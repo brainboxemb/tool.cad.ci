@@ -24,7 +24,7 @@ External acceptance is complete:
 
 ### #95 — reusable durable-lane orchestration
 
-Status: **now**.
+Status: **now — release-prepared after green feature validation**.
 
 Consumer evidence: `lib.py.solidcraft.forge` currently duplicates generic
 durable-lane orchestration in its workflow YAML even though this repository's
@@ -69,8 +69,8 @@ Implementation order:
 4. implement durable mode in the existing root composite action;
 5. prove main scope, existing named scope, initial named scope, stale/malformed
    durable evidence, exact source freshness and jobs forwarding;
-6. release a new tool version with the existing exact library pin unless a
-   generic library change proves necessary;
+6. release **tool.cad.ci 0.18.0** with the existing exact lib.py.cad.ci 0.10.0
+   pin; feature-head validation is already green before the version bump;
 7. prove the released action in `tool.cad.ci.test` on one same-runner consumer
    flow;
 8. only then replace duplicated durable orchestration in Forge.
