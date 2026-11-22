@@ -155,7 +155,7 @@ class MergeCommandTests(unittest.TestCase):
     def test_resolved_merge_creates_exact_two_parent_commit_and_advances_base(self):
         base_sha, head_sha = "a" * 40, "b" * 40
         resolution_sha, tree_sha, merge_sha = "c" * 40, "d" * 40, "e" * 40
-        text = "\\n".join([
+        text = "\n".join([
             "/merge-resolved",
             "base " + base_sha,
             "head " + head_sha,
@@ -223,7 +223,7 @@ class MergeCommandTests(unittest.TestCase):
         self.assertEqual(advance.kwargs["fields"]["force"], "false")
 
     def test_resolved_merge_rejects_moved_parent_before_commit_creation(self):
-        text = "\\n".join([
+        text = "\n".join([
             "/merge-resolved",
             "base " + "a" * 40,
             "head " + "b" * 40,
