@@ -1,16 +1,16 @@
 name: CAD CI same-runner run
-description: Run the exact released CAD-CI stack and keep it available for later steps on the same runner.
+description: Run the exact released CAD-CI stack and optionally publish one durable build scope on the same runner.
 
 inputs:
   source_sha:
     description: Exact caller source commit to check out and run.
     required: true
   base_sha:
-    description: Exact base commit used for incremental selection.
+    description: Exact base commit for run-only incremental selection; leave empty in durable mode.
     required: false
     default: ""
   full_run:
-    description: Run every configured process:true item instead of using a Git diff.
+    description: Run every configured process:true item in run-only mode; durable mode resolves this automatically.
     required: false
     default: "false"
   jobs:
@@ -22,13 +22,39 @@ inputs:
     required: false
     default: "{}"
   github_token:
-    description: GitHub token used only for generic GHCR authentication.
+    description: GitHub token used for generic GHCR authentication and durable publication.
     required: true
+  durable_scope:
+    description: Optional long-lived build scope such as main, dev-cad or dev-ci.
+    required: false
+    default: ""
+  source_ref:
+    description: Source ref recorded in durable publication provenance; required in durable mode.
+    required: false
+    default: ""
 
 outputs:
   library_revision:
     description: Exact lib.py.cad.ci commit pinned by this tool revision.
     value: ${{ steps.library.outputs.revision }}
+  scope:
+    description: Durable scope, or empty in run-only mode.
+    value: ${{ steps.selection.outputs.scope }}
+  base_sha:
+    description: Effective incremental base resolved by the action.
+    value: ${{ steps.selection.outputs.base_sha }}
+  full_run:
+    description: Effective full-run decision.
+    value: ${{ steps.selection.outputs.full_run }}
+  scope_exists:
+    description: Whether the durable scope existed before this run.
+    value: ${{ steps.selection.outputs.scope_exists }}
+  build_commit:
+    description: Published durable build commit, or empty in run-only mode.
+    value: ${{ steps.durable_publish.outputs.build_commit }}
+  prepared_scope:
+    description: Absolute prepared durable scope path, or empty in run-only mode.
+    value: ${{ steps.durable_publish.outputs.prepared_scope }}
 
 runs:
   using: composite
@@ -36,10 +62,25 @@ runs:
     - name: Validate run inputs
       shell: bash
       env:
+        CAD_CI_SOURCE_SHA_INPUT: ${{ inputs.source_sha }}
         CAD_CI_FULL_RUN: ${{ inputs.full_run }}
         CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
         CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
+        CAD_CI_DURABLE_SCOPE: ${{ inputs.durable_scope }}
+        CAD_CI_SOURCE_REF: ${{ inputs.source_ref }}
       run: |
+        case "$CAD_CI_SOURCE_SHA_INPUT" in
+          [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*)
+            test "${#CAD_CI_SOURCE_SHA_INPUT}" -eq 40 || {
+              echo "ERROR: source_sha must be an exact 40-character Git SHA" >&2
+              exit 2
+            }
+            ;;
+          *)
+            echo "ERROR: source_sha must be an exact 40-character Git SHA" >&2
+            exit 2
+            ;;
+        esac
         case "$CAD_CI_FULL_RUN" in
           true|false) ;;
           *)
@@ -47,10 +88,6 @@ runs:
             exit 2
             ;;
         esac
-        if [ "$CAD_CI_FULL_RUN" = "false" ] && [ -z "$CAD_CI_BASE_SHA_INPUT" ]; then
-          echo "ERROR: incremental CAD CI requires base_sha" >&2
-          exit 2
-        fi
         case "$CAD_CI_JOBS_INPUT" in
           ''|*[!0-9]*|0)
             echo "ERROR: jobs must be a positive integer" >&2
@@ -58,19 +95,30 @@ runs:
             ;;
         esac
 
+        if [ -n "$CAD_CI_DURABLE_SCOPE" ]; then
+          if [ -n "$CAD_CI_BASE_SHA_INPUT" ]; then
+            echo "ERROR: durable mode resolves base_sha automatically" >&2
+            exit 2
+          fi
+          if [ "$CAD_CI_FULL_RUN" != "false" ]; then
+            echo "ERROR: durable mode resolves full_run automatically" >&2
+            exit 2
+          fi
+          if [ -z "$CAD_CI_SOURCE_REF" ]; then
+            echo "ERROR: source_ref is required in durable mode" >&2
+            exit 2
+          fi
+        elif [ "$CAD_CI_FULL_RUN" = "false" ] && [ -z "$CAD_CI_BASE_SHA_INPUT" ]; then
+          echo "ERROR: incremental CAD CI requires base_sha" >&2
+          exit 2
+        fi
+
     - name: Checkout caller source
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.source_sha }}
         fetch-depth: 1
         fetch-tags: false
-
-    - name: Fetch exact base commit
-      if: ${{ inputs.full_run == 'false' }}
-      shell: bash
-      env:
-        CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
-      run: git fetch --no-tags --depth=1 origin "$CAD_CI_BASE_SHA_INPUT"
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -108,6 +156,37 @@ runs:
         --no-deps --no-compile
         "PyYAML>=6.0" "SCons==4.11.1"
 
+    - name: Resolve effective selection
+      id: selection
+      shell: bash
+      env:
+        CAD_CI_DURABLE_SCOPE: ${{ inputs.durable_scope }}
+        CAD_CI_SOURCE_SHA_INPUT: ${{ inputs.source_sha }}
+        CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
+        CAD_CI_FULL_RUN_INPUT: ${{ inputs.full_run }}
+      run: |
+        if [ -n "$CAD_CI_DURABLE_SCOPE" ]; then
+          python "$GITHUB_ACTION_PATH/scripts/reusable_ci.py" durable-resolve \
+            --repo . \
+            --generated-build .cache/cad-ci-generated-build \
+            --scope "$CAD_CI_DURABLE_SCOPE" \
+            --source-sha "$CAD_CI_SOURCE_SHA_INPUT" \
+            --github-output "$GITHUB_OUTPUT"
+        else
+          echo "scope=" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$CAD_CI_BASE_SHA_INPUT" >> "$GITHUB_OUTPUT"
+          echo "full_run=$CAD_CI_FULL_RUN_INPUT" >> "$GITHUB_OUTPUT"
+          echo "scope_exists=false" >> "$GITHUB_OUTPUT"
+          echo "generated_build=" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Fetch exact incremental base commit
+      if: ${{ steps.selection.outputs.full_run == 'false' }}
+      shell: bash
+      env:
+        CAD_CI_EFFECTIVE_BASE_SHA: ${{ steps.selection.outputs.base_sha }}
+      run: git fetch --no-tags --depth=1 origin "$CAD_CI_EFFECTIVE_BASE_SHA"
+
     - name: Authenticate Docker to GHCR
       shell: bash
       env:
@@ -119,13 +198,37 @@ runs:
       env:
         CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.environment_json }}
         CAD_CI_SOURCE_SHA_INPUT: ${{ inputs.source_sha }}
-        CAD_CI_BASE_SHA_INPUT: ${{ inputs.base_sha }}
-        CAD_CI_FULL_RUN: ${{ inputs.full_run }}
+        CAD_CI_BASE_SHA_EFFECTIVE: ${{ steps.selection.outputs.base_sha }}
+        CAD_CI_FULL_RUN_EFFECTIVE: ${{ steps.selection.outputs.full_run }}
         CAD_CI_JOBS_INPUT: ${{ inputs.jobs }}
       run: |
         python "$GITHUB_ACTION_PATH/scripts/reusable_ci.py" run \
           --repo . \
           --source-sha "$CAD_CI_SOURCE_SHA_INPUT" \
-          --base-sha "$CAD_CI_BASE_SHA_INPUT" \
-          --full-run "$CAD_CI_FULL_RUN" \
+          --base-sha "$CAD_CI_BASE_SHA_EFFECTIVE" \
+          --full-run "$CAD_CI_FULL_RUN_EFFECTIVE" \
           --jobs "$CAD_CI_JOBS_INPUT"
+
+    - name: Publish durable build scope
+      id: durable_publish
+      if: ${{ inputs.durable_scope != '' }}
+      shell: bash
+      env:
+        CAD_CI_SCOPE: ${{ steps.selection.outputs.scope }}
+        CAD_CI_SCOPE_EXISTS: ${{ steps.selection.outputs.scope_exists }}
+        CAD_CI_BASE_SHA: ${{ steps.selection.outputs.base_sha }}
+        CAD_CI_SOURCE_SHA: ${{ inputs.source_sha }}
+        CAD_CI_SOURCE_REF: ${{ inputs.source_ref }}
+        CAD_CI_GENERATED_BUILD: ${{ steps.selection.outputs.generated_build }}
+      run: |
+        python "$GITHUB_ACTION_PATH/scripts/reusable_ci.py" durable-publish \
+          --repo . \
+          --generated-build "$CAD_CI_GENERATED_BUILD" \
+          --prepared-scope .cache/cad-ci-prepared-scope \
+          --candidate-root build \
+          --scope "$CAD_CI_SCOPE" \
+          --scope-exists "$CAD_CI_SCOPE_EXISTS" \
+          --source-sha "$CAD_CI_SOURCE_SHA" \
+          --base-sha "$CAD_CI_BASE_SHA" \
+          --source-ref "$CAD_CI_SOURCE_REF" \
+          --github-output "$GITHUB_OUTPUT"
