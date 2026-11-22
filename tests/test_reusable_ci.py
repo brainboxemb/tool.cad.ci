@@ -335,7 +335,10 @@ class SameRunnerActionTests(unittest.TestCase):
         text = self.read()
         self.assertIn("full_run must be true or false", text)
         self.assertIn("incremental CAD CI requires base_sha", text)
-        self.assertIn("if: ${{ inputs.full_run == 'false' }}", text)
+        self.assertIn(
+            "if: ${{ steps.selection.outputs.full_run == 'false' }}",
+            text,
+        )
 
 
 class ReusableWorkflowTests(unittest.TestCase):
