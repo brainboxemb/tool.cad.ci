@@ -393,3 +393,29 @@ pull requests.
 
 The current Forge policy is the acceptance reference for the first release.
 Downstream CAD's temporary local copy is not a second normative implementation.
+
+## Stable-to-lane synchronization
+
+The reusable dev-lane merge policy must distinguish three merge classes:
+
+1. configured long-lived `lane -> stable` promotion;
+2. configured long-lived `stable -> lane` synchronization;
+3. every other supported pull request.
+
+For exact configured `stable -> lane` synchronization:
+
+- the merge method is a normal merge commit, never squash or rebase;
+- stable and lane refs are both permanent and never cleanup targets;
+- the stable source ref is not advanced, recreated or deleted after merge;
+- GitHub updates the lane base ref through the merge result;
+- the configured integration workflow is dispatched for the updated lane/base;
+- the source must be the same repository as the target repository;
+- exact-head, draft, mergeability, check and status gates remain unchanged.
+
+Exact configured `lane -> stable` promotion keeps the existing 0.19.0
+behavior: normal merge plus preservation/advancement of the long-lived lane at
+the resulting stable merge commit.
+
+Lane-to-lane, temporary-to-lane, temporary-to-stable and other ordinary
+supported pull requests remain squash merges unless a separate future contract
+explicitly changes them.

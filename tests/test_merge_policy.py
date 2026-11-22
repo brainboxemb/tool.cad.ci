@@ -30,8 +30,39 @@ class MergePolicyTests(unittest.TestCase):
                 )
                 self.assertEqual(value.merge_method, "merge")
                 self.assertTrue(value.direct_lane_promotion)
+                self.assertFalse(value.direct_lane_synchronization)
                 self.assertFalse(value.cleanup_head)
                 self.assertTrue(value.integrate_base)
+
+    def test_stable_to_configured_lane_sync_uses_merge(self):
+        lanes = ("cad-work", "ci-work")
+        for base in lanes:
+            with self.subTest(base=base):
+                value = merge_policy.evaluate(
+                    base=base,
+                    head="stable",
+                    stable_ref="stable",
+                    lane_refs=lanes,
+                    permanent_refs=("build", "pages"),
+                )
+                self.assertEqual(value.merge_method, "merge")
+                self.assertFalse(value.direct_lane_promotion)
+                self.assertTrue(value.direct_lane_synchronization)
+                self.assertFalse(value.cleanup_head)
+                self.assertTrue(value.integrate_base)
+
+    def test_lane_to_lane_remains_squash_without_cleanup(self):
+        value = merge_policy.evaluate(
+            base="cad-work",
+            head="ci-work",
+            stable_ref="stable",
+            lane_refs=("cad-work", "ci-work"),
+        )
+        self.assertEqual(value.merge_method, "squash")
+        self.assertFalse(value.direct_lane_promotion)
+        self.assertFalse(value.direct_lane_synchronization)
+        self.assertFalse(value.cleanup_head)
+        self.assertTrue(value.integrate_base)
 
     def test_all_other_merges_are_squash(self):
         value = merge_policy.evaluate(
@@ -42,6 +73,7 @@ class MergePolicyTests(unittest.TestCase):
         )
         self.assertEqual(value.merge_method, "squash")
         self.assertFalse(value.direct_lane_promotion)
+        self.assertFalse(value.direct_lane_synchronization)
         self.assertTrue(value.cleanup_head)
         self.assertTrue(value.integrate_base)
 
@@ -104,6 +136,9 @@ class ReusableMergePolicyWorkflowTests(unittest.TestCase):
         self.assertIn("INTEGRATION_WORKFLOW", text)
         self.assertIn("temporary head deleted", text)
         self.assertIn("long-lived lane recreated at merge commit", text)
+        self.assertIn("DIRECT_SYNC", text)
+        self.assertIn("long-lived lane synchronized by merge", text)
+        self.assertIn('"$DIRECT_PROMOTION" = "true" ] || [ "$DIRECT_SYNC" = "true"', text)
 
         self.assertNotIn("dev-cad", text)
         self.assertNotIn("dev-ci", text)

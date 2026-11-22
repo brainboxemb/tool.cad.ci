@@ -141,11 +141,12 @@ jobs:
           )"
           METHOD="$(jq -r '.merge_method' <<<"$POLICY")"
           DIRECT_PROMOTION="$(jq -r '.direct_lane_promotion' <<<"$POLICY")"
+          DIRECT_SYNC="$(jq -r '.direct_lane_synchronization' <<<"$POLICY")"
           CLEANUP_HEAD="$(jq -r '.cleanup_head' <<<"$POLICY")"
           INTEGRATE_BASE="$(jq -r '.integrate_base' <<<"$POLICY")"
 
-          if [ "$DIRECT_PROMOTION" = "true" ] && [ "$HEAD_REPO" != "$REPOSITORY" ]; then
-            refuse "long-lived lane promotion must originate from this repository"
+          if { [ "$DIRECT_PROMOTION" = "true" ] || [ "$DIRECT_SYNC" = "true" ]; } && [ "$HEAD_REPO" != "$REPOSITORY" ]; then
+            refuse "long-lived permanent merge must originate from this repository"
           fi
 
           MERGE_JSON="$(
@@ -165,6 +166,8 @@ jobs:
               gh api -X POST                 "repos/$REPOSITORY/git/refs"                 -f ref="refs/heads/$HEAD_REF"                 -f sha="$MERGE_SHA"                 >/dev/null
               LIFECYCLE_RESULT="long-lived lane recreated at merge commit"
             fi
+          elif [ "$DIRECT_SYNC" = "true" ]; then
+            LIFECYCLE_RESULT="long-lived lane synchronized by merge"
           elif [ "$CLEANUP_HEAD" = "true" ] && [ "$HEAD_REPO" = "$REPOSITORY" ]; then
             if gh api "repos/$REPOSITORY/git/ref/heads/$HEAD_REF" >/dev/null 2>&1; then
               gh api -X DELETE                 "repos/$REPOSITORY/git/refs/heads/$HEAD_REF"                 >/dev/null
