@@ -26,10 +26,28 @@ Issue #95 is complete and closed.
 
 ## Current work
 
-No tool implementation is active.
+### #99 repin released lib.py.cad.ci 0.11.0
 
-The tool remains a thin exposure/pinning layer. Generic SCons, build-store,
-projection, scheduling, caching and freshness behavior remains library-owned.
+Status: **now**.
+
+`lib.py.cad.ci 0.11.0` is released at exact commit
+`e621daf6e309bdd0e3f643a12007f1b66490696d`.
+
+This tool change is a thin repin/release only:
+
+- pin that exact library commit;
+- release `tool.cad.ci 0.18.1`;
+- keep CLI/workflow/root-action behavior unchanged;
+- correct the stale README library-pin text;
+- after release, hand off to `tool.cad.ci.test` for black-box acceptance.
+
+Generic active-dependent selection semantics remain wholly library-owned.
+
+## Open issue assessment — 2026-11-22
+
+| Issue | Status | Next action |
+| --- | --- | --- |
+| #99 lib.py.cad.ci 0.11.0 repin / tool 0.18.1 | **now** | Pin exact released library, test, release, then external acceptance in `tool.cad.ci.test`. |
 
 ## Next trigger
 
