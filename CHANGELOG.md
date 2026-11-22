@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.23.0 - 2026-11-22
+
+- add optional owner-managed permanent-lane PR policy to the existing
+  `reusable-ci` / internal `reusable-run` one-runner path;
+- skip Python/library/GHCR/CAD-CI bootstrap for a non-empty docs-only
+  development-lane diff and require full CI for exact lane-to-stable promotion;
+- add canonical `cad-ci-lanes` consumer template version 1 so Forge/CAD no
+  longer implement PR file pagination/path loops/full-run promotion expressions;
+- correct canonical merge-policy template caller permissions and increment that
+  template to version 2;
+- add regression tests for lane-policy semantics, one-runner ordering and
+  template permission/public-surface contracts.
+
+
 ## 0.22.0 - 2026-11-22
 
 - add canonical versioned consumer workflow templates for run-only CI, complete
