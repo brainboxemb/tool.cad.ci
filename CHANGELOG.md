@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.0 - 2026-11-22
+
+- add a separate owner-only `/retire-branches` workflow for intentionally disposable unique branch history;
+- require one exact reviewed branch/SHA pair per command line, refuse stable/lane/permanent refs and open PR heads, and preflight the full set before mutation;
+- re-read every branch SHA immediately before deletion so moved refs are retained and audited;
+- keep conservative `/cleanup-branches` evidence rules unchanged;
+- add the canonical branch-retirement wrapper and update all copy-ready templates to `v0.27.0`.
+
 ## 0.26.0 - 2026-11-22
 
 - add a reusable owner-controlled `/cleanup-branches` governance workflow for stale temporary refs;
