@@ -60,7 +60,8 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertEqual(
             set(contract["inputs"]),
             {"command", "pull_request_number", "stable_ref", "lane_refs_json",
-             "permanent_refs_json", "temporary_prefixes_json", "integration_workflow"},
+             "permanent_refs_json", "temporary_prefixes_json", "integration_workflow",
+             "resolution_prefix"},
         )
         self.assertEqual(set(wf["jobs"]), {"merge"})
         job = wf["jobs"]["merge"]
@@ -70,6 +71,7 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertEqual(job["timeout-minutes"], "10")
         self.assertEqual(job["permissions"]["contents"], "write")
         self.assertEqual(job["permissions"]["actions"], "write")
+        self.assertIn("/merge-resolved", job["if"])
         steps = job["steps"]
         checkout = next(step for step in steps if "uses" in step)
         self.assertEqual(len(checkout["uses"].split("@")[-1]), 40)
