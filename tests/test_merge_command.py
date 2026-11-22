@@ -122,6 +122,144 @@ class MergeCommandTests(unittest.TestCase):
             self.assertIn("post-merge processing FAILED", body)
             self.assertIn("b" * 40, body)
 
+    def test_api_repeated_fields_encode_commit_parent_array(self):
+        completed = SimpleNamespace(
+            stdout='HTTP/2.0 201 Created\\r\\n\\r\\n{"sha":"ok"}',
+            stderr="", returncode=0,
+        )
+        with patch.object(command.subprocess, "run", return_value=completed) as subprocess:
+            command.api(
+                "POST",
+                "repos/o/r/git/commits",
+                fields={"message": "merge", "tree": "t" * 40},
+                field_lists={"parents": ["a" * 40, "b" * 40]},
+            )
+            argv = subprocess.call_args.args[0]
+            self.assertIn("parents[]=" + "a" * 40, argv)
+            self.assertIn("parents[]=" + "b" * 40, argv)
+
+    def test_conflicted_pr_requires_reviewed_parent_shas(self):
+        pr = {
+            "state": "open", "draft": False, "mergeable": False,
+            "base": {"sha": "a" * 40},
+            "head": {"sha": "b" * 40},
+        }
+        with patch.object(command, "api", return_value=pr):
+            self.assertIs(
+                command.conflicted_pr("owner/repo", 12, "a" * 40, "b" * 40),
+                pr,
+            )
+            with self.assertRaisesRegex(command.Refused, "base SHA"):
+                command.conflicted_pr("owner/repo", 12, "c" * 40, "b" * 40)
+
+    def test_resolved_merge_creates_exact_two_parent_commit_and_advances_base(self):
+        base_sha, head_sha = "a" * 40, "b" * 40
+        resolution_sha, tree_sha, merge_sha = "c" * 40, "d" * 40, "e" * 40
+        text = "\n".join([
+            "/merge-resolved",
+            "base " + base_sha,
+            "head " + head_sha,
+            "resolution-pr 201",
+            "resolution resolve/pr-200 " + resolution_sha + " " + tree_sha,
+        ])
+        args = SimpleNamespace(
+            command=text, repository="owner/repo", pull_request_number=200,
+            actor="owner", repository_owner="owner", stable_ref="main",
+            lane_refs_json='["dev-cad"]',
+            permanent_refs_json='["build","gh-pages"]',
+            temporary_prefixes_json='["issue/"]', integration_workflow="ci.yml",
+            current_run_id="77", resolution_prefix="resolve/",
+        )
+        pr = {
+            "state": "open", "draft": False, "mergeable": False,
+            "base": {"ref": "dev-cad", "sha": base_sha},
+            "head": {
+                "ref": "main", "sha": head_sha,
+                "repo": {"full_name": "owner/repo"},
+            },
+        }
+        review = {
+            "state": "open", "draft": False, "mergeable": True,
+            "base": {"ref": "dev-cad", "sha": base_sha},
+            "head": {
+                "ref": "resolve/pr-200", "sha": resolution_sha,
+                "repo": {"full_name": "owner/repo"},
+            },
+        }
+        exact = {
+            "sha": merge_sha,
+            "tree": {"sha": tree_sha},
+            "parents": [{"sha": base_sha}, {"sha": head_sha}],
+        }
+        outcome = command.PostMergeResult(
+            lifecycle="long-lived lane synchronized by merge",
+            dispatched=["dev-cad"],
+        )
+        with patch.object(command, "conflicted_pr", return_value=pr), \
+             patch.object(command, "_resolution_review", return_value=review), \
+             patch.object(command, "verify_fresh_pr"), \
+             patch.object(command, "require_ref_sha"), \
+             patch.object(command, "api", side_effect=[
+                 {"sha": merge_sha}, exact, {}
+             ]) as api, \
+             patch.object(command, "post_merge", return_value=outcome), \
+             patch.object(command, "_close_pr_if_open", return_value="closed"), \
+             patch.object(command, "_cleanup_resolution_ref",
+                          return_value="resolution ref deleted"), \
+             patch.object(command, "comment"):
+            self.assertEqual(command.run(args), 0)
+
+        create = api.call_args_list[0]
+        self.assertEqual(create.args[:2], ("POST", "repos/owner/repo/git/commits"))
+        self.assertEqual(
+            create.kwargs["field_lists"]["parents"], [base_sha, head_sha]
+        )
+        advance = api.call_args_list[2]
+        self.assertEqual(
+            advance.args[:2],
+            ("PATCH", "repos/owner/repo/git/refs/heads/dev-cad"),
+        )
+        self.assertEqual(advance.kwargs["fields"]["sha"], merge_sha)
+        self.assertEqual(advance.kwargs["fields"]["force"], "false")
+
+    def test_resolved_merge_rejects_moved_parent_before_commit_creation(self):
+        text = "\n".join([
+            "/merge-resolved",
+            "base " + "a" * 40,
+            "head " + "b" * 40,
+            "resolution-pr 201",
+            "resolution resolve/pr-200 " + "c" * 40 + " " + "d" * 40,
+        ])
+        args = SimpleNamespace(
+            command=text, repository="owner/repo", pull_request_number=200,
+            actor="owner", repository_owner="owner", stable_ref="main",
+            lane_refs_json='["dev-cad"]',
+            permanent_refs_json='["build","gh-pages"]',
+            temporary_prefixes_json='["issue/"]', integration_workflow="",
+            current_run_id="77", resolution_prefix="resolve/",
+        )
+        pr = {
+            "state": "open", "draft": False, "mergeable": False,
+            "base": {"ref": "dev-cad", "sha": "a" * 40},
+            "head": {
+                "ref": "main", "sha": "b" * 40,
+                "repo": {"full_name": "owner/repo"},
+            },
+        }
+        review = {
+            "base": {"ref": "dev-cad", "sha": "a" * 40},
+            "head": {"ref": "resolve/pr-200", "sha": "c" * 40},
+        }
+        with patch.object(command, "conflicted_pr", return_value=pr), \
+             patch.object(command, "_resolution_review", return_value=review), \
+             patch.object(command, "verify_fresh_pr"), \
+             patch.object(command, "require_ref_sha",
+                          side_effect=command.Refused("base ref moved")), \
+             patch.object(command, "api") as api:
+            with self.assertRaisesRegex(command.Refused, "base ref moved"):
+                command.run(args)
+            api.assert_not_called()
+
     def test_gh_response_headers_are_not_parsed_as_json(self):
         completed = SimpleNamespace(
             stdout='HTTP/2.0 200 OK\r\ncontent-type: application/json\r\n\r\n{"ok": true}\n',

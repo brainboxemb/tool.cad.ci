@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       command:
-        description: Explicit caller command; must be exactly /merge.
+        description: Owner command; /merge or reviewed multiline /merge-resolved.
         required: true
         type: string
       pull_request_number:
@@ -39,13 +39,18 @@ on:
         required: false
         type: string
         default: ""
+      resolution_prefix:
+        description: Branch prefix reserved for reviewed conflict-resolution refs.
+        required: false
+        type: string
+        default: "resolve/"
 
 permissions:
   contents: read
 
 jobs:
   merge:
-    if: inputs.command == '/merge' && github.actor == github.repository_owner
+    if: (inputs.command == '/merge' || startsWith(inputs.command, '/merge-resolved')) && github.actor == github.repository_owner
     # Merge, ref lifecycle, comments and optional workflow_dispatch are
     # privileged operations. Only this job receives elevated permissions.
     permissions:
@@ -71,6 +76,7 @@ jobs:
       PERMANENT_REFS_JSON: ${{ inputs.permanent_refs_json }}
       TEMPORARY_PREFIXES_JSON: ${{ inputs.temporary_prefixes_json }}
       INTEGRATION_WORKFLOW: ${{ inputs.integration_workflow }}
+      RESOLUTION_PREFIX: ${{ inputs.resolution_prefix }}
     steps:
       - name: Checkout called tool revision
         # Immutable revision of actions/checkout v4 (same trusted pin used by CAD).
@@ -102,4 +108,5 @@ jobs:
             --permanent-refs-json "$PERMANENT_REFS_JSON" \
             --temporary-prefixes-json "$TEMPORARY_PREFIXES_JSON" \
             --integration-workflow "$INTEGRATION_WORKFLOW" \
-            --current-run-id "$CURRENT_RUN_ID"
+            --current-run-id "$CURRENT_RUN_ID" \
+            --resolution-prefix "$RESOLUTION_PREFIX"

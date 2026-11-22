@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.28.0 - 2026-11-22
+
+- add owner-reviewed `/merge-resolved` recovery for genuinely conflicted permanent-lane promotion/synchronization without squash, rebase or force-push;
+- bind the operation to explicit reviewed base/head SHAs, a separate mergeable green resolution PR, its exact resolution commit and exact Git tree;
+- create and read back one two-parent merge object with parents exactly `[base, head]`, then recheck every mutable ref before a non-force base advance;
+- reuse normal permanent-lane lifecycle and integration dispatch after the resolved merge, then close review PRs and delete the unchanged `resolve/*` ref;
+- refuse ordinary PRs, moved parent/ref/tree evidence, a non-green resolution review, or a conflicted PR that becomes normally mergeable;
+- bump the canonical merge-policy wrapper to template version 3 and update all consumer templates to `v0.28.0`.
+
 ## 0.27.1 - 2026-11-22
 
 - exclude the currently executing owner `/merge` workflow by explicit GitHub Actions run id before validating the PR head checks;
