@@ -26,31 +26,22 @@ Issue #95 is complete and closed.
 
 ## Current work
 
-Issue #103 — **now**: provide the reusable dev-lane merge/lifecycle policy as a
-released GitHub Actions workflow surface.
+No tool implementation is active.
 
-Required order:
+Released tool.cad.ci 0.19.0 @
+`5677c41a61929b32ab2cb07087a6505f7b9347d8` adds the reusable dev-lane
+merge/lifecycle workflow and remains pinned to lib.py.cad.ci 0.11.0 @
+`e621daf6e309bdd0e3f643a12007f1b66490696d`.
 
-1. freeze the public workflow contract in requirements/design;
-2. preserve current Forge acceptance semantics exactly;
-3. implement the generic reusable workflow without Forge-specific names;
-4. test merge-method, head/check verification, permanent-ref protection,
-   temporary-branch cleanup and post-promotion lane preservation;
-5. release a new tool.cad.ci version;
-6. externally accept it in tool.cad.ci.test;
-7. qualify released equivalence in Forge before removing Forge-local policy.
+External acceptance is complete in tool.cad.ci.test #80 / PR #81 / run
+`45022699789`.
 
-No lib.py.cad.ci change is expected: this is workflow orchestration, not generic
-planning/execution semantics.
-
-Issue #99 remains released and externally accepted; consumers may continue using
-0.18.1 / 0.11.0 while #103 is developed.
+Forge #674 is now the consumer-equivalence/adoption gate. No further tool change
+is required unless that consumer qualification exposes a genuine shared defect.
 
 ## Open issue assessment — 2026-11-22
 
-| Issue | Status | Current interpretation |
-| --- | --- | --- |
-| #103 reusable dev-lane merge policy workflow | **now** | Tool-owned reusable GitHub Actions surface; preserve Forge behavior, release, black-box accept, then migrate consumers. |
+No open tool issues remain after #103 is released and externally accepted.
 
 ## Next trigger
 
@@ -64,3 +55,9 @@ Open a new issue only for:
 
 Every new released tool/library pair or public action contract must pass
 `tool.cad.ci.test` before consumer adoption.
+
+
+## Recently completed
+
+- #103 reusable dev-lane merge policy workflow — released as tool.cad.ci 0.19.0,
+  external acceptance run `45022699789` green; Forge #674 owns consumer adoption.
