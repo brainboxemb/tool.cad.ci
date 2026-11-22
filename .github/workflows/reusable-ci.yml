@@ -21,6 +21,11 @@ on:
         required: false
         type: boolean
         default: false
+      pr_policy_json:
+        description: Optional stable/lane/docs-only pull-request policy JSON.
+        required: false
+        type: string
+        default: ""
       jobs:
         description: Maximum parallel SCons jobs; must be a positive integer.
         required: false
@@ -61,6 +66,7 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       base_sha: ${{ inputs.base_sha }}
       full_run: ${{ inputs.full_run }}
+      pr_policy_json: ${{ inputs.pr_policy_json }}
       jobs: ${{ inputs.jobs }}
       environment_json: ${{ inputs.environment_json }}
       upload_build: ${{ inputs.upload_build }}
