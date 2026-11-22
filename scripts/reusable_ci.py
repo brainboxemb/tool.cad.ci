@@ -125,7 +125,7 @@ def durable_scope_name(value: str) -> str:
     if (
         not scope
         or not _SCOPE_NAME.fullmatch(scope)
-        or scope == ".cad-ci"
+        or scope in {".", "..", ".cad-ci"}
     ):
         raise ValueError(f"invalid durable scope name: {value!r}")
     return scope
