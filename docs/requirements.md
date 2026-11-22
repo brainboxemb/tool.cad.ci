@@ -282,6 +282,34 @@ pull requests.
 The current Forge policy is the acceptance reference for the first release.
 Downstream CAD's temporary local copy is not a second normative implementation.
 
+## Conservative stale-branch maintenance cleanup
+
+The merge-governance API also exposes a separate owner-issued maintenance
+operation for stale temporary branches left by historical/manual workflows.
+
+This operation is not the normal post-merge cleanup path.
+
+Required behavior:
+
+- only explicitly configured temporary branch prefixes are candidates;
+- stable, configured lane, permanent/generated and every `backup/*` ref are
+  never general cleanup targets;
+- a same-repository branch used by an open pull request is retained;
+- deletion requires positive evidence tied to the current inspected SHA:
+  either the branch tip is already integrated into a configured stable/lane
+  ref, or the exact `(head ref, head SHA)` equals a merged pull request head;
+- branch name, issue state and historical use of the same name are not deletion
+  evidence;
+- immediately before delete, the current branch SHA is read again; a moved
+  branch is retained and reported;
+- unique/unmerged history is retained and reported;
+- enumeration/API failures fail closed rather than producing a partial
+  best-effort deletion pass;
+- the operation runs trusted released tool source only and never executes
+  consumer or PR code;
+- live deletion behavior must be externally qualified in `tool.cad.ci.test`
+  before a consumer adopts a new release.
+
 ## Stable-to-lane synchronization
 
 The reusable dev-lane merge policy must distinguish three merge classes:

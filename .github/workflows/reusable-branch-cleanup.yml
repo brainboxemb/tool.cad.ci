@@ -1,0 +1,87 @@
+name: Reusable branch cleanup
+
+# Public governance API. This workflow supplies only trusted runner,
+# permissions and credentials; cleanup policy lives in branch_cleanup.py.
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        description: Explicit caller command; must be exactly /cleanup-branches.
+        required: true
+        type: string
+      issue_number:
+        description: Issue or PR conversation that receives the cleanup audit.
+        required: true
+        type: number
+      stable_ref:
+        description: Stable integration branch.
+        required: false
+        type: string
+        default: main
+      lane_refs_json:
+        description: JSON list of long-lived development lane refs.
+        required: true
+        type: string
+      permanent_refs_json:
+        description: JSON list of additional permanent/generated refs that cleanup must never delete.
+        required: false
+        type: string
+        default: '["build","gh-pages"]'
+      temporary_prefixes_json:
+        description: JSON allow-list of temporary branch prefixes eligible for maintenance cleanup.
+        required: false
+        type: string
+        default: '["issue/","fix/","feature/","accept/","promote/","docs/","chore/"]'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    if: inputs.command == '/cleanup-branches' && github.actor == github.repository_owner
+    permissions:
+      contents: write
+      pull-requests: read
+      issues: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: branch-cleanup-${{ github.repository }}
+      cancel-in-progress: false
+    env:
+      REPOSITORY: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ inputs.issue_number }}
+      TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
+      STABLE_REF: ${{ inputs.stable_ref }}
+      LANE_REFS_JSON: ${{ inputs.lane_refs_json }}
+      PERMANENT_REFS_JSON: ${{ inputs.permanent_refs_json }}
+      TEMPORARY_PREFIXES_JSON: ${{ inputs.temporary_prefixes_json }}
+    steps:
+      - name: Checkout called tool revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .cache/cad-ci-tool-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Retire evidence-backed temporary branches
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMAND: ${{ inputs.command }}
+          ACTOR: ${{ github.actor }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          python3 "$TOOL_ROOT/scripts/branch_cleanup.py" \
+            --command "$COMMAND" \
+            --repository "$REPOSITORY" \
+            --issue-number "$ISSUE_NUMBER" \
+            --actor "$ACTOR" \
+            --repository-owner "$REPOSITORY_OWNER" \
+            --stable-ref "$STABLE_REF" \
+            --lane-refs-json "$LANE_REFS_JSON" \
+            --permanent-refs-json "$PERMANENT_REFS_JSON" \
+            --temporary-prefixes-json "$TEMPORARY_PREFIXES_JSON"
