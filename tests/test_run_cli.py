@@ -125,7 +125,8 @@ class RunCliTests(unittest.TestCase):
                     / "build/cases/a/.cad-ci/steps/build.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(step_evidence["schema"], 3)
+            self.assertEqual(step_evidence["schema"], 4)
+            self.assertEqual(step_evidence["action_type"], "command")
             self.assertEqual(step_evidence["output_state"], "UNCHANGED")
             self.assertTrue(step_evidence["action_executed"])
             self.assertIsNotNone(step_evidence["run_started_at"])
