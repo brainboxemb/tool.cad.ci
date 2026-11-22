@@ -117,7 +117,7 @@ class WorkflowApiContractTests(unittest.TestCase):
     def test_all_external_github_actions_use_immutable_40_character_shas(self):
         """Release reproducibility must not depend on moving action tags."""
 
-        paths = [ROOT / "action.yml", *WORKFLOWS.glob("*.yml")]
+        paths = list(WORKFLOWS.glob("*.yml"))
         for path in paths:
             data = load_yaml(path)
             step_groups = [data.get("runs", {}).get("steps", [])]
@@ -134,13 +134,8 @@ class WorkflowApiContractTests(unittest.TestCase):
                             r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}$",
                         )
 
-    def test_same_runner_action_has_documented_public_inputs_outputs(self):
-        action = load_yaml(ROOT / "action.yml")
-        self.assertEqual(action["runs"]["using"], "composite")
-        for group in ("inputs", "outputs"):
-            for name, entry in action[group].items():
-                with self.subTest(group=group, name=name):
-                    self.assertTrue(entry.get("description"))
+    def test_root_composite_action_is_not_a_public_surface(self):
+        self.assertFalse((ROOT / "action.yml").exists())
 
 
 if __name__ == "__main__":
