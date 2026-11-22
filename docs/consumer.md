@@ -1,10 +1,12 @@
-# Using tool.cad.ci from Forge or CAD
+# Using tool.cad.ci from a consumer repository
 
-Forge and CAD consume one exact released `tool.cad.ci` revision. Do not
-consume moving `main`.
+Every consumer uses one exact released `tool.cad.ci` revision. Do not consume
+moving `main`. For a new repository, start with
+[`new-repository.md`](new-repository.md) and the versioned templates under
+[`templates/github/workflows/`](../templates/github/workflows/README.md).
 
-A normal consumer uses the high-level reusable workflow and keeps only its
-trigger, permissions and the exact released tool commit:
+A normal run-only consumer starts from the canonical `cad-ci.yml` template
+and keeps only its trigger, permissions and the exact released tool commit:
 
 ```yaml
 jobs:
@@ -146,3 +148,19 @@ published as durable build output.
 A new tool release is first pinned and tested in `tool.cad.ci.test` using
 representative generic cases. Only after that exact released stack passes should
 Forge or CAD update its tool pin.
+
+
+## Template provenance
+
+Copied workflow files keep their canonical header:
+
+```yaml
+# template: tool.cad.ci/<template-id>
+# template-version: <integer>
+```
+
+The authoritative mapping is `templates/manifest.json`. A consumer may change
+documented repository-owned values, but it must not silently grow generic
+checkout/bootstrap, changed-path, CAD-CI execution, durable-state or merge API
+logic. When the canonical template version changes, consumers can compare their
+header against the released template before adopting it.

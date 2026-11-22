@@ -1,0 +1,19 @@
+# template: tool.cad.ci/cad-ci-pr
+# template-version: 1
+#
+# Complete one-runner PR lifecycle: verify, optional durable PR publication,
+# and close cleanup. Replace TOOL_CAD_CI_RELEASE_SHA with one immutable release.
+
+name: CAD CI PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  cad-ci:
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@TOOL_CAD_CI_RELEASE_SHA

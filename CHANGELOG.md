@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.22.0 - 2026-11-22
+
+- add canonical versioned consumer workflow templates for run-only CI, complete
+  PR lifecycle, same-runner composite-action use and merge governance;
+- add `templates/manifest.json` with stable template ids and integer template
+  versions so copied consumer files retain traceable provenance;
+- add `docs/new-repository.md` as the supported end-to-end setup path for a
+  new CAD-CI consumer repository;
+- add regression tests that keep templates on supported public APIs and prevent
+  copied generic bootstrap/execution/merge implementation or existing
+  consumer-specific policy from leaking into templates.
+
+
 ## 0.21.0 - 2026-11-22
 
 - consume released `lib.py.cad.ci 0.11.1` at exact commit

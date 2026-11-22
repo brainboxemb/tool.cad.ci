@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "templates": {
+    "github/workflows/cad-ci.yml": {
+      "id": "tool.cad.ci/cad-ci",
+      "version": 1,
+      "surface": "reusable-ci.yml"
+    },
+    "github/workflows/cad-ci-pr.yml": {
+      "id": "tool.cad.ci/cad-ci-pr",
+      "version": 1,
+      "surface": "reusable-pr.yml"
+    },
+    "github/workflows/cad-ci-same-runner.yml": {
+      "id": "tool.cad.ci/cad-ci-same-runner",
+      "version": 1,
+      "surface": "action.yml"
+    },
+    "github/workflows/merge-policy.yml": {
+      "id": "tool.cad.ci/merge-policy",
+      "version": 1,
+      "surface": "reusable-merge-policy.yml"
+    }
+  }
+}

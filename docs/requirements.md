@@ -451,6 +451,34 @@ trusted branch source. Durable mode is not a generic untrusted PR execution
 surface. This is a documented caller constraint, not a separate architecture
 workstream.
 
+## Versioned consumer templates and onboarding
+
+The released tool is responsible for telling a new repository how to consume
+its public GitHub Actions APIs. Consumer repositories must not invent a second
+generic workflow design.
+
+Requirements:
+
+- ship canonical templates for normal run-only CI, complete PR lifecycle,
+  same-runner root action use and merge governance;
+- every template has a stable template id and positive integer template
+  version, duplicated in a machine-readable manifest;
+- templates use only documented public `tool.cad.ci` surfaces and one
+  explicit immutable release-SHA marker;
+- templates contain only trigger, permission and repository-owned policy
+  configuration; they do not copy generic checkout/bootstrap, PR-file
+  pagination, changed-path classification, SCons/CAD-CI execution, durable
+  state or merge implementation;
+- existing consumer/repository names and workflow filenames are not encoded in
+  the generic templates;
+- a new-repository guide explains configuration, template selection, immutable
+  pinning, allowed local customization and verification order;
+- template structure is release-versioned and covered by automated tests so a
+  copied consumer can identify its provenance and compare versions.
+
+The templates are a consumer contract above the public Actions APIs, not a new
+execution engine.
+
 ## Public API invariants (issue #110)
 
 The following IDs name **externally observable requirements** independent of

@@ -97,6 +97,21 @@ CLI tests should prove:
 The generic SCons acceptance matrix belongs in `lib.py.cad.ci`.
 End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
+## Consumer templates
+
+`templates/github/workflows/` is the canonical source for consumer workflow
+wrappers. Each template must have a stable `template` id and integer
+`template-version` matching `templates/manifest.json`.
+
+A consumer repository must start from these templates rather than inventing
+generic CAD-CI orchestration. Templates may contain caller triggers,
+permissions and repository-owned policy values, but never generic
+checkout/bootstrap, changed-path classification, CAD-CI execution, durable
+state/publication or merge API implementation.
+
+When the copied workflow structure changes, increment that template's integer
+version and update tests/onboarding in the same change.
+
 ## GitHub Actions
 
 Generic consumer setup belongs in reusable workflows or the released root
