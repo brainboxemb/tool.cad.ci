@@ -8,7 +8,7 @@ Read the [public API contract](../../docs/api.md) **before selecting a workflow*
 | `reusable-pr.yml` | Complete PR verification, optional publication/cleanup on **one runner** | PR consumers requiring the complete lifecycle |
 | `reusable-plan.yml` | **Public advanced** selection-only API; returns plan JSON and exact source/base commits | Callers that need planning without execution; not the normal run entry point |
 | `reusable-run.yml` | **Internal** single-run implementation behind `reusable-ci.yml` | Do not call directly from consumers |
-| `reusable-merge-policy.yml` | GitHub branch-governance service for owner-issued merges | Repository owners with an explicit branch policy; ownership under audit |
+| `reusable-merge-policy.yml` | GitHub branch-governance service for owner-issued merges | Repository owners with an explicit branch policy; ownership under audit |\n| `reusable-branch-cleanup.yml` | Conservative maintenance cleanup for stale temporary branches | Repository owners using the shared branch policy; ownership under audit |
 | `ci.yml` | Tests **this repository** | Internal; never a consumer entry point |
 
 ## Contract ownership
@@ -27,7 +27,7 @@ copy live under [`docs/manual/`](../../docs/manual/README.md).
 | --- | --- |
 | `reusable-ci.yml` | `docs/manual/templates/cad-ci.yml` or `docs/manual/templates/cad-ci-lanes.yml` |
 | `reusable-pr.yml` | `docs/manual/templates/cad-ci-pr.yml` |
-| `reusable-merge-policy.yml` | `docs/manual/templates/merge-policy.yml` |
+| `reusable-merge-policy.yml` | `docs/manual/templates/merge-policy.yml` |\n| `reusable-branch-cleanup.yml` | `docs/manual/templates/branch-cleanup.yml` |
 
 Do not add consumer-specific wrapper examples here. Update the canonical
 manual template, its integer template version when needed, release pin and tests together.
