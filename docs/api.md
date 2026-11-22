@@ -28,7 +28,8 @@ reinterpret that configuration.
 | `reusable-plan.yml` | **Public advanced** selection-only workflow | `.github/workflows/reusable-plan.yml` | unit/schema + external candidate plan output | Retain as explicit plan-only API; not default |
 | `reusable-run.yml` | **Internal workflow implementation** delegated from `reusable-ci.yml` | `.github/workflows/reusable-run.yml` | unit/schema via public `reusable-ci.yml` | Not a supported direct consumer API |
 | `reusable-merge-policy.yml` | GitHub merge governance; used by Forge | `.github/workflows/reusable-merge-policy.yml`, `scripts/merge_policy.py`, `scripts/merge_command.py` | `tests/test_merge_policy.py`, `tests/test_merge_command.py`; external merge policy case | **Ownership review**; preserve current consumer behavior |
-| `reusable-branch-cleanup.yml` | Conservative stale temporary-branch maintenance | `.github/workflows/reusable-branch-cleanup.yml`, `scripts/branch_cleanup.py` | `tests/test_branch_cleanup.py`; live external acceptance required | Candidate governance surface under #138 |
+| `reusable-branch-cleanup.yml` | Conservative stale temporary-branch maintenance | `.github/workflows/reusable-branch-cleanup.yml`, `scripts/branch_cleanup.py` | `tests/test_branch_cleanup.py`; live external acceptance in `tool.cad.ci.test` #180 | Released governance surface |
+| `reusable-branch-retirement.yml` | Separately reviewed exact-SHA branch retirement | `.github/workflows/reusable-branch-retirement.yml`, `scripts/branch_retirement.py` | `tests/test_branch_retirement.py`; live external acceptance required | Candidate destructive governance surface under #140 |
 | `ci.yml` | This repository's CI, **not** consumer API | `.github/workflows/ci.yml` | GitHub Actions | Internal |
 | `scripts/*.py` | Workflow/maintenance implementation, **not** separate public CLI contract | `scripts/` | associated tests | Internal unless explicitly promoted |
 
@@ -91,6 +92,18 @@ The workflow declares `contents: write` for optional durable output and
 same-repository PR publication runs in that job, while fork PRs never publish.
 Callers needing strictly read-only verification use `reusable-ci.yml`.
 Do not split the workflow into a second publication runner.
+
+### `reusable-branch-retirement.yml` — separately reviewed destructive governance API
+
+Entry point: `workflow_call`, intended behind an owner-only multiline
+`/retire-branches` issue comment. Each subsequent line must contain exactly
+one branch name and one reviewed 40-character SHA. The workflow refuses
+stable/lane/permanent refs and open same-repository PR heads, preflights all
+requested refs before mutation, and re-reads each SHA immediately before
+deletion. Missing refs are idempotent; moved refs are retained and reported.
+
+This API exists only for deliberately retiring unique history after review. It
+does not alter the evidence rules of normal `/cleanup-branches`.
 
 ### `reusable-branch-cleanup.yml` — separate governance maintenance API\n\nEntry point: `workflow_call`, intended behind an owner-only `/cleanup-branches` comment. Required: `command` (exact `/cleanup-branches`), `issue_number`, `lane_refs_json`. Optional: `stable_ref` (default `main`), `permanent_refs_json` and `temporary_prefixes_json`. Requires `contents: write`, `pull-requests: read` and `issues: write`. It enumerates current branches/open PRs/merged PR head evidence, and deletes only allow-listed temporary branches whose current inspected SHA is positively retired by integration into a configured durable ref or an exact merged-PR `(ref, SHA)` record. It re-reads the branch SHA immediately before deletion. Permanent/generated refs, `backup/*`, open PR heads, moved refs and unique/unmerged history are retained and reported.\n\nThis maintenance surface is distinct from the post-merge cleanup performed by `reusable-merge-policy.yml`; it exists for stale branches left by historical/manual workflows. Live deletion must be qualified in `tool.cad.ci.test` before consumer adoption.\n\n### `reusable-merge-policy.yml` — separate governance API
 
