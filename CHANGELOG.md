@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.19.0 - 2026-11-22
+
+- add a released reusable dev-lane merge-policy workflow for repositories with
+  one stable branch and configured long-lived development lanes;
+- derive normal merge commits only for configured lane-to-stable promotions and
+  squash all other supported PR merges;
+- verify current PR head, latest checks and commit statuses immediately before
+  merge;
+- preserve/recreate promoted long-lived lanes at the resulting stable merge
+  commit and delete only explicitly allow-listed temporary heads;
+- keep permanent/generated/backup refs outside cleanup and make consumer
+  post-merge integration dispatch optional/configurable;
+- keep merge/lifecycle orchestration tool-owned and repository-neutral; add no
+  lib.py.cad.ci planning/execution behavior and retain the exact 0.11.0 library
+  pin.
+
 ## 0.18.1 - 2026-11-22
 
 - consume released `lib.py.cad.ci 0.11.0` at exact commit
