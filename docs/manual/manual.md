@@ -23,7 +23,7 @@ placeholder to replace.
 
 | File | Template version | Use |
 | --- | ---: | --- |
-| `merge-policy.yml` | 2 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
+| `merge-policy.yml` | 2 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |\n| `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
 | `cad-ci-lanes.yml` | 1 | PR validation for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
