@@ -350,3 +350,46 @@ The caller job needs `contents: write` for durable publication and
 Scope names are simple non-empty identifiers containing only letters, numbers,
 dot, underscore and dash. Path separators, traversal and reserved generated
 path fragments are invalid.
+
+
+## Reusable dev-lane merge policy
+
+tool.cad.ci provides a reusable GitHub Actions workflow for repositories using
+long-lived development lanes such as:
+
+```text
+main
+dev-cad
+dev-ci
+```
+
+This is workflow orchestration owned by the tool repository. It must not add
+generic CAD-CI planning/execution semantics and must not depend on Forge-specific
+code.
+
+Required behavior:
+
+- merging is an explicit owner-controlled command; there is no silent auto-merge;
+- the workflow receives the PR identity from the triggering repository and
+  verifies the current PR head SHA immediately before merge;
+- it verifies the latest required check/status state for that exact head before
+  performing the merge;
+- exact configured long-lived dev-lane -> main promotions use a normal merge
+  commit;
+- all other supported PR merges use squash;
+- permanent refs, generated refs and backup refs are never deleted;
+- only explicitly allow-listed temporary branch prefixes may be deleted;
+- after a direct long-lived-lane -> main promotion, the long-lived lane is
+  preserved/advanced at the resulting main merge commit;
+- consumer-specific post-merge integration dispatch is configurable and may be
+  omitted;
+- the shared workflow must not hard-code Forge workflow names, repository names
+  or consumer commands;
+- consumer repositories keep only a thin wrapper/trigger and repository-local
+  configuration.
+
+The workflow must fail closed for draft, unmergeable, stale-head or non-green
+pull requests.
+
+The current Forge policy is the acceptance reference for the first release.
+Downstream CAD's temporary local copy is not a second normative implementation.
