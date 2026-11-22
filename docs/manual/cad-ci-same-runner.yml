@@ -1,0 +1,36 @@
+# template: tool.cad.ci/cad-ci-same-runner
+# template-version: 1
+# tool-release: 0.23.0
+# tool-release-sha: bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+#
+# Copy this file to:
+#   .github/workflows/cad-ci-durable.yml
+#
+# Same-runner pattern for trusted durable branches when repository-owned work
+# must continue after CAD-CI in the same job/workspace.
+
+name: CAD CI durable lane
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  cad-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run released CAD-CI stack
+        id: cad
+        uses: brainboxemb/tool.cad.ci@bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+        with:
+          source_sha: ${{ github.sha }}
+          durable_scope: ${{ github.ref_name }}
+          source_ref: ${{ github.ref_name }}
+          github_token: ${{ github.token }}
+
+      # Repository-owned post-run steps go below this line.
+      # The exact released cad_ci_tool stack and steps.cad outputs remain
+      # available on this runner.
