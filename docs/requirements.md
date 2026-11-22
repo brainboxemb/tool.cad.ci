@@ -508,3 +508,40 @@ still consumes the exact released workflow.
 
 Traceability and evidence are maintained in [API contract](api.md). Behaviour
 requiring live GitHub mutation has **not** been certified by unit tests alone.
+
+
+## Reusable permanent-lane PR policy
+
+The stable public `reusable-ci.yml` may receive optional `pr_policy_json`.
+Empty input preserves the normal run-only contract.
+
+The policy object contains only:
+- `stable_ref`;
+- non-empty `lane_refs`;
+- optional `docs_only_prefixes`.
+
+For pull requests:
+- explicit `full_run: true` always wins;
+- exact configured lane -> stable promotion runs complete processed CAD-CI;
+- a normal PR targeting a configured lane may skip expensive CAD-CI bootstrap
+  only when the exact non-empty Git diff is entirely below configured docs-only
+  prefixes;
+- empty/unknown/mixed diffs run CAD-CI;
+- unsupported/non-PR context runs rather than silently skipping.
+
+Classification occurs on the same reusable-run runner after exact caller
+checkout/base fetch and before Python/library/GHCR bootstrap. There is no
+classifier job, artifact handoff or consumer-local GitHub PR pagination.
+
+Consumers that use this policy must not copy path loops or promotion full-run
+expressions into their own workflow YAML.
+
+## Merge consumer permission ceiling
+
+The canonical `tool.cad.ci/merge-policy` consumer template must grant the
+calling reusable-workflow job the permissions required by
+`reusable-merge-policy.yml`: actions/content/pull-requests/issues write and
+checks/statuses read.
+
+Template version 2 owns this correction. Repository-specific integration
+workflow and extra temporary prefixes remain caller-owned values.
