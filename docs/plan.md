@@ -4,31 +4,40 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
 ## Released baseline
 
-- current released baseline: `tool.cad.ci v0.23.0`;
-- candidate release: `tool.cad.ci v0.24.0`;
-- both use `lib.py.cad.ci 0.11.1` @
+- `tool.cad.ci v0.24.0` @
+  `18d374fad83e61b9a9b057931352ce4a2c8e2252`;
+- `lib.py.cad.ci 0.11.1` @
   `fa6bf244381dde609a0b04de673d774911c52fea`;
-- `tool.cad.ci.test` #93 / PR #94 proves the v0.23.0 stack through one normal
-  `reusable-ci.yml` consumer path.
+- external acceptance passed in `tool.cad.ci.test` #102 / PR #104 through
+  the single normal `reusable-ci.yml@v0.24.0` consumer path;
+- the root composite action is no longer part of the current released surface.
 
 ## Current work
 
-### #128 — release workflow-only consumer surface as v0.24.0
+### #130 — remove redundant root cad-ci.py launcher
 
-1. bump the tool version to `0.24.0`;
-2. publish the action-free consumer surface introduced by #126 / PR #127;
-3. update copy-ready templates to `@v0.24.0` without changing template versions;
-4. merge only after tool CI is green;
-5. let the normal main release job publish `v0.24.0`;
-6. externally qualify that exact release in `tool.cad.ci.test`;
-7. only then migrate Forge and the CAD repository from their historical root
-   action pins to the released workflow/config model.
+The package already owns both normal CLI entrypoints:
+
+- installed console command `cad-ci`;
+- source/module invocation `python -m cad_ci_tool`.
+
+Remove root `cad-ci.py` because it adds no behavior and has no identified
+consumer.
+
+### Consumer migration after v0.24.0 acceptance
+
+- Forge migration: `lib.py.solidcraft.forge` #740;
+- CAD repository migration: `2026-011-02.cad.solidcraft` #288.
+
+Those consumers still pin historical releases containing the removed root
+action, so they remain functional until their lane-safe migrations are
+completed.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #128 Release tool.cad.ci 0.24.0 | **now** | Merge after green CI, then external qualification. |
+| #130 Remove root cad-ci.py launcher | **now** | Remove redundant launcher and stale surface wording; merge after green CI. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **later / governance** | Separate from CAD-CI execution cleanup. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
@@ -45,6 +54,5 @@ consumer workflow
                       -> SCons
 ```
 
-Do not introduce a second GitHub Actions execution path for repository-specific
-post steps. If config cannot express a genuinely generic lifecycle requirement,
-change the owning library/tool contract first.
+Do not introduce another wrapper, root launcher or GitHub Actions execution
+route when the package/workflow entrypoints already cover the requirement.
