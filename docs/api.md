@@ -4,7 +4,7 @@ Status: **audit draft**, 2026-11-22. This document distinguishes observed entry 
 
 ## Product boundary
 
-`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (currently released 0.12.0 for this candidate). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
+`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (currently released 0.13.0 for this candidate). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
 
 A consumer uses an exact released version tag rather than a moving branch. CLI arguments and workflow_call inputs are separate interface types and are not interchangeable.
 
