@@ -50,13 +50,13 @@ The tool must not add a second merge/parser for root variables.
 ## Consumer template architecture
 
 The public reusable workflows and root composite action are the executable API.
-The files under `docs/manual/` are canonical **copy-ready consumer wrappers**
+The files under `docs/manual/templates/` are canonical **copy-ready consumer wrappers**
 for those APIs.
 
 ```text
 new repository
   -> copy one versioned template
-  -> replace TOOL_CAD_CI_RELEASE_SHA with an immutable release
+  -> keep the exact immutable released tool SHA recorded in the template
   -> change repository-owned trigger/policy values only
   -> call released public workflow/action
 ```

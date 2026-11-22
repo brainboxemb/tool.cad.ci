@@ -33,7 +33,7 @@ A consumer pins an immutable release commit rather than a moving branch. Inputs 
 The executable public API is defined by the workflows/action below. New
 repositories do not invent their own generic wrapper around those surfaces:
 they copy a versioned canonical wrapper from
-[`docs/manual/`](manual/README.md).
+[`docs/manual/templates/`](manual/README.md).
 
 Template provenance is recorded twice:
 

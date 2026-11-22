@@ -11,7 +11,8 @@ That GitHub API capability is separate from CAD-CI execution and its long-term
 product ownership is under review. Its presence does not authorise merge-policy
 logic in the CAD-CI library.
 
-**Repository handoff/manual:** [copy-ready manual](docs/manual/README.md).
+**Work-session handoff:** [handoff](docs/handoff.md).
+**Consumer manual:** [manual index](docs/manual/README.md).
 **Public interfaces:** [API contract](docs/api.md).
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
@@ -22,9 +23,9 @@ The released 0.21.0 tool pins `lib.py.cad.ci` 0.11.1 at exact commit
 ## Starting a consumer repository
 
 Do not invent a generic GitHub Actions workflow in a consumer. Start from the
-copy-ready files in [`docs/manual/`](docs/manual/README.md).
+copy-ready files in [`docs/manual/templates/`](docs/manual/templates/).
 
-Each copied manual file keeps a `template` id, integer `template-version`,
+Each copied template keeps a `template` id, integer `template-version`,
 and the exact released tool commit it calls. The copy-ready files contain no
 release placeholder; change only values explicitly marked as repository policy.
 Repositories with permanent `main`/`dev-cad`/`dev-ci` lanes use the canonical

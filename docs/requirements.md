@@ -471,8 +471,10 @@ Requirements:
   state or merge implementation;
 - existing consumer/repository names and workflow filenames are not encoded in
   the generic templates;
-- `docs/manual/README.md` explains repository handoff, template selection,
+- `docs/manual/README.md` is the consumer documentation index;
+- `docs/manual/manual.md` explains repository setup, template selection,
   allowed local customization and verification order;
+- copy-ready workflow templates live only under `docs/manual/templates/`;
 - template structure is versioned and covered by automated tests so a copied
   consumer can identify its provenance directly from the file.
 

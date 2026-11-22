@@ -99,10 +99,10 @@ End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
 ## Consumer templates
 
-`docs/manual/` is the canonical repository-handoff/manual location. Copy-ready
-workflow files live directly there. Each template must have a stable `template`
-id, integer `template-version`, `tool-release` and exact `tool-release-sha` in
-its header.
+`docs/manual/` is the canonical consumer-manual location. Copy-ready workflow
+files live only under `docs/manual/templates/`. Each template must have a stable
+`template` id, integer `template-version`, `tool-release` and exact
+`tool-release-sha` in its header.
 
 A consumer repository must start from these manual templates rather than
 inventing generic CAD-CI orchestration. Templates may contain caller triggers,
@@ -111,8 +111,33 @@ checkout/bootstrap, changed-path classification, CAD-CI execution, durable
 state/publication or merge API implementation.
 
 When the copied workflow structure changes, increment that template's integer
-version and update tests/manual in the same change. Keep the manual files
+version and update tests/manual in the same change. Keep the template files
 copy-ready: no release-SHA placeholder.
+
+## Documentation layout
+
+Keep the top level of `docs/` small and predictable. The normal core documents
+are:
+
+- `api.md`;
+- `consumer.md`;
+- `design.md`;
+- `handoff.md`;
+- `plan.md`;
+- `requirements.md`.
+
+`docs/manual/` contains user-facing consumer documentation.
+`docs/manual/templates/` contains copy-ready workflow templates.
+`docs/background/` contains specialist explanatory material that is useful to
+retain but is not a core repository contract.
+
+Do not add one-off Markdown files to the root of `docs/` when the content
+belongs in the manual, background, API, design or requirements documents.
+
+`docs/handoff.md` follows the shared structure from
+`brainboxemb/meta.cad.solidcraft/templates/docs/handoff.md`. It is a durable
+new-session entrypoint, not a second plan; current status stays in GitHub and
+`docs/plan.md`.
 
 ## GitHub Actions
 

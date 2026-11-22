@@ -9,7 +9,9 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MANUAL = ROOT / "docs" / "manual"
+DOCS = ROOT / "docs"
+MANUAL = DOCS / "manual"
+TEMPLATES = MANUAL / "templates"
 RELEASE = "0.23.0"
 RELEASE_SHA = "bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1"
 
@@ -30,13 +32,35 @@ def load_yaml(path: Path) -> dict:
 
 
 class ConsumerTemplateTests(unittest.TestCase):
-    def test_manual_contains_only_documentation_and_copy_ready_yaml(self):
-        actual = {path.name for path in MANUAL.iterdir() if path.is_file()}
-        self.assertEqual(actual, {"README.md", *EXPECTED})
+    def test_docs_root_has_only_core_documents_and_documentation_dirs(self):
+        actual = {path.name for path in DOCS.iterdir()}
+        self.assertEqual(
+            actual,
+            {
+                "api.md",
+                "consumer.md",
+                "design.md",
+                "handoff.md",
+                "plan.md",
+                "requirements.md",
+                "manual",
+                "background",
+            },
+        )
+
+    def test_manual_separates_documentation_from_templates(self):
+        files = {path.name for path in MANUAL.iterdir() if path.is_file()}
+        dirs = {path.name for path in MANUAL.iterdir() if path.is_dir()}
+        self.assertEqual(files, {"README.md", "manual.md"})
+        self.assertEqual(dirs, {"templates"})
+
+    def test_template_directory_contains_only_expected_yaml(self):
+        actual = {path.name for path in TEMPLATES.iterdir() if path.is_file()}
+        self.assertEqual(actual, set(EXPECTED))
 
     def test_every_template_has_visible_provenance_and_exact_release_pin(self):
         for filename, (template_id, version, _) in EXPECTED.items():
-            text = (MANUAL / filename).read_text(encoding="utf-8")
+            text = (TEMPLATES / filename).read_text(encoding="utf-8")
             with self.subTest(template=filename):
                 self.assertIn(f"# template: {template_id}", text)
                 self.assertIn(f"# template-version: {version}", text)
@@ -47,7 +71,7 @@ class ConsumerTemplateTests(unittest.TestCase):
 
     def test_templates_call_only_expected_public_surface(self):
         for filename, (_, _, surface) in EXPECTED.items():
-            text = (MANUAL / filename).read_text(encoding="utf-8")
+            text = (TEMPLATES / filename).read_text(encoding="utf-8")
             with self.subTest(template=filename):
                 if surface == "action.yml":
                     self.assertIn(
@@ -69,13 +93,13 @@ class ConsumerTemplateTests(unittest.TestCase):
             "scons",
         )
         for filename in EXPECTED:
-            text = (MANUAL / filename).read_text(encoding="utf-8").lower()
+            text = (TEMPLATES / filename).read_text(encoding="utf-8").lower()
             with self.subTest(template=filename):
                 for value in forbidden:
                     self.assertNotIn(value, text)
 
     def test_lane_template_delegates_policy_without_local_classifier(self):
-        wf = load_yaml(MANUAL / "cad-ci-lanes.yml")
+        wf = load_yaml(TEMPLATES / "cad-ci-lanes.yml")
         job = wf["jobs"]["cad-ci"]
         self.assertNotIn("runs-on", job)
         self.assertEqual(
@@ -83,12 +107,12 @@ class ConsumerTemplateTests(unittest.TestCase):
             '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}',
         )
-        text = (MANUAL / "cad-ci-lanes.yml").read_text(encoding="utf-8")
+        text = (TEMPLATES / "cad-ci-lanes.yml").read_text(encoding="utf-8")
         for forbidden in ("gh api", "git diff", "docs_only=true", "full_run:"):
             self.assertNotIn(forbidden, text)
 
     def test_merge_policy_is_version_2_and_copy_ready(self):
-        wf = load_yaml(MANUAL / "merge-policy.yml")
+        wf = load_yaml(TEMPLATES / "merge-policy.yml")
         job = wf["jobs"]["merge"]
         self.assertEqual(
             job["permissions"],
