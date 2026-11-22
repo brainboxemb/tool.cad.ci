@@ -21,18 +21,26 @@ the tool only pins and exposes the released library behavior.
 
 ## Current work
 
-Consumer migration remains owned by the consumers:
+### #137 — one config-driven durable-lane reusable workflow
 
-- Forge: `lib.py.solidcraft.forge` #740;
-- CAD repository: `2026-011-02.cad.solidcraft` #288.
+**Now, blocked on the released result of lib.py.cad.ci #94.**
 
-Both consumers remain functional on historical immutable releases until their
-current permanent-lane work reaches a safe migration point.
+Add one public `reusable-durable.yml` for permanent source branches. One job
+and runner resolve the stored complete scope, run CAD-CI exactly once, publish
+the build scope and, when root `cad-ci.yml` configures Pages, publish that
+site through the same released library lifecycle.
+
+Do not reintroduce root `action.yml`, consumer post-steps, artifact handoff or
+tool-owned builder/publication semantics.
+
+After release, qualify the exact stack in `tool.cad.ci.test` #141. Only then
+migrate CAD #288 and Forge #740.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
+| #137 Config-driven durable-lane workflow | **now / blocked on lib #94 release** | Implement against the released library contract, then release and externally qualify. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
