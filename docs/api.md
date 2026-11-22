@@ -33,20 +33,20 @@ A consumer pins an immutable release commit rather than a moving branch. Inputs 
 The executable public API is defined by the workflows/action below. New
 repositories do not invent their own generic wrapper around those surfaces:
 they copy a versioned canonical wrapper from
-[`templates/github/workflows/`](../templates/github/workflows/README.md).
+[`docs/manual/`](manual/README.md).
 
 Template provenance is recorded twice:
 
 - header: `# template: ...` and `# template-version: N`;
-- manifest: [`templates/manifest.json`](../templates/manifest.json).
+- copy-ready file header: `tool-release` and `tool-release-sha`.
 
 The integer template version changes when the copied consumer structure or
 required repository-owned configuration changes. It is separate from the
 semantic `tool.cad.ci` release version. Every copied template still pins one
 immutable released tool commit.
 
-Templates are not an additional execution API. They may only select and
-configure the supported surfaces documented below.
+Manual templates are not an additional execution API. They are versioned,
+copy-ready wrappers that only select and configure the supported surfaces below.
 
 ## GitHub Actions API (observed, not yet approved as a stable specification)
 
