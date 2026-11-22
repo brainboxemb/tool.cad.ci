@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.1 - 2026-11-22
+
+- exclude the currently executing owner `/merge` workflow by explicit GitHub Actions run id before validating the PR head checks;
+- remove the indexing race where a command check could become visible before the corresponding `issue_comment` workflow run appeared in the Actions-runs API;
+- preserve exclusion of older indexed command runs while continuing to require independent PR validation checks and commit statuses;
+- add regression coverage for the stable-to-lane synchronization failure reproduced by `tool.cad.ci.test` PR #190;
+- update copy-ready consumer templates to the exact `v0.27.1` release tag.
+
 ## 0.27.0 - 2026-11-22
 
 - add a separate owner-only `/retire-branches` workflow for intentionally disposable unique branch history;
