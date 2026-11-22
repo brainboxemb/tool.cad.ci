@@ -499,7 +499,7 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("workflow_call:", text)
         self.assertIn("repository: ${{ job.workflow_repository }}", text)
         self.assertIn("ref: ${{ job.workflow_sha }}", text)
-        self.assertEqual(text.count("scripts/reusable_ci.py run"), 1)
+        self.assertEqual(text.count('scripts/reusable_ci.py" run'), 1)
         self.assertNotIn("actions/cache/restore", text)
         self.assertNotIn("actions/cache/save", text)
         self.assertNotIn("cache-primary-key", text)
