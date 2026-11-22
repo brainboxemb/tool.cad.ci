@@ -15,9 +15,11 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
 ## Current work
 
-There is no unfinished CAD-CI execution-surface cleanup in this repository.
+Issue #134 is next after the library release: adopt lib.py.cad.ci 0.12.0 and
+document the declarative builder consumer boundary without duplicating library
+logic.
 
-Consumer migration is now owned by the consumers:
+Consumer migration remains owned by the consumers:
 
 - Forge: `lib.py.solidcraft.forge` #740;
 - CAD repository: `2026-011-02.cad.solidcraft` #288.
@@ -29,6 +31,7 @@ current permanent-lane work reaches a safe migration point.
 
 | Issue | Status | Next |
 | --- | --- | --- |
+| #134 Adopt declarative builder configuration from lib.py.cad.ci 0.12.0 | **blocked on library release** | Pin the exact released library, update docs, release tool, then prove in tool.cad.ci.test. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
