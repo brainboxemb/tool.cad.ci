@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.18.0 - 2026-11-22
+
+- extend the existing root same-runner composite action with optional durable
+  lane orchestration instead of introducing a chain of separate workflow jobs;
+- resolve existing `main` or named durable build scopes, derive exact
+  incremental/full-run selection and execute exactly one CAD-CI/SCons graph;
+- prepare/update and publish the complete durable build scope in the same
+  workspace after that run;
+- expose effective scope/base/full-run state, exact build commit and prepared
+  scope path to later consumer-owned steps on the same runner;
+- preserve the existing run-only action mode and the exact
+  `lib.py.cad.ci 0.10.0` pin;
+- keep consumer site generation and Pages content outside the action;
+- add no artifact handoff, second runner, duplicate checkout/bootstrap,
+  selection engine, build-store implementation or publication implementation.
+
 ## 0.17.1 - 2026-11-22
 
 - consume released `lib.py.cad.ci 0.10.0` at exact commit
