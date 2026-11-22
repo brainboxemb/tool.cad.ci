@@ -4,21 +4,22 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
 ## Released baseline
 
-- `tool.cad.ci v0.24.0` @
-  `18d374fad83e61b9a9b057931352ce4a2c8e2252`;
-- `lib.py.cad.ci 0.11.1` @
-  `fa6bf244381dde609a0b04de673d774911c52fea`;
-- external acceptance passed in `tool.cad.ci.test` #102 / PR #104 through
-  the single normal `reusable-ci.yml@v0.24.0` consumer path;
+- `tool.cad.ci v0.25.0` @
+  `92b9cbb59bf24f6b47ba1fae267f67f2becc503f`;
+- `lib.py.cad.ci 0.12.0` @
+  `64656db8df528a5c0de799e62c0f028fd0133486`;
+- external released-stack acceptance passed in `tool.cad.ci.test` PR #135,
+  final run `45063617081`, through the normal
+  `reusable-ci.yml@v0.25.0` consumer path;
+- the accepted fixture proves two declarative item `ci.yml` files can share
+  one repository-owned builder and rebuild together when that builder changes;
 - root `action.yml` and root `cad-ci.py` are no longer current public
   entrypoints.
 
-## Current work
+Issue #134 is complete. Builder interpretation remains entirely library-owned;
+the tool only pins and exposes the released library behavior.
 
-Issue #134 is active: pin released lib.py.cad.ci 0.12.0, document the
-declarative builder consumer boundary and release tool.cad.ci 0.25.0 without
-duplicating library logic. External black-box acceptance follows in
-`tool.cad.ci.test` before consumer migration.
+## Current work
 
 Consumer migration remains owned by the consumers:
 
@@ -32,7 +33,6 @@ current permanent-lane work reaches a safe migration point.
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #134 Adopt declarative builder configuration from lib.py.cad.ci 0.12.0 | **active** | Pin exact 0.12.0, release tool 0.25.0, then prove the released stack in tool.cad.ci.test. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
