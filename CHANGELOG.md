@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.20.1 - 2026-11-22
+
+- exclude same-head GitHub Actions runs triggered by `issue_comment` from the
+  pull-request validation check set so a stable-to-lane `/merge` command does
+  not block on its own in-progress or previous command checks;
+- continue requiring at least one non-command validation check and keep
+  pending, cancelled or failed normal validation checks blocking;
+- keep commit-status validation and the 0.20.0 promotion/synchronization
+  classifications unchanged;
+- retain the exact lib.py.cad.ci 0.11.0 pin and add no CAD-CI planning or
+  execution behavior.
+
 ## 0.20.0 - 2026-11-22
 
 - add an explicit history-preserving stable-to-configured-lane synchronization
