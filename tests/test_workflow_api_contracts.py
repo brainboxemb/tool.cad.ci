@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CALLABLE = (
     "reusable-ci.yml",
+    "reusable-durable.yml",
     "reusable-pr.yml",
     "reusable-plan.yml",
     "reusable-run.yml",
@@ -75,6 +76,39 @@ class WorkflowApiContractTests(unittest.TestCase):
         cmd = next(step for step in steps if "run" in step)
         self.assertIn("scripts/merge_command.py", cmd["run"])
         self.assertNotIn("gh api", cmd["run"])
+
+    def test_durable_workflow_is_one_runner_and_one_run(self):
+        wf = load_yaml(WORKFLOWS / "reusable-durable.yml")
+        self.assertEqual(set(wf["jobs"]), {"durable"})
+        job = wf["jobs"]["durable"]
+        self.assertEqual(job["runs-on"], "ubuntu-latest")
+        self.assertEqual(wf["permissions"]["contents"], "write")
+        self.assertEqual(wf["permissions"]["packages"], "read")
+        inputs = wf["on"]["workflow_call"]["inputs"]
+        self.assertEqual(
+            set(inputs),
+            {"source_sha", "source_ref", "scope", "jobs", "environment_json"},
+        )
+        steps = job["steps"]
+        self.assertEqual(
+            sum(step.get("name") == "Run selected CAD CI graph" for step in steps),
+            1,
+        )
+        self.assertEqual(
+            sum(step.get("name") == "Resolve durable scope state" for step in steps),
+            1,
+        )
+        self.assertEqual(
+            sum(step.get("name") == "Publish durable build and Pages" for step in steps),
+            1,
+        )
+        self.assertFalse(
+            any(
+                "upload-artifact" in step.get("uses", "")
+                or "download-artifact" in step.get("uses", "")
+                for step in steps
+            )
+        )
 
     def test_pr_workflow_rejects_unsupported_event_before_checkout(self):
         wf = load_yaml(WORKFLOWS / "reusable-pr.yml")
