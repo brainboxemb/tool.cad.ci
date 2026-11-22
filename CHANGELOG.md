@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.1 - 2026-11-22
+
+- consume released `lib.py.cad.ci 0.11.0` at exact commit
+  `e621daf6e309bdd0e3f643a12007f1b66490696d`;
+- expose the library-owned opt-in active direct-dependent selection context
+  through the existing CLI/workflow/action stack without adding tool-owned
+  selection, scheduling, batch or cache behavior;
+- keep all existing CLI arguments, workflow inputs and root-action inputs
+  unchanged.
+
 ## 0.18.0 - 2026-11-22
 
 - extend the existing root same-runner composite action with optional durable
