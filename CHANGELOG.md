@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.26.0 - 2026-11-22
+
+- add a reusable owner-controlled `/cleanup-branches` governance workflow for stale temporary refs;
+- delete only allow-listed temporary branches with positive current-SHA integration evidence or an exact merged-PR head `(ref, SHA)` match;
+- retain and report open-PR heads, moved refs, unique/unmerged history, permanent/generated refs and every `backup/*` ref;
+- add the canonical versioned branch-cleanup consumer template and document the maintenance API separately from normal post-merge cleanup;
+- require live released-stack branch-deletion acceptance in `tool.cad.ci.test` before consumer adoption;
+- update all copy-ready workflow templates to the exact `v0.26.0` release tag without changing unrelated template versions.
+
 ## 0.25.0 - 2026-11-22
 
 - consume released `lib.py.cad.ci 0.12.0` at exact commit
