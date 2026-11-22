@@ -10,7 +10,7 @@ keeps only its trigger, permissions and exact released tool version tag:
 ```yaml
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.23.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.24.0
 ```
 
 The reusable workflow owns generic checkout, Python/tool setup and one

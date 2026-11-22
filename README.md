@@ -16,7 +16,7 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The released 0.21.0 tool pins `lib.py.cad.ci` 0.11.1 at exact commit
+The 0.24.0 release pins `lib.py.cad.ci` 0.11.1 at exact commit
 `fa6bf244381dde609a0b04de673d774911c52fea`.
 
 ## Starting a consumer repository
