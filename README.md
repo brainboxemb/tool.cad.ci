@@ -140,7 +140,7 @@ permissions:
 
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@<tool-commit>
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@<tool-version>
 ```
 
 `reusable-pr.yml` performs run, durable PR preparation/publication and closed-PR cleanup on one runner. It:
@@ -177,7 +177,7 @@ jobs:
       contents: write
       packages: read
     steps:
-      - uses: brainboxemb/tool.cad.ci@<tool-commit>
+      - uses: brainboxemb/tool.cad.ci@<tool-version>
         with:
           source_sha: ${{ github.sha }}
           base_sha: ${{ github.event.before }}

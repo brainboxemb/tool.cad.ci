@@ -101,8 +101,8 @@ End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
 `docs/manual/` is the canonical consumer-manual location. Copy-ready workflow
 files live only under `docs/manual/templates/`. Each template must have a stable
-`template` id, integer `template-version`, `tool-release` and exact
-`tool-release-sha` in its header.
+`template` id, integer `template-version` and exact released `tool-release` tag
+in its header.
 
 A consumer repository must start from these manual templates rather than
 inventing generic CAD-CI orchestration. Templates may contain caller triggers,
@@ -111,8 +111,8 @@ checkout/bootstrap, changed-path classification, CAD-CI execution, durable
 state/publication or merge API implementation.
 
 When the copied workflow structure changes, increment that template's integer
-version and update tests/manual in the same change. Keep the template files
-copy-ready: no release-SHA placeholder.
+version and update tests/manual in the same change. Keep the template files copy-ready: use an exact released version tag and no
+version placeholder.
 
 ## Documentation layout
 

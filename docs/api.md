@@ -38,12 +38,11 @@ they copy a versioned canonical wrapper from
 Template provenance is recorded twice:
 
 - header: `# template: ...` and `# template-version: N`;
-- copy-ready file header: `tool-release` and `tool-release-sha`.
+- copy-ready file header: exact released `tool-release` version tag.
 
 The integer template version changes when the copied consumer structure or
 required repository-owned configuration changes. It is separate from the
-semantic `tool.cad.ci` release version. Every copied template still pins one
-immutable released tool commit.
+semantic `tool.cad.ci` release version. Every copied template calls one exact released tool version tag.
 
 Manual templates are not an additional execution API. They are versioned,
 copy-ready wrappers that only select and configure the supported surfaces below.
@@ -89,7 +88,7 @@ Do not split the workflow into a second publication runner.
 
 ### Root composite `action.yml`
 
-Entry point: `uses: brainboxemb/tool.cad.ci@<released-sha>` within a caller-owned job. Required inputs: `source_sha` (40-character commit), `github_token` (GHCR authentication). Optional: `base_sha`, `full_run` (default false), `jobs` (default 1), `environment_json` (default `{}`), `durable_scope`, `source_ref`. Durable mode resolves base/full-run itself, so manual base/full-run overrides are rejected; it requires `source_ref`. Outputs: `library_revision`, `scope`, `base_sha`, `full_run`, `scope_exists`, `build_commit`, `prepared_scope`. Side effects: checkout, Python/source bootstrap, GHCR login, single CAD-CI run, optional durable build publication. Unlike reusable workflows, it preserves the same runner/workspace for subsequent consumer steps.
+Entry point: `uses: brainboxemb/tool.cad.ci@<released-version>` within a caller-owned job. Required inputs: `source_sha` (40-character commit), `github_token` (GHCR authentication). Optional: `base_sha`, `full_run` (default false), `jobs` (default 1), `environment_json` (default `{}`), `durable_scope`, `source_ref`. Durable mode resolves base/full-run itself, so manual base/full-run overrides are rejected; it requires `source_ref`. Outputs: `library_revision`, `scope`, `base_sha`, `full_run`, `scope_exists`, `build_commit`, `prepared_scope`. Side effects: checkout, Python/source bootstrap, GHCR login, single CAD-CI run, optional durable build publication. Unlike reusable workflows, it preserves the same runner/workspace for subsequent consumer steps.
 
 ### Same-runner action source contract
 

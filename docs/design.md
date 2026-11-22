@@ -56,7 +56,7 @@ for those APIs.
 ```text
 new repository
   -> copy one versioned template
-  -> keep the exact immutable released tool SHA recorded in the template
+  -> keep the exact released tool version tag recorded in the template
   -> change repository-owned trigger/policy values only
   -> call released public workflow/action
 ```
@@ -314,7 +314,7 @@ The action revision is itself the exact tool revision. Therefore no second tool
 checkout is required:
 
 ```text
-brainboxemb/tool.cad.ci@<released-sha>
+brainboxemb/tool.cad.ci@<released-version>
   -> GITHUB_ACTION_PATH == exact tool source
   -> read exact lib pin from that source
   -> shallow checkout exact lib source

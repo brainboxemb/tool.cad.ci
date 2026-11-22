@@ -12,14 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "0.23.0"
-RELEASE_SHA = "bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1"
+RELEASE = "v0.23.0"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
     "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 1, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
-    "cad-ci-same-runner.yml": ("tool.cad.ci/cad-ci-same-runner", 1, "action.yml"),
     "merge-policy.yml": ("tool.cad.ci/merge-policy", 2, "reusable-merge-policy.yml"),
 }
 
@@ -58,16 +56,15 @@ class ConsumerTemplateTests(unittest.TestCase):
         actual = {path.name for path in TEMPLATES.iterdir() if path.is_file()}
         self.assertEqual(actual, set(EXPECTED))
 
-    def test_every_template_has_visible_provenance_and_exact_release_pin(self):
+    def test_every_template_has_visible_provenance_and_release_tag(self):
         for filename, (template_id, version, _) in EXPECTED.items():
             text = (TEMPLATES / filename).read_text(encoding="utf-8")
             with self.subTest(template=filename):
                 self.assertIn(f"# template: {template_id}", text)
                 self.assertIn(f"# template-version: {version}", text)
                 self.assertIn(f"# tool-release: {RELEASE}", text)
-                self.assertIn(f"# tool-release-sha: {RELEASE_SHA}", text)
-                self.assertNotIn("TOOL_CAD_CI_RELEASE_SHA", text)
-                self.assertIn(RELEASE_SHA, text)
+                self.assertNotIn("# tool-release-sha:", text)
+                self.assertNotRegex(text, r"@[0-9a-f]{40}\\b")
 
     def test_templates_call_only_expected_public_surface(self):
         for filename, (_, _, surface) in EXPECTED.items():
@@ -75,11 +72,11 @@ class ConsumerTemplateTests(unittest.TestCase):
             with self.subTest(template=filename):
                 if surface == "action.yml":
                     self.assertIn(
-                        "uses: brainboxemb/tool.cad.ci@" + RELEASE_SHA,
+                        "uses: brainboxemb/tool.cad.ci@" + RELEASE,
                         text,
                     )
                 else:
-                    self.assertIn(surface + "@" + RELEASE_SHA, text)
+                    self.assertIn(surface + "@" + RELEASE, text)
 
     def test_templates_do_not_copy_generic_implementation(self):
         forbidden = (
@@ -130,7 +127,7 @@ class ConsumerTemplateTests(unittest.TestCase):
         self.assertEqual(
             job["uses"],
             "brainboxemb/tool.cad.ci/.github/workflows/"
-            "reusable-merge-policy.yml@" + RELEASE_SHA,
+            "reusable-merge-policy.yml@" + RELEASE,
         )
 
 

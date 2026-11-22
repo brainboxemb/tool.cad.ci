@@ -33,7 +33,6 @@ copy live under [`docs/manual/`](../../docs/manual/README.md).
 | --- | --- |
 | `reusable-ci.yml` | `docs/manual/templates/cad-ci.yml` or `docs/manual/templates/cad-ci-lanes.yml` |
 | `reusable-pr.yml` | `docs/manual/templates/cad-ci-pr.yml` |
-| root `action.yml` | `docs/manual/templates/cad-ci-same-runner.yml` |
 | `reusable-merge-policy.yml` | `docs/manual/templates/merge-policy.yml` |
 
 Do not add consumer-specific wrapper examples here. Update the canonical

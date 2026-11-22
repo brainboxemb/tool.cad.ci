@@ -8,16 +8,15 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **0.23.0**
-- exact tool commit: `bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1`
+- tool release: **v0.23.0**
 
 Each YAML template contains:
 
 - `template` — stable template identity;
 - `template-version` — version of the copied repository wrapper;
-- `tool-release` and `tool-release-sha` — the exact released tool it calls.
+- `tool-release` — the exact released version tag the template calls.
 
-The YAML files already contain the exact release SHA. There is no release
+The YAML files already contain the exact release tag. There is no version
 placeholder to replace.
 
 ## Templates
@@ -28,7 +27,6 @@ placeholder to replace.
 | `cad-ci-lanes.yml` | 1 | PR validation for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
-| `cad-ci-same-runner.yml` | 1 | Trusted durable branch flow with repository work after CAD-CI on the same runner. |
 
 ## First handoff: merge policy
 
@@ -106,7 +104,6 @@ A consumer may own:
 - caller permissions;
 - intentional branch/lane/docs-prefix values;
 - optional integration workflow name;
-- repository/domain work before or after the generic CAD-CI call;
 - repository secrets and domain runtime configuration.
 
 A consumer must not copy:
