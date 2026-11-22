@@ -495,6 +495,48 @@ The existing `integrate_base` rule remains appropriate for synchronization
 because the base is a configured durable lane. Promotion additionally dispatches
 the retained lane exactly as in 0.19.0.
 
+## Reviewed permanent-ref conflict recovery
+
+GitHub's normal PR merge endpoint cannot merge a PR whose mergeability is
+`false`. For permanent refs, resolving that by squash/rebase would violate the
+history contract. The recovery path therefore treats a separate
+same-repository resolution PR as the reviewed tree carrier.
+
+```text
+conflicted permanent PR
+  base=A, head=B
+        |
+        +-- owner prepares resolve/<name>
+        |      -> separate PR to same base
+        |      -> mergeable + green validation
+        |      -> exact resolution commit R / tree T
+        |
+        +-- owner comments:
+               /merge-resolved
+               base A
+               head B
+               resolution-pr N
+               resolution resolve/<name> R T
+                  |
+                  -> revalidate A, B, N, R, T
+                  -> create Git commit tree=T parents=[A,B]
+                  -> verify returned object
+                  -> revalidate refs again
+                  -> non-force advance base
+                  -> normal permanent lifecycle + dispatch
+                  -> close review PRs / delete unchanged resolve ref
+```
+
+The resolution branch is not merged. Its PR exists to expose and validate the
+exact resolved snapshot. The tool uses only its reviewed tree. This ensures the
+resulting permanent merge commit has the two required permanent parents rather
+than adding the temporary resolution commit as a third/history parent.
+
+Raw Git object creation remains inside `scripts/merge_command.py`; the
+consumer wrapper passes no arbitrary tree or parent values except through the
+owner-reviewed comment. `scripts/merge_resolution.py` owns only strict command
+parsing and merge-object verification.
+
 ## Command-workflow isolation in the PR green gate
 
 Issue #108 keeps the existing merge-policy order but separates validation
