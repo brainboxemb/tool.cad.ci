@@ -11,8 +11,7 @@ That GitHub API capability is separate from CAD-CI execution and its long-term
 product ownership is under review. Its presence does not authorise merge-policy
 logic in the CAD-CI library.
 
-**New repository setup:** [consumer onboarding](docs/new-repository.md).
-**Versioned workflow templates:** [templates](templates/github/workflows/README.md).
+**Repository handoff/manual:** [copy-ready manual](docs/manual/README.md).
 **Public interfaces:** [API contract](docs/api.md).
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
@@ -23,12 +22,11 @@ The released 0.21.0 tool pins `lib.py.cad.ci` 0.11.1 at exact commit
 ## Starting a consumer repository
 
 Do not invent a generic GitHub Actions workflow in a consumer. Start from the
-versioned templates shipped in [`templates/github/workflows/`](templates/github/workflows/README.md)
-and follow [the new-repository guide](docs/new-repository.md).
+copy-ready files in [`docs/manual/`](docs/manual/README.md).
 
-Each copied template keeps a `template` id and integer `template-version`.
-The consumer replaces only `TOOL_CAD_CI_RELEASE_SHA` with one immutable
-released tool commit and changes documented repository-owned policy values.
+Each copied manual file keeps a `template` id, integer `template-version`,
+and the exact released tool commit it calls. The copy-ready files contain no
+release placeholder; change only values explicitly marked as repository policy.
 Repositories with permanent `main`/`dev-cad`/`dev-ci` lanes use the canonical
 `cad-ci-lanes.yml` wrapper; docs-only classification and promotion full-run
 selection stay inside the released reusable CI stack, not consumer YAML.
