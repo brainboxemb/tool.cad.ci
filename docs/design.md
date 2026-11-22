@@ -433,6 +433,23 @@ The final ref read immediately before DELETE narrows the race between evidence
 collection and mutation. A changed SHA is reported as moved and is not deleted.
 Backup refs and permanent/generated refs never enter the candidate set.
 
+## Exact-SHA branch retirement governance
+
+Automatic cleanup and explicit retirement are intentionally different
+operations. Automatic cleanup derives retirement evidence from Git history and
+merged pull requests. Exact-SHA retirement accepts the repository owner's
+reviewed `(ref, SHA)` pairs as the evidence for unique history that is
+intentionally disposable.
+
+The reusable workflow remains thin and checks out its exact called tool
+revision. The Python helper parses the multiline owner command, blocks
+stable/lane/permanent refs and open PR heads, preflights every requested ref,
+then re-reads each SHA immediately before DELETE. A branch that moved after
+review is preserved and reported.
+
+This is the separately reviewed mechanism required by Forge #620; it does not
+broaden `/cleanup-branches` or make issue state a deletion signal.
+
 ## Stable-to-lane merge-policy extension
 
 Issue #106 extends the shared merge-policy classifier without changing CAD-CI

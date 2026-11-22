@@ -310,6 +310,26 @@ Required behavior:
 - live deletion behavior must be externally qualified in `tool.cad.ci.test`
   before a consumer adopts a new release.
 
+## Separately reviewed exact-SHA branch retirement
+
+Unique/unmerged history must never become automatically disposable merely
+because an issue is closed or a branch name is old. When an owner has reviewed
+such history and intentionally decides to retire it, the governance layer may
+provide a separate exact-SHA operation.
+
+Required behavior:
+
+- the command is owner-only and separate from `/cleanup-branches`;
+- every requested branch carries an exact 40-character expected SHA;
+- stable, configured lane and permanent/generated refs are always refused;
+- same-repository open PR heads are refused;
+- the complete reviewed set is preflighted before the first deletion;
+- a SHA mismatch during preflight refuses the operation before mutation;
+- each ref is re-read immediately before DELETE and a moved ref is retained;
+- missing refs are reported idempotently;
+- no ancestry, issue state or historical branch-name evidence substitutes for
+  the explicit exact-SHA review.
+
 ## Stable-to-lane synchronization
 
 The reusable dev-lane merge policy must distinguish three merge classes:

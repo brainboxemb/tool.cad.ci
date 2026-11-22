@@ -33,7 +33,8 @@ current permanent-lane work reaches a safe migration point.
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #138 Reusable conservative stale-branch cleanup | **now** | Finish unit/API contract, release, then prove real branch deletion in `tool.cad.ci.test`. |
+| #140 Exact-SHA branch retirement | **now** | Release the separately reviewed retirement surface, then delete only the remaining manually audited unique refs in `tool.cad.ci.test` #180. |
+| #138 Reusable conservative stale-branch cleanup | **complete** | Released in v0.26.0 and live-qualified in `tool.cad.ci.test` #180; keep the automatic policy conservative. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
