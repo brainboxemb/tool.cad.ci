@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import tomllib
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -26,13 +27,16 @@ def release_version(root: Path = ROOT) -> str:
     if not _VERSION.fullmatch(version):
         raise ValueError(f"VERSION is not a release version: {version}")
 
-    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
-    if f'version = "{version}"' not in pyproject:
-        raise ValueError("VERSION and pyproject.toml do not match")
+    pyproject = tomllib.loads(
+        (root / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    if pyproject.get("project", {}).get("version") != version:
+        raise ValueError("VERSION and [project].version in pyproject.toml do not match")
 
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
-    if f"## {version} -" not in changelog:
-        raise ValueError(f"CHANGELOG.md has no {version} release section")
+    heading = re.compile(rf"(?m)^## {re.escape(version)} - ")
+    if heading.search(changelog) is None:
+        raise ValueError(f"CHANGELOG.md has no {version} release heading")
     return version
 
 
@@ -55,21 +59,57 @@ def _request(url: str, token: str, *, method: str = "GET", data: dict | None = N
         return json.loads(response.read().decode("utf-8"))
 
 
+def _tag_commit(base: str, tag: str, token: str) -> str | None:
+    """Resolve a lightweight or annotated tag to its actual immutable commit."""
+
+    try:
+        reference = _request(f"{base}/git/ref/tags/{tag}", token)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+    target = reference.get("object") or {}
+    # Annotated tags refer to tag objects, not immediately to commit objects.
+    for _ in range(5):
+        kind, sha = target.get("type"), target.get("sha")
+        if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+            raise ValueError(f"release tag {tag} has an invalid target")
+        if kind == "commit":
+            return sha
+        if kind != "tag":
+            raise ValueError(f"release tag {tag} targets unsupported object {kind}")
+        value = _request(f"{base}/git/tags/{sha}", token)
+        target = value.get("object") or {}
+    raise ValueError(f"release tag {tag} has excessive tag indirection")
+
+
 def publish(repository: str, sha: str, token: str, root: Path = ROOT) -> str:
     """Create the missing GitHub release for the exact supplied main commit."""
 
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None:
+        raise ValueError("GITHUB_REPOSITORY must have owner/name form")
+    if re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+        raise ValueError("GITHUB_SHA must be an exact 40-character commit")
     version = release_version(root)
     tag = f"v{version}"
     base = f"https://api.github.com/repos/{repository}"
 
-    # Main workflows can be retried. Treat an existing tag/release as success so
-    # a rerun does not fail after the first publication already completed.
+    # Never treat an existing version as successful if it points to a
+    # different commit. A newer main with unchanged VERSION is not a release.
+    existing_commit = _tag_commit(base, tag, token)
+    if existing_commit is not None and existing_commit != sha:
+        raise ValueError(
+            f"{tag} already points to {existing_commit}; refusing to relabel {sha}"
+        )
     try:
         _request(f"{base}/releases/tags/{tag}", token)
-        return f"release already exists: {tag}"
     except HTTPError as exc:
         if exc.code != 404:
             raise
+    else:
+        if existing_commit is None:
+            raise ValueError(f"release {tag} exists but tag reference is missing")
+        return f"release already exists: {tag} at {existing_commit}"
 
     _request(
         f"{base}/releases",

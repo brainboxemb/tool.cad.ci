@@ -13,26 +13,19 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
 import tomllib
-from typing import NamedTuple
 
 
 _ENV_NAME = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
-_SCOPE = re.compile(r"^[A-Za-z0-9._-]+$")
-_RESERVED_ENV_PREFIXES = ("GITHUB_", "RUNNER_", "ACTIONS_")
-
-
-class DurableResolution(NamedTuple):
-    """Resolved durable build-scope selection for one source revision."""
-
-    scope: str
-    base_sha: str
-    full_run: bool
-    scope_exists: bool
+_RESERVED_ENV_PREFIXES = ("GITHUB_", "RUNNER_", "ACTIONS_", "CAD_CI_", "PIP_", "LD_")
+_RESERVED_ENV_NAMES = {
+    "HOME", "PATH", "PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP",
+    "VIRTUAL_ENV", "DOCKER_CONFIG", "GH_TOKEN", "GITHUB_TOKEN",
+    "SSH_AUTH_SOCK",
+}
 
 
 def exact_sha(value: str, name: str) -> str:
@@ -44,207 +37,33 @@ def exact_sha(value: str, name: str) -> str:
     return normalized
 
 
-def durable_scope(value: str) -> str:
-    """Validate one durable generated-build scope name."""
+def fetch_durable_scope_state(**kwargs):
+    """Call the library only after its exact pinned source is on PYTHONPATH."""
 
-    normalized = value.strip()
-    if (
-        not normalized
-        or _SCOPE.fullmatch(normalized) is None
-        or normalized in {".", ".."}
-        or ".cad-ci" in normalized
-    ):
-        raise ValueError("durable scope must be a safe simple identifier")
-    return normalized
+    from cad_ci.durable import fetch_durable_scope_state as resolve
+
+    return resolve(**kwargs)
 
 
-def resolve_durable_state(
-    *,
-    generated_build: Path,
-    scope: str,
-    source_sha: str,
-) -> DurableResolution:
-    """Resolve incremental/full-run state from an already fetched build tree."""
+def publish_durable_scope(**kwargs):
+    """Call the library durable publisher after bootstrap is complete."""
 
-    scope = durable_scope(scope)
-    source_sha = exact_sha(source_sha, "source_sha")
-    manifest = generated_build / scope / "build.json"
-    if not manifest.is_file():
-        if scope == "main":
-            raise ValueError(
-                "durable main scope is missing; stable integration cannot "
-                "be updated incrementally"
-            )
-        return DurableResolution(
-            scope=scope,
-            base_sha=source_sha,
-            full_run=True,
-            scope_exists=False,
-        )
+    from cad_ci.durable import publish_durable_scope as publish
 
-    try:
-        value = json.loads(manifest.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"durable scope has invalid build.json: {scope}"
-        ) from exc
-    if not isinstance(value, dict):
-        raise ValueError(f"durable scope build.json is not an object: {scope}")
+    return publish(**kwargs)
 
-    base_sha = value.get("source_commit")
-    if not isinstance(base_sha, str) or _SHA.fullmatch(base_sha) is None:
-        raise ValueError(
-            f"durable scope has invalid source_commit: {scope}"
-        )
-    return DurableResolution(
+
+def durable_scope_state(*, scope: str, base_sha: str, full_run: bool, exists: bool):
+    """Construct the library state object without duplicating its semantics."""
+
+    from cad_ci.durable import DurableScopeState
+
+    return DurableScopeState(
         scope=scope,
         base_sha=base_sha,
-        full_run=False,
-        scope_exists=True,
+        full_run=full_run,
+        exists=exists,
     )
-
-
-def fetch_durable_state(
-    *,
-    repo: Path,
-    generated_build: Path,
-    scope: str,
-    source_sha: str,
-) -> DurableResolution:
-    """Fetch the generated build branch once and resolve one durable scope."""
-
-    generated_build = generated_build.resolve()
-    if generated_build.exists():
-        shutil.rmtree(generated_build)
-    subprocess.run(
-        _tool_command(
-            "build",
-            "fetch",
-            "--repo",
-            str(repo.resolve()),
-            "--out",
-            str(generated_build),
-        ),
-        cwd=repo,
-        check=True,
-    )
-    return resolve_durable_state(
-        generated_build=generated_build,
-        scope=scope,
-        source_sha=source_sha,
-    )
-
-
-def publish_durable_scope(
-    *,
-    repo: Path,
-    generated_build: Path,
-    prepared_scope: Path,
-    candidate_root: Path,
-    resolution: DurableResolution,
-    source_sha: str,
-    source_ref: str,
-) -> str:
-    """Prepare and publish one complete durable build scope."""
-
-    source_sha = exact_sha(source_sha, "source_sha")
-    source_ref = source_ref.strip()
-    if not source_ref:
-        raise ValueError("source_ref is required for durable publication")
-    if resolution.full_run and resolution.scope_exists:
-        raise ValueError("existing durable scope cannot require a full run")
-    if not resolution.full_run:
-        exact_sha(resolution.base_sha, "base_sha")
-
-    prepared_scope = prepared_scope.resolve()
-    if prepared_scope.exists():
-        shutil.rmtree(prepared_scope)
-
-    common = [
-        "--repo",
-        str(repo.resolve()),
-        "--candidate-root",
-        str(candidate_root.resolve()),
-        "--out",
-        str(prepared_scope),
-        "--source-commit",
-        source_sha,
-    ]
-    if resolution.scope == "main":
-        command = _tool_command(
-            "build",
-            "update-main",
-            *common,
-            "--main",
-            str((generated_build / "main").resolve()),
-            "--base",
-            resolution.base_sha,
-            "--head",
-            source_sha,
-        )
-    elif resolution.scope_exists:
-        command = _tool_command(
-            "build",
-            "update-named",
-            *common,
-            "--named",
-            str((generated_build / resolution.scope).resolve()),
-            "--name",
-            resolution.scope,
-            "--base",
-            resolution.base_sha,
-            "--head",
-            source_sha,
-        )
-    else:
-        command = _tool_command(
-            "build",
-            "prepare-named",
-            *common,
-            "--name",
-            resolution.scope,
-        )
-    subprocess.run(command, cwd=repo, check=True)
-
-    publish = [
-        "publish",
-        "build",
-        "--repo",
-        str(repo.resolve()),
-        "--candidate",
-        str(prepared_scope),
-    ]
-    if resolution.scope == "main":
-        publish.extend(["--scope", "main"])
-    else:
-        publish.extend(
-            ["--scope", "named", "--scope-name", resolution.scope]
-        )
-    publish.extend(
-        [
-            "--message",
-            f"build: {resolution.scope} {source_sha}",
-            "--source-ref",
-            source_ref,
-            "--expected-source",
-            source_sha,
-        ]
-    )
-    completed = subprocess.run(
-        _tool_command(*publish),
-        cwd=repo,
-        text=True,
-        stdout=subprocess.PIPE,
-        check=True,
-    )
-    lines = [
-        line.strip()
-        for line in completed.stdout.splitlines()
-        if line.strip()
-    ]
-    if not lines or _SHA.fullmatch(lines[-1]) is None:
-        raise ValueError("durable build publication did not return a commit")
-    return lines[-1]
 
 
 def parse_bool(value: str) -> bool:
@@ -282,12 +101,16 @@ def selection_args(
     source_sha = source_sha.strip()
     base_sha = base_sha.strip()
     if full_run:
+        # For local callers a full run need not compare Git revisions.
         return []
     if not source_sha:
         raise ValueError("incremental CAD CI requires source_sha")
     if not base_sha:
         raise ValueError("incremental CAD CI requires base_sha")
-    return ["--base", base_sha, "--head", source_sha]
+    return [
+        "--base", exact_sha(base_sha, "base_sha"),
+        "--head", exact_sha(source_sha, "source_sha"),
+    ]
 
 
 def consumer_environment(raw: str) -> dict[str, str]:
@@ -307,7 +130,7 @@ def consumer_environment(raw: str) -> dict[str, str]:
     for key, item in value.items():
         if not isinstance(key, str) or not _ENV_NAME.fullmatch(key):
             raise ValueError(f"invalid consumer environment name: {key!r}")
-        if key.startswith(_RESERVED_ENV_PREFIXES):
+        if key in _RESERVED_ENV_NAMES or key.startswith(_RESERVED_ENV_PREFIXES):
             raise ValueError(f"reserved consumer environment name: {key}")
         if not isinstance(item, str):
             raise ValueError(
@@ -496,7 +319,7 @@ def main() -> int:
             return 0
 
         if args.command == "durable-resolve":
-            resolution = fetch_durable_state(
+            resolution = fetch_durable_scope_state(
                 repo=args.repo,
                 generated_build=args.generated_build,
                 scope=args.scope,
@@ -506,7 +329,7 @@ def main() -> int:
                 ("scope", resolution.scope),
                 ("base_sha", resolution.base_sha),
                 ("full_run", str(resolution.full_run).lower()),
-                ("scope_exists", str(resolution.scope_exists).lower()),
+                ("scope_exists", str(resolution.exists).lower()),
                 (
                     "generated_build",
                     str(args.generated_build.resolve()),
@@ -516,18 +339,18 @@ def main() -> int:
             return 0
 
         if args.command == "durable-publish":
-            resolution = DurableResolution(
-                scope=durable_scope(args.scope),
+            resolution = durable_scope_state(
+                scope=args.scope,
                 base_sha=exact_sha(args.base_sha, "base_sha"),
                 full_run=parse_bool(args.full_run),
-                scope_exists=parse_bool(args.scope_exists),
+                exists=parse_bool(args.scope_exists),
             )
             commit = publish_durable_scope(
                 repo=args.repo,
                 generated_build=args.generated_build,
                 prepared_scope=args.prepared_scope,
                 candidate_root=args.candidate_root,
-                resolution=resolution,
+                state=resolution,
                 source_sha=args.source_sha,
                 source_ref=args.source_ref,
             )
@@ -563,7 +386,12 @@ def main() -> int:
             jobs=args.jobs,
         )
         return 0
-    except (OSError, subprocess.CalledProcessError, ValueError) as exc:
+    except (
+        OSError,
+        subprocess.CalledProcessError,
+        ValueError,
+        RuntimeError,
+    ) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 

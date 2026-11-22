@@ -1,3 +1,6 @@
+# Public advanced selection-only API. Returns plan JSON and exact source/base SHAs.
+# It does not run or publish; normal execution uses reusable-ci.yml. Contract: docs/api.md.
+
 name: Reusable CAD CI plan
 
 on:
@@ -42,28 +45,75 @@ jobs:
     env:
       CAD_CI_SOURCE_SHA: ${{ inputs.source_sha != '' && inputs.source_sha || (github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha) }}
       CAD_CI_BASE_SHA: ${{ inputs.base_sha != '' && inputs.base_sha || (github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || '') }}
+      TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
+      LIB_ROOT: ${{ github.workspace }}/.cache/cad-ci-lib-source
+      PYTHONPATH: ${{ github.workspace }}/.cache/cad-ci-tool-source:${{ github.workspace }}/.cache/cad-ci-lib-source
 
     steps:
       - name: Checkout caller source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ env.CAD_CI_SOURCE_SHA }}
-          fetch-depth: 0
+          fetch-depth: 1
+          fetch-tags: false
+          # Only needed for exact-base fetch on private caller repositories.
+          # Removed before any consumer-provided command or configuration is run.
+          persist-credentials: true
 
       - name: Checkout called tool revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
           path: .cache/cad-ci-tool-source
           fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
 
-      - name: Install called tool revision
-        run: python -m pip install -e .cache/cad-ci-tool-source
+      - name: Resolve exact pinned CAD CI library revision
+        id: library
+        run: |
+          python "$TOOL_ROOT/scripts/reusable_ci.py" library-revision \
+            --tool-root "$TOOL_ROOT" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned CAD CI library source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: brainboxemb/lib.py.cad.ci
+          ref: ${{ steps.library.outputs.revision }}
+          path: .cache/cad-ci-lib-source
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Install external CAD CI dependencies
+        run: >-
+          python -m pip install --disable-pip-version-check
+          --no-deps --no-compile
+          "PyYAML>=6.0" "SCons==4.11.1"
+
+      - name: Fetch exact base revision for incremental selection
+        if: "!inputs.full_run"
+        env:
+          BASE_SHA: ${{ env.CAD_CI_BASE_SHA }}
+        run: |
+          if [ -z "$BASE_SHA" ]; then
+            echo "ERROR: incremental CAD CI requires base SHA" >&2
+            exit 2
+          fi
+          if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fi
+
+      - name: Drop caller Git credentials before consumer execution
+        shell: bash
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader || :
 
       - name: Record source revisions
         id: refs

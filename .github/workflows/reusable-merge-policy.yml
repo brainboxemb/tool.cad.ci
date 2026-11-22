@@ -1,5 +1,9 @@
 name: Reusable merge policy
 
+# Public API contract: docs/api.md and docs/merge-policy.md.
+# This workflow only supplies GitHub runner/permissions/credentials; the
+# validated merge command and recovery status live in scripts/merge_command.py.
+
 on:
   workflow_call:
     inputs:
@@ -37,19 +41,26 @@ on:
         default: ""
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  checks: read
-  statuses: read
-  actions: write
+  contents: read
 
 jobs:
   merge:
     if: inputs.command == '/merge' && github.actor == github.repository_owner
+    # Merge, ref lifecycle, comments and optional workflow_dispatch are
+    # privileged operations. Only this job receives elevated permissions.
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      checks: read
+      statuses: read
+      actions: write
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     concurrency:
-      group: merge-policy-${{ github.repository }}-${{ inputs.pull_request_number }}
+      # Serialise *all* merge commands in one repository, not just commands
+      # for the same PR; concurrent PRs may target the same durable branch.
+      group: merge-policy-${{ github.repository }}
       cancel-in-progress: false
     env:
       REPOSITORY: ${{ github.repository }}
@@ -62,158 +73,31 @@ jobs:
       INTEGRATION_WORKFLOW: ${{ inputs.integration_workflow }}
     steps:
       - name: Checkout called tool revision
-        uses: actions/checkout@v4
+        # Immutable revision of actions/checkout v4 (same trusted pin used by CAD).
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
           path: .cache/cad-ci-tool-source
           fetch-depth: 1
+          persist-credentials: false
 
-      - name: Merge through shared repository policy
+      - name: Execute merge and report outcome
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
+          COMMAND: ${{ inputs.command }}
+          ACTOR: ${{ github.actor }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
-          set -euo pipefail
-
-          refuse() {
-            reason="$1"
-            echo "merge refused: $reason" >&2
-            gh api -X POST               "repos/$REPOSITORY/issues/$PR_NUMBER/comments"               -f body="Merge refused by shared repository policy: $reason"               >/dev/null
-            exit 1
-          }
-
-          PR_JSON="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
-          STATE="$(jq -r '.state' <<<"$PR_JSON")"
-          DRAFT="$(jq -r '.draft' <<<"$PR_JSON")"
-          MERGEABLE="$(jq -r 'if .mergeable == null then "unknown" else (.mergeable|tostring) end' <<<"$PR_JSON")"
-          BASE_REF="$(jq -r '.base.ref' <<<"$PR_JSON")"
-          HEAD_REF="$(jq -r '.head.ref' <<<"$PR_JSON")"
-          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR_JSON")"
-          HEAD_REPO="$(jq -r '.head.repo.full_name // ""' <<<"$PR_JSON")"
-
-          [ "$STATE" = "open" ] || refuse "pull request is not open"
-          [ "$DRAFT" = "false" ] || refuse "pull request is still a draft"
-          [ "$MERGEABLE" = "true" ] || refuse "pull request is not currently mergeable ($MERGEABLE)"
-
-          CHECKS_JSON="$(
-            gh api               -H "Accept: application/vnd.github+json"               "repos/$REPOSITORY/commits/$HEAD_SHA/check-runs?per_page=100"
-          )"
-          COMMAND_RUNS_JSON="$(
-            gh api               -H "Accept: application/vnd.github+json"               "repos/$REPOSITORY/actions/runs?head_sha=$HEAD_SHA&event=issue_comment&per_page=100"
-          )"
-          COMMAND_RUN_IDS="$(jq -c '[.workflow_runs[].id | tostring]' <<<"$COMMAND_RUNS_JSON")"
-          LATEST_CHECKS="$(
-            jq -c --argjson command_run_ids "$COMMAND_RUN_IDS" '
-              [
-                .check_runs[]
-                | . as $check
-                | select(
-                    (
-                      any(
-                        $command_run_ids[];
-                        . as $run_id
-                        | (($check.details_url // "")
-                           | contains("/actions/runs/" + $run_id + "/"))
-                      )
-                    )
-                    | not
-                  )
-              ]
-              | sort_by(.name, (.started_at // ""), .id)
-              | group_by(.name)
-              | map(last)
-            ' <<<"$CHECKS_JSON"
-          )"
-          CHECK_COUNT="$(jq -r 'length' <<<"$LATEST_CHECKS")"
-          [ "$CHECK_COUNT" -gt 0 ] || refuse "no completed PR checks exist on the current head"
-
-          BAD_CHECKS="$(
-            jq -r '
-              [
-                .[]
-                | select(
-                    .status != "completed"
-                    or (
-                      .conclusion != "success"
-                      and .conclusion != "neutral"
-                      and .conclusion != "skipped"
-                    )
-                  )
-                | .name + "=" + .status + "/" + (.conclusion // "none")
-              ]
-              | join(", ")
-            ' <<<"$LATEST_CHECKS"
-          )"
-          [ -z "$BAD_CHECKS" ] || refuse "checks are not green: $BAD_CHECKS"
-
-          STATUS_JSON="$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA/status")"
-          STATUS_COUNT="$(jq -r '.statuses | length' <<<"$STATUS_JSON")"
-          STATUS_STATE="$(jq -r '.state' <<<"$STATUS_JSON")"
-          if [ "$STATUS_COUNT" -gt 0 ] && [ "$STATUS_STATE" != "success" ]; then
-            refuse "commit status contexts are not green ($STATUS_STATE)"
-          fi
-
-          POLICY="$(
-            python "$TOOL_ROOT/scripts/merge_policy.py"               --base "$BASE_REF"               --head "$HEAD_REF"               --stable-ref "$STABLE_REF"               --lane-refs-json "$LANE_REFS_JSON"               --permanent-refs-json "$PERMANENT_REFS_JSON"               --temporary-prefixes-json "$TEMPORARY_PREFIXES_JSON"
-          )"
-          METHOD="$(jq -r '.merge_method' <<<"$POLICY")"
-          DIRECT_PROMOTION="$(jq -r '.direct_lane_promotion' <<<"$POLICY")"
-          DIRECT_SYNC="$(jq -r '.direct_lane_synchronization' <<<"$POLICY")"
-          CLEANUP_HEAD="$(jq -r '.cleanup_head' <<<"$POLICY")"
-          INTEGRATE_BASE="$(jq -r '.integrate_base' <<<"$POLICY")"
-
-          if { [ "$DIRECT_PROMOTION" = "true" ] || [ "$DIRECT_SYNC" = "true" ]; } && [ "$HEAD_REPO" != "$REPOSITORY" ]; then
-            refuse "long-lived permanent merge must originate from this repository"
-          fi
-
-          MERGE_JSON="$(
-            gh api -X PUT               "repos/$REPOSITORY/pulls/$PR_NUMBER/merge"               -f sha="$HEAD_SHA"               -f merge_method="$METHOD"
-          )"
-          MERGED="$(jq -r '.merged' <<<"$MERGE_JSON")"
-          [ "$MERGED" = "true" ] || refuse "GitHub declined merge: $(jq -r '.message' <<<"$MERGE_JSON")"
-          MERGE_SHA="$(jq -r '.sha' <<<"$MERGE_JSON")"
-
-          LIFECYCLE_RESULT="not-requested"
-          if [ "$DIRECT_PROMOTION" = "true" ]; then
-            sleep 1
-            if gh api "repos/$REPOSITORY/git/ref/heads/$HEAD_REF" >/dev/null 2>&1; then
-              gh api -X PATCH                 "repos/$REPOSITORY/git/refs/heads/$HEAD_REF"                 -f sha="$MERGE_SHA"                 -F force=false                 >/dev/null
-              LIFECYCLE_RESULT="long-lived lane advanced to merge commit"
-            else
-              gh api -X POST                 "repos/$REPOSITORY/git/refs"                 -f ref="refs/heads/$HEAD_REF"                 -f sha="$MERGE_SHA"                 >/dev/null
-              LIFECYCLE_RESULT="long-lived lane recreated at merge commit"
-            fi
-          elif [ "$DIRECT_SYNC" = "true" ]; then
-            LIFECYCLE_RESULT="long-lived lane synchronized by merge"
-          elif [ "$CLEANUP_HEAD" = "true" ] && [ "$HEAD_REPO" = "$REPOSITORY" ]; then
-            if gh api "repos/$REPOSITORY/git/ref/heads/$HEAD_REF" >/dev/null 2>&1; then
-              gh api -X DELETE                 "repos/$REPOSITORY/git/refs/heads/$HEAD_REF"                 >/dev/null
-              LIFECYCLE_RESULT="temporary head deleted"
-            else
-              LIFECYCLE_RESULT="temporary head already absent"
-            fi
-          fi
-
-          DISPATCHED=()
-          if [ -n "$INTEGRATION_WORKFLOW" ]; then
-            if [ "$INTEGRATE_BASE" = "true" ]; then
-              gh api -X POST                 "repos/$REPOSITORY/actions/workflows/$INTEGRATION_WORKFLOW/dispatches"                 -f ref="$BASE_REF"                 >/dev/null
-              DISPATCHED+=("$BASE_REF")
-            fi
-            if [ "$DIRECT_PROMOTION" = "true" ]; then
-              gh api -X POST                 "repos/$REPOSITORY/actions/workflows/$INTEGRATION_WORKFLOW/dispatches"                 -f ref="$HEAD_REF"                 >/dev/null
-              DISPATCHED+=("$HEAD_REF")
-            fi
-          fi
-
-          if [ "${#DISPATCHED[@]}" -gt 0 ]; then
-            INTEGRATION_RESULT="$(IFS=', '; echo "${DISPATCHED[*]}")"
-          else
-            INTEGRATION_RESULT="none"
-          fi
-
-          COMMENT_BODY="$(
-            printf 'Merged by shared repository policy: `%s -> %s` using **%s** at `%s`. Branch lifecycle: %s. Integration dispatched: %s.'               "$HEAD_REF" "$BASE_REF" "$METHOD" "$MERGE_SHA" "$LIFECYCLE_RESULT" "$INTEGRATION_RESULT"
-          )"
-          gh api -X POST             "repos/$REPOSITORY/issues/$PR_NUMBER/comments"             -f body="$COMMENT_BODY"             >/dev/null
+          python3 "$TOOL_ROOT/scripts/merge_command.py" \
+            --command "$COMMAND" \
+            --repository "$REPOSITORY" \
+            --pull-request-number "$PR_NUMBER" \
+            --actor "$ACTOR" \
+            --repository-owner "$REPOSITORY_OWNER" \
+            --stable-ref "$STABLE_REF" \
+            --lane-refs-json "$LANE_REFS_JSON" \
+            --permanent-refs-json "$PERMANENT_REFS_JSON" \
+            --temporary-prefixes-json "$TEMPORARY_PREFIXES_JSON" \
+            --integration-workflow "$INTEGRATION_WORKFLOW"

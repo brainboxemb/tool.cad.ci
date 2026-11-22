@@ -1,3 +1,6 @@
+# Public normal-consumer run-only entry point; owns cancellation.
+# Calls reusable-run.yml at this same tool revision. Contract: docs/api.md.
+
 name: Reusable CAD CI
 
 on:

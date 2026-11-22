@@ -118,36 +118,23 @@ class MergePolicyTests(unittest.TestCase):
 
 
 class ReusableMergePolicyWorkflowTests(unittest.TestCase):
-    def test_workflow_is_repository_neutral_and_fail_closed(self):
+    def test_workflow_is_thin_and_calls_versioned_helper(self):
         text = (
             ROOT / ".github" / "workflows" / "reusable-merge-policy.yml"
         ).read_text(encoding="utf-8")
-
         self.assertIn("workflow_call:", text)
         self.assertIn("inputs.command == '/merge'", text)
-        self.assertIn("github.actor == github.repository_owner", text)
-        self.assertIn("check-runs?per_page=100", text)
-        self.assertIn("event=issue_comment", text)
-        self.assertIn("COMMAND_RUN_IDS", text)
-        self.assertIn(".details_url", text)
-        self.assertIn("/actions/runs/", text)
-        self.assertIn("group_by(.name)", text)
-        self.assertIn('sha="$HEAD_SHA"', text)
-        self.assertIn('merge_method="$METHOD"', text)
         self.assertIn("job.workflow_repository", text)
         self.assertIn("job.workflow_sha", text)
-        self.assertIn("scripts/merge_policy.py", text)
-        self.assertIn("INTEGRATION_WORKFLOW", text)
-        self.assertIn("temporary head deleted", text)
-        self.assertIn("long-lived lane recreated at merge commit", text)
-        self.assertIn("DIRECT_SYNC", text)
-        self.assertIn("long-lived lane synchronized by merge", text)
-        self.assertIn('"$DIRECT_PROMOTION" = "true" ] || [ "$DIRECT_SYNC" = "true"', text)
-
+        self.assertIn("persist-credentials: false", text)
+        self.assertIn("timeout-minutes: 10", text)
+        self.assertIn("scripts/merge_command.py", text)
+        self.assertIn("--lane-refs-json", text)
+        self.assertIn("--integration-workflow", text)
+        self.assertNotIn("gh api", text)
+        self.assertNotIn("gh api -X PUT", text)
         self.assertNotIn("dev-cad", text)
         self.assertNotIn("dev-ci", text)
-        self.assertNotIn("scpf.yml", text)
-        self.assertNotIn("lib.py.solidcraft.forge", text)
 
     def test_workflow_does_not_accept_arbitrary_merge_method(self):
         text = (

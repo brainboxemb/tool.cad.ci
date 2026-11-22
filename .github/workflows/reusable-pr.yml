@@ -1,3 +1,7 @@
+# Public PR verification, conditional durable publication and close cleanup.
+# ONE runner/job: no artifact handoff or separate publication runner.
+# Contract: docs/api.md; source trust review: #115.
+
 name: Reusable CAD CI PR
 
 on:
@@ -18,6 +22,11 @@ on:
         required: false
         type: string
         default: "{}"
+      publish_build:
+        description: Enable PR build publication and closed-PR cleanup.
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -39,8 +48,29 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/.cache/cad-ci-tool-source:${{ github.workspace }}/.cache/cad-ci-lib-source
 
     steps:
+      - name: Validate caller pull_request context
+        # A public workflow_call may be invoked from any event. Never
+        # reinterpret a non-PR invocation as a publishable PR run.
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ] || [ -z "$PR_NUMBER" ]; then
+            echo "ERROR: reusable-pr.yml requires a pull_request event" >&2
+            exit 2
+          fi
+          case "$PR_ACTION" in
+            opened|reopened|synchronize|closed) ;;
+            *)
+              echo "ERROR: unsupported pull_request action: $PR_ACTION" >&2
+              exit 2
+              ;;
+          esac
+
       - name: Checkout caller source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.action == 'closed' && github.event.repository.default_branch || github.event.pull_request.head.sha }}
           fetch-depth: 1
@@ -51,14 +81,15 @@ jobs:
         run: git fetch --no-tags --depth=1 origin "$CAD_CI_BASE_SHA"
 
       - name: Checkout called tool revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
           path: .cache/cad-ci-tool-source
           fetch-depth: 1
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
 
@@ -70,12 +101,13 @@ jobs:
             --github-output "$GITHUB_OUTPUT"
 
       - name: Checkout pinned CAD CI library source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: brainboxemb/lib.py.cad.ci
           ref: ${{ steps.library.outputs.revision }}
           path: .cache/cad-ci-lib-source
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Install external CAD CI runtime dependencies
         run: >-
@@ -114,6 +146,7 @@ jobs:
 
       - name: Prepare affected PR build scope
         if: >-
+          inputs.publish_build &&
           github.event.action != 'closed' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
           steps.build_output.outputs.available == 'true'
@@ -129,6 +162,7 @@ jobs:
 
       - name: Publish affected PR build scope
         if: >-
+          inputs.publish_build &&
           github.event.action != 'closed' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
           steps.build_output.outputs.available == 'true'
@@ -146,6 +180,7 @@ jobs:
 
       - name: Remove closed PR build scope
         if: >-
+          inputs.publish_build &&
           github.event.action == 'closed' &&
           github.event.pull_request.head.repo.full_name == github.repository
         run: |

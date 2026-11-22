@@ -5,7 +5,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LIB_COMMIT = "e621daf6e309bdd0e3f643a12007f1b66490696d"
+LIB_COMMIT = "fa6bf244381dde609a0b04de673d774911c52fea"
 
 
 class LibraryBoundaryTests(unittest.TestCase):
@@ -31,6 +31,12 @@ class LibraryBoundaryTests(unittest.TestCase):
             self.assertIn(f"from cad_ci.{module}", cli)
         for module in ("config", "build_store", "git_publish", "pages"):
             self.assertIn(f"from cad_ci.{module}", publication)
+
+    def test_workflow_helper_delegates_durable_state_to_library(self):
+        helper = (ROOT / "scripts/reusable_ci.py").read_text(encoding="utf-8")
+        self.assertIn("from cad_ci.durable import", helper)
+        self.assertNotIn("build.json", helper)
+        self.assertNotIn("def durable_scope(value", helper)
 
 
 if __name__ == "__main__":

@@ -44,6 +44,18 @@ from cad_ci.pages import (
 
 PUBLICATION_ERRORS = (BuildStoreError, PagesError, GitPublishError, GitError)
 
+def positive_int(value: str) -> int:
+    """Parse a strictly positive public CLI count (jobs, PR number, retries)."""
+
+    try:
+        result = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer") from exc
+    if result < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return result
+
+
 
 def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     """Add build, pages and publish command groups to the main parser."""
@@ -60,7 +72,7 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
 
     prepare_pr = build_sub.add_parser("prepare-pr")
     _candidate_args(prepare_pr, selectable=True)
-    prepare_pr.add_argument("--pull-request", type=int, required=True)
+    prepare_pr.add_argument("--pull-request", type=positive_int, required=True)
 
     update_main_cmd = build_sub.add_parser("update-main")
     _candidate_args(update_main_cmd, selectable=True)
@@ -101,7 +113,7 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
 
     remove = build_sub.add_parser("remove-pr")
     remove.add_argument("--store", type=Path, required=True)
-    remove.add_argument("--pull-request", type=int, required=True)
+    remove.add_argument("--pull-request", type=positive_int, required=True)
 
     pages = sub.add_parser("pages", help="install stable or preview site output")
     pages_sub = pages.add_subparsers(dest="pages_command", required=True)
@@ -118,10 +130,10 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
     preview = pages_sub.add_parser("install-preview")
     preview.add_argument("--site", type=Path, required=True)
     preview.add_argument("--pages-root", type=Path, required=True)
-    preview.add_argument("--pull-request", type=int, required=True)
+    preview.add_argument("--pull-request", type=positive_int, required=True)
     remove_preview_cmd = pages_sub.add_parser("remove-preview")
     remove_preview_cmd.add_argument("--pages-root", type=Path, required=True)
-    remove_preview_cmd.add_argument("--pull-request", type=int, required=True)
+    remove_preview_cmd.add_argument("--pull-request", type=positive_int, required=True)
 
     publish = sub.add_parser("publish", help="commit and push generated branches safely")
     publish_sub = publish.add_subparsers(dest="publish_command", required=True)
@@ -139,7 +151,7 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
 
     publish_build_cleanup = publish_sub.add_parser("build-cleanup")
     _publish_common(publish_build_cleanup)
-    publish_build_cleanup.add_argument("--pull-request", type=int, required=True)
+    publish_build_cleanup.add_argument("--pull-request", type=positive_int, required=True)
 
     publish_pages_cmd = publish_sub.add_parser("pages")
     _publish_common(publish_pages_cmd)
@@ -155,7 +167,7 @@ def add_publication_commands(sub: argparse._SubParsersAction) -> None:
 
     publish_pages_cleanup = publish_sub.add_parser("pages-cleanup")
     _publish_common(publish_pages_cleanup)
-    publish_pages_cleanup.add_argument("--pull-request", type=int, required=True)
+    publish_pages_cleanup.add_argument("--pull-request", type=positive_int, required=True)
 
 
 def _candidate_args(
@@ -250,7 +262,7 @@ def _publish_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--message", required=True)
     parser.add_argument("--remote", default="origin")
-    parser.add_argument("--retries", type=int, default=3)
+    parser.add_argument("--retries", type=positive_int, default=3)
     parser.add_argument("--source-ref")
     parser.add_argument("--expected-source")
 

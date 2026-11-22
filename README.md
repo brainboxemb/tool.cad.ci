@@ -1,11 +1,19 @@
 # tool.cad.ci
 
-`tool.cad.ci` is the thin command-line interface for BrainboxEmb CAD CI.
+`tool.cad.ci` is the **released consumer interface** to BrainboxEmb CAD CI:
+a command-line tool, GitHub Actions reusable workflows and a same-runner
+composite action. The reusable CAD-CI implementation lives in
+`lib.py.cad.ci`; this repository does not implement another planner,
+execution engine, cache, build store, Pages or Git publication mechanism.
 
-The reusable implementation lives in `lib.py.cad.ci`. This repository owns
-argument parsing, terminal output, documentation/release plumbing and
-CLI-specific tests. It does not implement its own planner, execution engine,
-cache, build store, Pages or Git publication mechanics.
+It currently also exposes an optional **repository merge-governance workflow**.
+That GitHub API capability is separate from CAD-CI execution and its long-term
+product ownership is under review. Its presence does not authorise merge-policy
+logic in the CAD-CI library.
+
+**Public interfaces:** [API contract and current qualification gaps](docs/api.md).
+**Workflow catalogue:** [workflows README](.github/workflows/README.md).
+**Active work:** [repository plan](docs/plan.md).
 
 The tool pins `lib.py.cad.ci` 0.11.0 at exact commit
 `e621daf6e309bdd0e3f643a12007f1b66490696d`.

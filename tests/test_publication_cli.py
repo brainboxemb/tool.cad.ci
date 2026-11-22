@@ -537,6 +537,24 @@ class PublicationCliTests(unittest.TestCase):
                 ["dev_cad", "dev_ci"],
             )
 
+    def test_public_counts_reject_zero_negative_and_non_numeric(self):
+        """Every public PR identifier and publish retry count must be > 0."""
+
+        from contextlib import redirect_stderr
+
+        cases = (
+            ["build", "remove-pr", "--store", "build", "--pull-request", "0"],
+            ["pages", "remove-preview", "--pages-root", "site", "--pull-request", "-1"],
+            ["publish", "pages-cleanup", "--message", "cleanup", "--pull-request", "abc"],
+            ["publish", "pages", "--site", "site", "--message", "pages", "--retries", "0"],
+        )
+        for arguments in cases:
+            with self.subTest(arguments=arguments), redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    main(arguments)
+                self.assertEqual(error.exception.code, 2)
+
+
 
 if __name__ == "__main__":
     unittest.main()

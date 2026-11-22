@@ -41,15 +41,15 @@
 
 ## Reusable GitHub Actions
 
-- `tool.cad.ci` provides `reusable-pr.yml` as the high-level complete pull-request workflow, `reusable-ci.yml` as the high-level run-only workflow, plus lower-level reusable planning/execution workflows for consumers that need domain setup between them.
+- `tool.cad.ci` provides `reusable-pr.yml` as the public complete pull-request workflow and `reusable-ci.yml` as the public run-only workflow. `reusable-plan.yml` is an advanced public plan-only API. `reusable-run.yml` is internal implementation behind `reusable-ci.yml`.
 - A consumer references those workflows at one exact tool commit SHA.
 - The called workflow checks out its own tool source using `job.workflow_repository` and `job.workflow_sha`; workflow and tool implementation therefore cannot drift.
 - The complete PR workflow resolves the exact `lib.py.cad.ci` commit from that tool revision's `pyproject.toml`, checks out that source, and exposes both repositories through `PYTHONPATH`.
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
 - `reusable-pr.yml` is the normal pull-request entry point when the consumer wants CAD-CI verification plus durable PR publication/cleanup.
 - `reusable-ci.yml` remains the high-level run-only entry point and delegates to the generic run workflow from the same tool revision.
-- `reusable-plan.yml` exposes the compact generic item plan for consumers that need domain setup between planning and execution.
-- `reusable-run.yml` performs exactly one `cad-ci run` and does not restore or save GitHub Actions cache state.
+- `reusable-plan.yml` exposes the compact generic item plan without executing the graph.
+- `reusable-run.yml` performs exactly one `cad-ci run` for `reusable-ci.yml`; direct external use is not a supported public contract.
 - The released root `action.yml` is the same-runner run surface for a caller
   that must execute consumer-owned steps after CAD-CI without crossing a runner
   boundary.
@@ -93,7 +93,7 @@ workflow and PR/branch.
 
 Different repositories, caller workflows and PRs/branches remain independent.
 
-Lower-level `reusable-plan.yml` and `reusable-run.yml` must not share this
+Advanced `reusable-plan.yml` and internal `reusable-run.yml` must not share this
 high-level concurrency group because split consumers may intentionally use both
 within one caller-owned workflow.
 
@@ -152,39 +152,37 @@ Explicit/changed/base-head selection for sparse build operations remains
 unchanged.
 
 
-## Single-runner pull-request workflow
+## One-runner pull-request workflow
 
-`reusable-pr.yml` owns GitHub-only orchestration for the complete PR lifecycle.
+`reusable-pr.yml` provides the complete PR verification and durable-build
+publication/cleanup API. **Exactly one job and runner** handle the configured
+lifecycle. No artifact upload/download, second publisher job, second tool
+bootstrap, or extra SCons execution graph is permitted.
 
-For `opened`, `synchronize` and `reopened` events it must use one job and
-one runner to:
+For `opened`, `synchronize` and `reopened` events:
 
-1. check out the real PR head commit;
-2. check out the exact called tool revision and its exact pinned library source;
-3. expose both source trees through `PYTHONPATH` without building/installing either BrainboxEmb package;
-4. install only external Python runtime dependencies required by the library;
-5. authenticate generically to GHCR;
-6. perform exactly one `cad-ci run`;
-7. when materialized `build/` output exists and the PR belongs to the caller
-   repository, run `cad-ci build prepare-pr`;
-8. publish that prepared sparse scope with `cad-ci publish build --scope pr`.
+1. Check out the exact PR-head source and exact called tool/library revisions.
+2. Fetch the exact base commit only for an incremental run.
+3. Install external runtime dependencies and authenticate generically to GHCR.
+4. Run exactly one `cad-ci run` graph.
+5. When `publish_build` (default true) and same-repository materialized
+   `build/` output exist, prepare and publish the sparse PR scope **within
+   that same job and workspace**.
 
-There is no artifact transport between execution and publication because both
-stages use the same workspace on the same runner.
+For `pull_request.closed`, skip SCons and remove the same-repository PR
+build scope when `publish_build` is enabled, using the same job.
 
-For `pull_request.closed`, normal CAD-CI execution is skipped. The same
-reusable workflow checks out the default branch/tool revision and invokes
-`cad-ci publish build-cleanup --pull-request <number>`.
+Fork PRs must never publish or clean the caller's durable generated branches.
+`publish_build: false` disables publication and cleanup, without adding a job.
+Unknown events fail validation before checkout.
 
-The caller grants `contents: write` and `packages: read`. GitHub may narrow
-those permissions for untrusted/fork events. Durable PR publication is allowed
-only when `github.event.pull_request.head.repo.full_name == github.repository`.
-Verification must remain useful when publication is not allowed.
+The one-runner design is intentional. Same-repository publication is a
+caller-trust decision; fork PRs never publish. Callers requiring a strictly
+read-only PR verification path use `reusable-ci.yml`. Do not introduce a
+second runner or artifact handoff to change this contract.
 
-The workflow does not implement item selection, dependency traversal, build
-validation, source freshness or generated-branch retry logic. Those remain in
-the released library/CLI commands.
-
+Planning, build-store validation, freshness checking and publication policy
+remain in `lib.py.cad.ci`; workflow YAML only orchestrates them.
 
 ## PR bootstrap cost
 
@@ -208,7 +206,7 @@ changing CAD-CI semantics.
 - The caller source checkout fetches only the exact PR head initially.
 - Incremental runs explicitly fetch only the exact PR base commit required by
   released base/head selection. They do not fetch all branches, tags or history.
-- Full runs and closed-PR cleanup do not fetch an unused PR base commit.
+- Full verification runs and closed-PR cleanup do not fetch an unused PR base commit.
 - GHCR authentication uses the runner Docker CLI with the workflow token and
   `--password-stdin`; it does not require a separate Docker login action.
 - External PyYAML and SCons installation skips dependency recursion and eager
@@ -311,18 +309,15 @@ When `durable_scope` is non-empty:
 
 - caller must not supply a manual `base_sha`;
 - caller must not force `full_run=true`;
-- the action fetches the current generated `build` branch once after exact
-  tool/library bootstrap;
-- if `<scope>/build.json` exists, its exact 40-character
-  `source_commit` becomes the incremental base;
-- missing `main/build.json` is an error;
-- a missing named scope is an initial full run with `base_sha=source_sha`;
-- the action fetches the resolved base commit only for incremental runs;
+- after exact tool/library bootstrap, the action calls the library durable
+  scope API to materialize the current generated `build` branch and resolve
+  existing/missing state;
+- the library owns scope validation, manifest parsing, stored
+  `source_commit`, first-run/full-run and missing-main semantics;
+- the action fetches the library-resolved base commit only for incremental runs;
 - the action executes exactly one CAD-CI graph;
-- the same runner/workspace then prepares the complete scope with the existing
-  `cad-ci build update-main|update-named|prepare-named` contracts;
-- the same runner publishes that prepared scope with the existing
-  `cad-ci publish build` contract;
+- the same runner/workspace calls the library durable publication API, which
+  composes existing planner/build-store/generated-branch publication mechanics;
 - no artifact upload/download or second runner is used.
 
 Durable mode exposes:
@@ -347,9 +342,10 @@ tool/library contracts only.
 The caller job needs `contents: write` for durable publication and
 `packages: read` for runtime image authentication.
 
-Scope names are simple non-empty identifiers containing only letters, numbers,
-dot, underscore and dash. Path separators, traversal and reserved generated
-path fragments are invalid.
+Durable scope names use the library's complete-scope contract. `main` is the
+stable complete scope; caller-named complete scopes must satisfy the same
+build-store validation and may not use reserved `pr`. The tool must not carry
+a second scope validator.
 
 
 ## Reusable dev-lane merge policy
@@ -427,16 +423,17 @@ command workflows triggered by `issue_comment`.
 
 For the exact current PR head SHA:
 
-- fetch commit check-runs;
-- fetch GitHub Actions workflow runs for the same head with
+- fetch all pages of commit check-runs, failing if the response is incomplete;
+- fetch all pages of GitHub Actions workflow runs for the same head with
   `event=issue_comment`;
 - exclude only check-runs whose Actions run ID belongs to that command-run set;
-- group/evaluate the latest remaining validation check per check name;
+- evaluate the latest remaining validation check per (GitHub App ID, check name),
+  so independent apps with the same visible name cannot mask a failure;
 - require at least one remaining validation check;
 - accept only completed checks with conclusion `success`, `neutral` or
   `skipped`;
 - continue rejecting pending, cancelled or failed non-command validation
-  checks;
+  checks, and reject a PR whose base/head changed during validation;
 - keep commit status-context validation unchanged.
 
 The filter is event/identity based. It must not hard-code a consumer branch,
@@ -445,3 +442,41 @@ repository, workflow title or check name.
 This rule applies to all merge classes, but is required for stable-to-lane
 synchronization because the stable PR head is also the commit on which the
 issue-comment command workflow executes.
+
+
+## Composite-action source trust
+
+The root same-runner action supports run-only use and durable publication on
+trusted branch source. Durable mode is not a generic untrusted PR execution
+surface. This is a documented caller constraint, not a separate architecture
+workstream.
+
+## Public API invariants (issue #110)
+
+The following IDs name **externally observable requirements** independent of
+specific filenames, shell commands or Python helper names. Earlier sections
+supply detailed functional requirements; this section makes their public
+boundary explicit. A requirement does not become satisfied merely because
+an implementation exists.
+
+| ID | Required public behaviour |
+| --- | --- |
+| API-001 | An immutable tool release defines one CLI version and one exact pinned `lib.py.cad.ci` revision. Moving branch references are not accepted release identities. |
+| API-002 | `cad-ci plan` explains selected items/dependencies without asserting target freshness; `cad-ci run` delegates exactly one graph to the library/SCons. |
+| API-003 | `cad-ci build`, `pages` and `publish` expose only released library-backed preparation/publication mechanics; generated outputs preserve evidence and source-freshness checks. |
+| API-004 | Normal run-only consumers have one high-level reusable workflow; consumers needing subsequent domain work on the same runner have one composite-action entry point. No extra job boundary is added only for apparent reuse. |
+| API-005 | One-job/one-runner PR workflow executes exactly one graph, optionally publishes sparse same-repository PR output and handles cleanup without artifact handoff. Fork PRs cannot publish. |
+| API-006 | `reusable-plan.yml` is public advanced plan-only; `reusable-run.yml` is internal behind the stable `reusable-ci.yml`. Support levels, inputs/outputs and permissions are explicit and do not silently replace the root same-runner action. |
+| GOV-001 | Merge governance is an **optional, separately identified** API, not CAD-CI planning. The caller supplies branch-role configuration but not an arbitrary merge method. Owner-controlled merges check current PR state and independent validation. |
+| GOV-002 | Permanent lane promotion/synchronization preserve histories and permanent refs. Temporary cleanup is allow-listed, same-repository only, and must not knowingly delete a head that moved after validation. |
+| GOV-003 | Every successful merge has a distinct, auditable post-merge outcome. Failure of a lifecycle/dispatch/comment action cannot turn a completed merge into a claimed refusal. An ambiguous merge API result must be reported as **unknown**, not as a refusal. |
+| GOV-004 | Check evaluation is complete (including pagination), rejects incomplete information, and does not confuse command-run checks with PR-validation checks. `mergeable: null` is transient only for a bounded retry window. |
+| SEC-001 | Privileged workflows check authorisation before mutation, run trusted tool source only, minimise token exposure, and do not execute submitted PR code. |
+
+Open architectural decision: the current generic merge-governance workflow lives
+in this repository, but it is not a CAD-CI algorithm. Its long-term home is
+under review (#110). **Do not migrate or silently remove that API** while Forge
+still consumes the exact released workflow.
+
+Traceability and evidence are maintained in [API contract](api.md). Behaviour
+requiring live GitHub mutation has **not** been certified by unit tests alone.
