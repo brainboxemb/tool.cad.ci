@@ -124,6 +124,124 @@ class ReusableCiHelperTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must be a string"):
             self.helper.consumer_environment('{"COUNT":3}')
 
+
+    def test_durable_scope_name_validation(self):
+        for value in ("main", "dev-ci", "dev_cad", "lane.1"):
+            with self.subTest(value=value):
+                self.assertEqual(
+                    self.helper.durable_scope_name(value),
+                    value,
+                )
+        for value in ("", "../main", "dev/ci", ".cad-ci", "a b"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    self.helper.durable_scope_name(value)
+
+    def test_durable_resolve_existing_main_uses_exact_source_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            generated = repo / "generated"
+            scope = generated / "main"
+            scope.mkdir(parents=True)
+            base = "a" * 40
+            (scope / "build.json").write_text(
+                json.dumps({"source_commit": base}),
+                encoding="utf-8",
+            )
+            with patch.object(self.helper.subprocess, "run") as run:
+                resolved = self.helper.resolve_durable_scope(
+                    repo=repo,
+                    generated_build=generated,
+                    scope="main",
+                    source_sha="b" * 40,
+                )
+            self.assertEqual(resolved["base_sha"], base)
+            self.assertEqual(resolved["full_run"], "false")
+            self.assertEqual(resolved["scope_exists"], "true")
+            command = run.call_args.args[0]
+            self.assertIn("build", command)
+            self.assertIn("fetch", command)
+
+    def test_durable_resolve_missing_named_scope_is_initial_full_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            generated = repo / "generated"
+            with patch.object(self.helper.subprocess, "run"):
+                resolved = self.helper.resolve_durable_scope(
+                    repo=repo,
+                    generated_build=generated,
+                    scope="dev-ci",
+                    source_sha="b" * 40,
+                )
+            self.assertEqual(resolved["base_sha"], "b" * 40)
+            self.assertEqual(resolved["full_run"], "true")
+            self.assertEqual(resolved["scope_exists"], "false")
+
+    def test_durable_resolve_missing_main_is_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            with patch.object(self.helper.subprocess, "run"):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "durable main scope is missing",
+                ):
+                    self.helper.resolve_durable_scope(
+                        repo=repo,
+                        generated_build=repo / "generated",
+                        scope="main",
+                        source_sha="b" * 40,
+                    )
+
+    def test_durable_publish_uses_existing_build_and_publish_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            generated = repo / "generated"
+            prepared = repo / "prepared"
+            candidate = repo / "build"
+            candidate.mkdir()
+            (generated / "dev-ci").mkdir(parents=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[3:5] == ["publish", "build"]:
+                    return type(
+                        "Completed",
+                        (),
+                        {"stdout": "c" * 40 + "\n"},
+                    )()
+                return type("Completed", (), {"stdout": ""})()
+
+            with patch.object(self.helper.subprocess, "run", fake_run):
+                result = self.helper.publish_durable_scope(
+                    repo=repo,
+                    generated_build=generated,
+                    prepared_scope=prepared,
+                    candidate_root=candidate,
+                    scope="dev-ci",
+                    scope_exists=True,
+                    source_sha="b" * 40,
+                    base_sha="a" * 40,
+                    source_ref="dev-ci",
+                )
+
+            self.assertEqual(result["build_commit"], "c" * 40)
+            self.assertEqual(
+                result["prepared_scope"],
+                str(prepared.resolve()),
+            )
+            self.assertTrue(
+                any("update-named" in command for command in calls),
+                calls,
+            )
+            self.assertTrue(
+                any(
+                    command[3:5] == ["publish", "build"]
+                    for command in calls
+                ),
+                calls,
+            )
+
     def test_github_output_supports_compact_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "output"
@@ -174,6 +292,36 @@ class SameRunnerActionTests(unittest.TestCase):
         self.assertNotIn("site/build.py", text)
         self.assertNotIn("publish pages", text)
         self.assertNotIn("publish build", text)
+
+
+    def test_action_exposes_optional_durable_same_runner_mode(self):
+        text = self.read()
+        self.assertIn("durable_scope:", text)
+        self.assertIn("source_ref:", text)
+        self.assertIn("build_commit:", text)
+        self.assertIn("prepared_scope:", text)
+        self.assertIn("durable-resolve", text)
+        self.assertIn("durable-publish", text)
+        self.assertEqual(text.count('scripts/reusable_ci.py" run'), 1)
+
+    def test_durable_mode_has_no_second_job_or_artifact_transport(self):
+        text = self.read()
+        self.assertIn("using: composite", text)
+        self.assertNotIn("actions/upload-artifact", text)
+        self.assertNotIn("actions/download-artifact", text)
+        self.assertNotIn("workflow_call:", text)
+        self.assertIn("build fetch", (
+            ROOT / "scripts" / "reusable_ci.py"
+        ).read_text(encoding="utf-8"))
+        self.assertIn("publish build", (
+            ROOT / "scripts" / "reusable_ci.py"
+        ).read_text(encoding="utf-8"))
+
+    def test_durable_mode_keeps_consumer_site_and_pages_outside_action(self):
+        text = self.read()
+        self.assertNotIn("site/build.py", text)
+        self.assertNotIn("publish pages", text)
+        self.assertNotIn("generated-site", text)
 
     def test_action_exposes_and_validates_bounded_jobs(self):
         text = self.read()
