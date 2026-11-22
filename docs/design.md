@@ -406,6 +406,33 @@ planning/execution requirement. The first release should be implemented and
 tested entirely in tool.cad.ci, then black-box accepted in tool.cad.ci.test and
 finally qualified from Forge #674.
 
+## Stale-branch cleanup governance
+
+Historical/manual workflows can leave temporary refs after their pull request
+has already been integrated. Cleaning those refs is a repository-maintenance
+operation, not CAD-CI execution and not the same transaction as a normal
+`/merge`.
+
+The reusable cleanup workflow is deliberately thin. It checks out the exact
+called `tool.cad.ci` revision and invokes `scripts/branch_cleanup.py`.
+The helper owns GitHub pagination, evidence evaluation, the final SHA re-read,
+delete mutation and audit comment. Consumer YAML contains only the command
+trigger, permission ceiling and repository branch-role configuration.
+
+Deletion uses two positive evidence forms:
+
+1. GitHub compare shows the inspected temporary tip is contained in a
+   configured stable/lane ref;
+2. a merged pull request records the exact same head ref and head SHA.
+
+The second form is necessary for squash merges, where ancestry no longer proves
+the temporary commit is contained in the destination. Matching only a historical
+branch name is unsafe because branch names can be deleted and recreated.
+
+The final ref read immediately before DELETE narrows the race between evidence
+collection and mutation. A changed SHA is reported as moved and is not deleted.
+Backup refs and permanent/generated refs never enter the candidate set.
+
 ## Stable-to-lane merge-policy extension
 
 Issue #106 extends the shared merge-policy classifier without changing CAD-CI
