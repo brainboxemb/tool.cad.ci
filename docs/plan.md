@@ -15,9 +15,10 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
 ## Current work
 
-Issue #134 is next after the library release: adopt lib.py.cad.ci 0.12.0 and
-document the declarative builder consumer boundary without duplicating library
-logic.
+Issue #134 is active: pin released lib.py.cad.ci 0.12.0, document the
+declarative builder consumer boundary and release tool.cad.ci 0.25.0 without
+duplicating library logic. External black-box acceptance follows in
+`tool.cad.ci.test` before consumer migration.
 
 Consumer migration remains owned by the consumers:
 
@@ -31,7 +32,7 @@ current permanent-lane work reaches a safe migration point.
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #134 Adopt declarative builder configuration from lib.py.cad.ci 0.12.0 | **blocked on library release** | Pin the exact released library, update docs, release tool, then prove in tool.cad.ci.test. |
+| #134 Adopt declarative builder configuration from lib.py.cad.ci 0.12.0 | **active** | Pin exact 0.12.0, release tool 0.25.0, then prove the released stack in tool.cad.ci.test. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
@@ -44,8 +45,9 @@ consumer workflow
   -> released reusable workflow
        -> cad_ci_tool
             -> lib.py.cad.ci
-                 -> root cad-ci.yml + item ci.yml
-                      -> SCons
+                 -> root cad-ci.yml + declarative item ci.yml
+                      -> repository builder.yml
+                           -> SCons
 ```
 
 Supported CLI entrypoints are the installed `cad-ci` command and
