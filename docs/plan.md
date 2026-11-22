@@ -48,7 +48,7 @@ Execution order:
 2. ship a machine-readable template manifest and onboarding guide;
 3. test metadata, supported public surfaces and the absence of copied generic
    implementation logic;
-4. release only after repository CI is green;
+4. release candidate is `0.22.0`; release only after repository CI is green;
 5. externally accept the released template/tool stack;
 6. then migrate Forge/CAD consumer wrappers to the canonical released
    templates.
