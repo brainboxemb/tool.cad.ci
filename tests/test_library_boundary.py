@@ -32,11 +32,12 @@ class LibraryBoundaryTests(unittest.TestCase):
         for module in ("config", "build_store", "git_publish", "pages"):
             self.assertIn(f"from cad_ci.{module}", publication)
 
-    def test_workflow_helper_delegates_durable_state_to_library(self):
+    def test_workflow_helper_does_not_own_durable_state(self):
         helper = (ROOT / "scripts/reusable_ci.py").read_text(encoding="utf-8")
-        self.assertIn("from cad_ci.durable import", helper)
+        self.assertNotIn("cad_ci.durable", helper)
         self.assertNotIn("build.json", helper)
-        self.assertNotIn("def durable_scope(value", helper)
+        self.assertNotIn("durable-resolve", helper)
+        self.assertNotIn("durable-publish", helper)
 
 
 if __name__ == "__main__":

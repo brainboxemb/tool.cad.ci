@@ -37,35 +37,6 @@ def exact_sha(value: str, name: str) -> str:
     return normalized
 
 
-def fetch_durable_scope_state(**kwargs):
-    """Call the library only after its exact pinned source is on PYTHONPATH."""
-
-    from cad_ci.durable import fetch_durable_scope_state as resolve
-
-    return resolve(**kwargs)
-
-
-def publish_durable_scope(**kwargs):
-    """Call the library durable publisher after bootstrap is complete."""
-
-    from cad_ci.durable import publish_durable_scope as publish
-
-    return publish(**kwargs)
-
-
-def durable_scope_state(*, scope: str, base_sha: str, full_run: bool, exists: bool):
-    """Construct the library state object without duplicating its semantics."""
-
-    from cad_ci.durable import DurableScopeState
-
-    return DurableScopeState(
-        scope=scope,
-        base_sha=base_sha,
-        full_run=full_run,
-        exists=exists,
-    )
-
-
 def parse_bool(value: str) -> bool:
     """Parse the lower-case boolean form emitted by GitHub workflow inputs."""
 
@@ -452,42 +423,6 @@ def main() -> int:
     plan.add_argument("--full-run", default="false")
     plan.add_argument("--github-output", type=Path, required=True)
 
-    durable_resolve = commands.add_parser("durable-resolve")
-    durable_resolve.add_argument("--repo", type=Path, required=True)
-    durable_resolve.add_argument("--scope", required=True)
-    durable_resolve.add_argument("--source-sha", required=True)
-    durable_resolve.add_argument(
-        "--generated-build",
-        type=Path,
-        default=Path("generated-build"),
-    )
-    durable_resolve.add_argument("--github-output", type=Path, required=True)
-
-    durable_publish = commands.add_parser("durable-publish")
-    durable_publish.add_argument("--repo", type=Path, required=True)
-    durable_publish.add_argument("--scope", required=True)
-    durable_publish.add_argument("--source-sha", required=True)
-    durable_publish.add_argument("--source-ref", required=True)
-    durable_publish.add_argument("--base-sha", required=True)
-    durable_publish.add_argument("--scope-exists", required=True)
-    durable_publish.add_argument("--full-run", required=True)
-    durable_publish.add_argument(
-        "--generated-build",
-        type=Path,
-        default=Path("generated-build"),
-    )
-    durable_publish.add_argument(
-        "--candidate-root",
-        type=Path,
-        default=Path("build"),
-    )
-    durable_publish.add_argument(
-        "--prepared-scope",
-        type=Path,
-        default=Path("prepared-scope"),
-    )
-    durable_publish.add_argument("--github-output", type=Path, required=True)
-
     run_parser = commands.add_parser("run")
     run_parser.add_argument("--repo", type=Path, required=True)
     run_parser.add_argument("--source-sha", default="")
@@ -526,50 +461,6 @@ def main() -> int:
                 if isinstance(value, bool):
                     value = str(value).lower()
                 write_github_output(args.github_output, key, str(value))
-            return 0
-
-        if args.command == "durable-resolve":
-            resolution = fetch_durable_scope_state(
-                repo=args.repo,
-                generated_build=args.generated_build,
-                scope=args.scope,
-                source_sha=args.source_sha,
-            )
-            for key, value in (
-                ("scope", resolution.scope),
-                ("base_sha", resolution.base_sha),
-                ("full_run", str(resolution.full_run).lower()),
-                ("scope_exists", str(resolution.exists).lower()),
-                (
-                    "generated_build",
-                    str(args.generated_build.resolve()),
-                ),
-            ):
-                write_github_output(args.github_output, key, value)
-            return 0
-
-        if args.command == "durable-publish":
-            resolution = durable_scope_state(
-                scope=args.scope,
-                base_sha=exact_sha(args.base_sha, "base_sha"),
-                full_run=parse_bool(args.full_run),
-                exists=parse_bool(args.scope_exists),
-            )
-            commit = publish_durable_scope(
-                repo=args.repo,
-                generated_build=args.generated_build,
-                prepared_scope=args.prepared_scope,
-                candidate_root=args.candidate_root,
-                state=resolution,
-                source_sha=args.source_sha,
-                source_ref=args.source_ref,
-            )
-            write_github_output(args.github_output, "build_commit", commit)
-            write_github_output(
-                args.github_output,
-                "prepared_scope",
-                str(args.prepared_scope.resolve()),
-            )
             return 0
 
         full_run = parse_bool(args.full_run)

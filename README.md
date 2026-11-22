@@ -1,8 +1,7 @@
 # tool.cad.ci
 
 `tool.cad.ci` is the **released consumer interface** to BrainboxEmb CAD CI:
-a command-line tool, GitHub Actions reusable workflows and a same-runner
-composite action. The reusable CAD-CI implementation lives in
+a command-line tool and GitHub Actions reusable workflows. The reusable CAD-CI implementation lives in
 `lib.py.cad.ci`; this repository does not implement another planner,
 execution engine, cache, build store, Pages or Git publication mechanism.
 
@@ -26,7 +25,7 @@ Do not invent a generic GitHub Actions workflow in a consumer. Start from the
 copy-ready files in [`docs/manual/templates/`](docs/manual/templates/).
 
 Each copied template keeps a `template` id, integer `template-version`,
-and the exact released tool commit it calls. The copy-ready files contain no
+and the exact released tool version tag it calls. The copy-ready files contain no
 release placeholder; change only values explicitly marked as repository policy.
 Repositories with permanent `main`/`dev-cad`/`dev-ci` lanes use the canonical
 `cad-ci-lanes.yml` wrapper; docs-only classification and promotion full-run
@@ -121,8 +120,7 @@ below `.cache/cad-ci/`.
 ## Reusable GitHub Actions
 
 Consumers do not copy generic CAD-CI setup into their own workflows. Copy the
-matching canonical consumer template, then pin the released reusable workflow
-or root action at the exact tool commit.
+matching canonical consumer template, then call the released reusable workflow at an exact tool version tag.
 
 For a complete normal PR run, the consumer keeps only its event trigger,
 permissions and one reusable-workflow call:
@@ -165,39 +163,6 @@ after caller environment. Secrets remain normal GitHub Actions
 secrets/permissions. A caller that needs GHCR packages grants
 `packages: read`; the reusable workflow uses that token permission for the
 generic Docker login and does not expose the token to CAD-CI commands.
-
-When consumer-owned work must happen **after** CAD-CI on the same hosted runner,
-use the released root composite action instead of a reusable workflow:
-
-```yaml
-jobs:
-  main:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: read
-    steps:
-      - uses: brainboxemb/tool.cad.ci@<tool-version>
-        with:
-          source_sha: ${{ github.sha }}
-          base_sha: ${{ github.event.before }}
-          github_token: ${{ github.token }}
-
-      - name: Consumer-owned post-run step
-        run: python -m cad_ci_tool --help
-```
-
-The action checks out the caller source and exact pinned library source, exposes
-the action/tool source plus library source through `PYTHONPATH`, installs only
-external runtime dependencies, authenticates GHCR and performs exactly one
-`cad-ci run`. The same `python -m cad_ci_tool` stack remains available to
-later steps in that job. It does not contain consumer commands or publication
-policy.
-
-This surface is intended for consumers such as Forge where a domain-owned site
-generator must run between generic build-store/publication commands. It avoids
-artifact transport or a second runner merely to keep using CAD-CI after the
-verification run.
 
 When a downstream consumer job must publish or transform generated output, set
 `upload_build: true`. The run workflow uploads the complete materialized

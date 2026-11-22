@@ -17,7 +17,6 @@ A consumer pins an immutable release commit rather than a moving branch. Inputs 
 | `cad-ci build ...` | Public CLI, durable build operations | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py`; external acceptance | Retain, audit subcommand contracts |
 | `cad-ci pages ...` | Public CLI, local Pages installation/cleanup | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py` | Retain, document arguments |
 | `cad-ci publish ...` | Public CLI, generated branches and Pages | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py`; external acceptance | Retain, audit subcommand contracts |
-| root `action.yml` | Public same-runner composite action; used by Forge and CAD | `action.yml`, `scripts/reusable_ci.py` | `tests/test_reusable_ci.py`; `tool.cad.ci.test` | Retain; inputs/outputs below |
 | `reusable-ci.yml` | **Public stable** run-only workflow | `.github/workflows/reusable-ci.yml` | `tests/test_reusable_ci.py`; `tool.cad.ci.test` | Retain |
 | `reusable-pr.yml` | **Public stable** complete PR verification/publication lifecycle | `.github/workflows/reusable-pr.yml` | `tests/test_reusable_ci.py`; candidate acceptance | Retain |
 | `reusable-plan.yml` | **Public advanced** selection-only workflow | `.github/workflows/reusable-plan.yml` | unit/schema + external candidate plan output | Retain as explicit plan-only API; not default |
@@ -26,7 +25,7 @@ A consumer pins an immutable release commit rather than a moving branch. Inputs 
 | `ci.yml` | This repository's CI, **not** consumer API | `.github/workflows/ci.yml` | GitHub Actions | Internal |
 | `scripts/*.py` | Workflow/maintenance implementation, **not** separate public CLI contract | `scripts/` | associated tests | Internal unless explicitly promoted |
 
-**Usage evidence:** Forge's `merge-policy.yml` calls the released merge-policy workflow at `eb64a46...`. Forge and CAD invoke a released root action. `tool.cad.ci.test` calls the released `reusable-ci.yml` and root action. Not seeing a call in the reviewed consumers is not proof that an interface is unused everywhere.
+**Usage evidence:** Forge's `merge-policy.yml` calls the released merge-policy workflow. Forge and CAD still invoke historical released root actions; those immutable releases remain valid while their migration to the workflow/config model is tracked separately. `tool.cad.ci.test` now qualifies the released `reusable-ci.yml` consumer path.
 
 ## Versioned consumer wrappers
 
@@ -51,7 +50,7 @@ copy-ready wrappers that only select and configure the supported surfaces below.
 
 ### `reusable-plan.yml`
 
-Entry point: `workflow_call`. Inputs: `source_sha` (string, default triggering source SHA), `base_sha` (string, default triggering base/previous SHA), `full_run` (boolean, default false). Outputs: `plan_json` (compact selected item plan), `source_sha`, `base_sha`. Requires `contents: read`. Side effect: runner checkout/install and planning; **does not run the model graph or publish output**. This is an advanced **plan-only** API for callers that need the generic selection result without executing CAD-CI. Normal run consumers use `reusable-ci.yml`; same-runner consumers use the root action.
+Entry point: `workflow_call`. Inputs: `source_sha` (string, default triggering source SHA), `base_sha` (string, default triggering base/previous SHA), `full_run` (boolean, default false). Outputs: `plan_json` (compact selected item plan), `source_sha`, `base_sha`. Requires `contents: read`. Side effect: runner checkout/install and planning; **does not run the model graph or publish output**. This is an advanced **plan-only** API for callers that need the generic selection result without executing CAD-CI. Normal run consumers use `reusable-ci.yml`.
 
 ### `reusable-run.yml`
 
@@ -85,17 +84,6 @@ The workflow declares `contents: write` for optional durable output and
 same-repository PR publication runs in that job, while fork PRs never publish.
 Callers needing strictly read-only verification use `reusable-ci.yml`.
 Do not split the workflow into a second publication runner.
-
-### Root composite `action.yml`
-
-Entry point: `uses: brainboxemb/tool.cad.ci@<released-version>` within a caller-owned job. Required inputs: `source_sha` (40-character commit), `github_token` (GHCR authentication). Optional: `base_sha`, `full_run` (default false), `jobs` (default 1), `environment_json` (default `{}`), `durable_scope`, `source_ref`. Durable mode resolves base/full-run itself, so manual base/full-run overrides are rejected; it requires `source_ref`. Outputs: `library_revision`, `scope`, `base_sha`, `full_run`, `scope_exists`, `build_commit`, `prepared_scope`. Side effects: checkout, Python/source bootstrap, GHCR login, single CAD-CI run, optional durable build publication. Unlike reusable workflows, it preserves the same runner/workspace for subsequent consumer steps.
-
-### Same-runner action source contract
-
-The root composite action is a same-runner API. Run-only mode may be used with
-read-scoped credentials. Durable publication is for trusted branch/source
-contexts controlled by the caller. Do not use durable mode as a generic
-untrusted PR execution environment, and do not add a second runner to this API.
 
 ### `reusable-merge-policy.yml` — separate governance API
 
@@ -156,8 +144,8 @@ An evidence cell marked **GAP** is incomplete, not passed.
 | API-001 | Release/ownership architecture | `pyproject.toml`, `VERSION`, `scripts/publish_release.py` | `tests/test_release.py`, `test_library_boundary.py` | Exact pinned release in `tool.cad.ci.test` | Existing release contract |
 | API-002 | Planning/running architecture | `cad_ci_tool/cli.py` | `tests/test_run_cli.py` | Synthetic execution cases in `tool.cad.ci.test` | Existing |
 | API-003 | Build/Pages/publication sections | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py` | External `publish_case` | Existing |
-| API-004 | Single-runner and workflow concurrency | `action.yml`, `reusable-ci.yml`, `scripts/reusable_ci.py` | `tests/test_reusable_ci.py` | Forge + acceptance `same_runner` | Existing |
-| API-005 | Single-runner PR run + optional same-runner publication/cleanup | `reusable-pr.yml` | Parsed one-job/no-artifact assertions + candidate verification | Live publish/cleanup acceptance remains | In progress |
+| API-004 | Reusable workflow consumer boundary and concurrency | `reusable-ci.yml`, `scripts/reusable_ci.py` | `tests/test_reusable_ci.py` | `tool.cad.ci.test` released workflow acceptance | Existing |
+| API-005 | One-job PR run + optional in-job publication/cleanup | `reusable-pr.yml` | Parsed one-job/no-artifact assertions + candidate verification | Live publish/cleanup acceptance remains | In progress |
 | API-006 | Advanced/internal workflow boundary | public advanced `reusable-plan.yml`; internal `reusable-run.yml` | schema/contract tests + candidate plan acceptance | Explicit support levels documented | Complete |
 | GOV-001 | Shared merge-policy workflow / branch classifier | `scripts/merge_policy.py`, `reusable-merge-policy.yml` | `tests/test_merge_policy.py` | Forge `/merge` consumer, existing external source-contract check | Ownership review |
 | GOV-002 | Stable-to-lane extension / cleanup boundary | `scripts/merge_policy.py`, `scripts/merge_command.py` | `tests/test_merge_policy.py`, `tests/test_merge_command.py` | **GAP:** real lane/ref lifecycle with new implementation | Draft fix |

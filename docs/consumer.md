@@ -4,65 +4,27 @@ Every consumer uses one exact released `tool.cad.ci` revision. Do not consume
 moving `main`. For a new repository, start with the [consumer manual](manual/README.md) and
 copy a versioned workflow from [`manual/templates/`](manual/templates/).
 
-A normal run-only consumer starts from the canonical `cad-ci.yml` template
-and keeps only its trigger, permissions and the exact released tool commit:
+A normal consumer starts from the canonical `cad-ci.yml` template and
+keeps only its trigger, permissions and exact released tool version tag:
 
 ```yaml
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@<exact-release-commit>
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.23.0
 ```
 
-The reusable workflow owns generic checkout, Python/tool setup and one repository run. The consumer does not duplicate those steps.
+The reusable workflow owns generic checkout, Python/tool setup and one
+repository run. The consumer does not duplicate those steps.
 
-**Credential rule:** For untrusted PR-head verification, use a read-only
-workflow such as `reusable-ci.yml`. Never give untrusted item commands a
-write-scoped token or invoke the durable composite action on arbitrary PR-head
-source. The durable action is for trusted branch source. For untrusted/read-only PR
-verification, use `reusable-ci.yml`.
+**Credential rule:** untrusted PR verification uses read-only workflow
+permissions. Repository-specific build, verification or site-generation work
+belongs in root `cad-ci.yml` and item `ci.yml` steps when it is part of the
+repository CI graph. A need for work after CAD-CI is not a reason to add a
+second execution API or a consumer-local orchestration workaround.
 
-A long-lived branch that needs later domain-owned work on the **same runner**
-uses the root composite action in durable mode rather than splitting the flow
-across reusable-workflow jobs:
-
-```yaml
-jobs:
-  durable:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: read
-    steps:
-      - id: cad
-        uses: brainboxemb/tool.cad.ci@<exact-release-commit>
-        with:
-          source_sha: ${{ github.sha }}
-          durable_scope: ${{ github.ref_name }}
-          source_ref: ${{ github.ref_name }}
-          jobs: "2"
-          github_token: ${{ github.token }}
-
-      - name: Build consumer site
-        run: >-
-          python site/build.py
-          --build-evidence "${{ steps.cad.outputs.prepared_scope }}"
-          --build-commit "${{ steps.cad.outputs.build_commit }}"
-
-      - name: Publish consumer Pages
-        run: python -m cad_ci_tool publish pages ...
-```
-
-The durable action keeps checkout, exact tool/library bootstrap, one SCons run,
-complete build-scope preparation and durable build publication in one runner
-workspace. It does not upload/download build artifacts and does not start a
-second CAD-CI job. Consumer site generation and Pages content remain outside the
-action.
-
-A consumer that needs **selection only** may call the public advanced
-`reusable-plan.yml` at an exact released tool SHA. Do not call
-`reusable-run.yml` directly; `reusable-ci.yml` owns the supported run-only
-workflow. If domain setup and CAD-CI execution must share a runner, use the
-root composite action.
+A consumer that genuinely needs **selection only** may use the documented
+advanced `reusable-plan.yml` surface. `reusable-run.yml` remains internal
+behind `reusable-ci.yml`.
 
 Local/manual use still invokes the released CLI directly:
 
