@@ -1,0 +1,80 @@
+name: Reusable exact-SHA branch retirement
+
+# Separate reviewed destructive governance API. This does not broaden
+# conservative /cleanup-branches semantics.
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        description: Owner-reviewed multiline /retire-branches command with exact ref/SHA pairs.
+        required: true
+        type: string
+      issue_number:
+        description: Issue or PR conversation that receives the retirement audit.
+        required: true
+        type: number
+      stable_ref:
+        description: Stable ref that can never be retired.
+        required: false
+        type: string
+        default: main
+      lane_refs_json:
+        description: JSON list of long-lived lane refs that can never be retired.
+        required: true
+        type: string
+      permanent_refs_json:
+        description: JSON list of additional permanent/generated refs that can never be retired.
+        required: false
+        type: string
+        default: '["build","gh-pages"]'
+
+permissions:
+  contents: read
+
+jobs:
+  retire:
+    if: startsWith(inputs.command, '/retire-branches') && github.actor == github.repository_owner
+    permissions:
+      contents: write
+      pull-requests: read
+      issues: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: branch-retirement-${{ github.repository }}
+      cancel-in-progress: false
+    env:
+      REPOSITORY: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ inputs.issue_number }}
+      TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
+      STABLE_REF: ${{ inputs.stable_ref }}
+      LANE_REFS_JSON: ${{ inputs.lane_refs_json }}
+      PERMANENT_REFS_JSON: ${{ inputs.permanent_refs_json }}
+    steps:
+      - name: Checkout called tool revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .cache/cad-ci-tool-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Retire exact-SHA reviewed branches
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMAND: ${{ inputs.command }}
+          ACTOR: ${{ github.actor }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          python3 "$TOOL_ROOT/scripts/branch_retirement.py" \
+            --command "$COMMAND" \
+            --repository "$REPOSITORY" \
+            --issue-number "$ISSUE_NUMBER" \
+            --actor "$ACTOR" \
+            --repository-owner "$REPOSITORY_OWNER" \
+            --stable-ref "$STABLE_REF" \
+            --lane-refs-json "$LANE_REFS_JSON" \
+            --permanent-refs-json "$PERMANENT_REFS_JSON"
