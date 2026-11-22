@@ -16,27 +16,47 @@ It pins released `lib.py.cad.ci 0.9.3` at exact commit
 External `tool.cad.ci.test` #66 / PR #67 passed the complete released-stack
 suite.
 
-Accepted public behavior now includes:
-- selective active-closure startup from lib 0.9.3;
+Accepted public behavior includes:
+- selective active-closure startup;
 - `cad-ci run --jobs N`, default 1;
-- reusable run/high-level CI/PR jobs input;
-- same-runner action jobs input;
-- positive-integer validation;
-- actual jobs=2 concurrent SCons action overlap proven through public evidence.
+- reusable workflow/action jobs input;
+- bounded SCons parallel execution through the library.
 
 ## Current work
 
-No tool implementation is active.
+### #91 — consume released lib.py.cad.ci 0.10.0
 
-Default jobs remains 1. Consumers may deliberately opt into a bounded jobs value
-after measuring their own workload. The tool does not choose a consumer-wide
-parallelism policy.
+`lib.py.cad.ci 0.10.0` is released at exact commit
+`397fb04005b46de8d433cb18c091b1e73714b877`.
 
-New tool work must start from a fresh issue and must remain a thin surface over
-released library behavior. Generic selection/scheduling/cache/runtime logic does
-not move into this repository.
+That release adds the generic engine-owned dependency-output `copy:` step used
+to remove repeated complete dependency-bundle materialization for projection-
+only consumers.
+
+This tool requires no new CLI or workflow behavior. #91 is therefore a thin
+exact-pin patch release:
+
+1. pin library commit `397fb040...` in `pyproject.toml`;
+2. update the exact-pin boundary test;
+3. keep the tool implementation/workflows/actions unchanged;
+4. set tool version `0.17.1` in `VERSION`, `pyproject.toml` and changelog;
+5. require the exact release-prepared PR head to pass this repository's tests;
+6. squash-merge to main and require the normal release job to publish
+   `v0.17.1`;
+7. pin that exact released tool in `tool.cad.ci.test`;
+8. prove dependency-copy behavior through the public released tool stack before
+   Forge adopts it.
+
+## Open issue assessment — 2026-11-22
+
+| Issue | Status | Assessment |
+| --- | --- | --- |
+| #91 Consume released lib.py.cad.ci 0.10.0 dependency-output copy support | **now** | Exact released-library repin only; no generic implementation belongs here. |
 
 ## Next trigger
+
+After #91 release and external acceptance, this repository returns to
+demand-driven mode.
 
 A future tool change is justified only by:
 - a new released library capability that needs thin exposure;
