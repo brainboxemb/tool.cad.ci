@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.24.0**
+- tool release: **v0.25.0**
 
 Each YAML template contains:
 
@@ -68,29 +68,42 @@ defaults:
 
 items:
   - models/*
+
+builders:
+  solidcraft-model: ci/builders/solidcraft-model
 ```
 
-Each selected item owns a `ci.yml`, for example:
+Each selected item owns a small declarative `ci.yml`:
 
 ```yaml
 id: example-model
+builder: solidcraft-model
 
 watch:
-  - models/example-model/**
+  item:
+    - model.py
+    - model.yml
+```
+
+The shared implementation is separate:
+
+```yaml
+# ci/builders/solidcraft-model/builder.yml
+schema: 1
 
 steps:
   - id: build
-    inputs:
-      - models/example-model/build.py
-    run: [python, build.py]
-    outputs: [generated]
+    run: 'python "$CAD_CI_BUILDER_PATH/build.py"'
+    outputs: [model.sc, model.step]
 
   - id: verify
-    inputs:
-      - models/example-model/verify.py
-    run: [python, verify.py]
-    outputs: [verify.json]
+    run: 'python "$CAD_CI_BUILDER_PATH/verify.py"'
+    outputs: [verification.json]
 ```
+
+The name `solidcraft-model` is repository configuration; generic CAD-CI does
+not contain SolidCraft-specific behavior. A repository may instead name any
+builder that fits its own domain.
 
 Use `cad-ci-lanes.yml` when the repository follows the permanent-lane model.
 Do not add a local PR-files query or docs-only/promotion classifier; that policy

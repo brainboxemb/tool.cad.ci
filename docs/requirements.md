@@ -2,9 +2,9 @@
 
 ## Repository ownership
 
-- Consumer repositories own `cad-ci.yml`, item `ci.yml`, commands and domain rules.
+- Consumer repositories own `cad-ci.yml`, declarative item `ci.yml`, repository-owned builders, commands and domain rules.
 - `tool.cad.ci` is a thin CLI above one exact released `lib.py.cad.ci` commit.
-- Generic execution, build-store, Pages and publication mechanics are not duplicated here.
+- Generic configuration resolution, including builder aliases and `builder.yml`, execution, build-store, Pages and publication mechanics are not duplicated here.
 
 ## Planning
 
@@ -379,7 +379,7 @@ an implementation exists.
 | API-001 | An immutable tool release defines one CLI version and one exact pinned `lib.py.cad.ci` revision. Moving branch references are not accepted release identities. |
 | API-002 | `cad-ci plan` explains selected items/dependencies without asserting target freshness; `cad-ci run` delegates exactly one graph to the library/SCons. |
 | API-003 | `cad-ci build`, `pages` and `publish` expose only released library-backed preparation/publication mechanics; generated outputs preserve evidence and source-freshness checks. |
-| API-004 | Normal consumers use released reusable workflows; repository-specific work belongs in `cad-ci.yml`/item configuration rather than a second root action execution route. |
+| API-004 | Normal consumers use released reusable workflows; repository-specific execution belongs in builders referenced by declarative item configuration rather than embedded workflow or item-run orchestration. |
 | API-005 | One-job/one-runner PR workflow executes exactly one graph, optionally publishes sparse same-repository PR output and handles cleanup without artifact handoff. Fork PRs cannot publish. |
 | API-006 | `reusable-plan.yml` is public advanced plan-only; `reusable-run.yml` is internal behind the stable `reusable-ci.yml`. Support levels, inputs/outputs and permissions are explicit. |
 | GOV-001 | Merge governance is an **optional, separately identified** API, not CAD-CI planning. The caller supplies branch-role configuration but not an arbitrary merge method. Owner-controlled merges check current PR state and independent validation. |

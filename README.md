@@ -16,8 +16,8 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The 0.24.0 release pins `lib.py.cad.ci` 0.11.1 at exact commit
-`fa6bf244381dde609a0b04de673d774911c52fea`.
+The 0.25.0 release pins `lib.py.cad.ci` 0.12.0 at exact commit
+`64656db8df528a5c0de799e62c0f028fd0133486`.
 
 ## Starting a consumer repository
 
@@ -33,16 +33,21 @@ selection stay inside the released reusable CI stack, not consumer YAML.
 
 ## Consumer layout
 
+Normal item configuration is declarative. Build implementation lives in a
+separate repository-owned builder directory.
+
 ```text
 cad-ci.yml
-shared/
-cases/simple_case1/
-  ci.yml
+ci/builders/python-model/
+  builder.yml
   build.py
   verify.py
+cases/simple_case1/
+  ci.yml
+  input/
 ```
 
-Root `cad-ci.yml`:
+Root `cad-ci.yml` discovers items and gives builders stable names:
 
 ```yaml
 schema: 1
@@ -55,35 +60,46 @@ variables:
 
 items:
   - cases/*
+
+builders:
+  python-model: ci/builders/python-model
 ```
 
-Item `ci.yml`:
+Item `ci.yml` says what the item is and which builder applies:
 
 ```yaml
 id: simple-case
+builder: python-model
 
 watch:
-  - cases/simple_case1/**
-  - shared/**
+  item:
+    - input/**
+```
+
+The builder owns how that class of item is built:
+
+```yaml
+# ci/builders/python-model/builder.yml
+schema: 1
 
 steps:
   - id: build
-    inputs:
-      - cases/simple_case1/build.py
-      - cases/simple_case1/input/**
-      - shared/**
-    run: [python, build.py]
+    run: 'python "$CAD_CI_BUILDER_PATH/build.py"'
     outputs: [generated]
 
   - id: verify
-    inputs:
-      - cases/simple_case1/verify.py
-    run: [python, verify.py]
+    run: 'python "$CAD_CI_BUILDER_PATH/verify.py"'
     outputs: [verify.json]
 ```
 
-`watch` is coarse Git-selection input. Step `inputs` are SCons build
-dependencies. If a step omits `inputs`, it inherits the item `watch` paths.
+A builder directory is automatically part of selection and SCons signatures
+for every item that uses it. Shared builder commands receive
+`CAD_CI_ITEM_PATH` for the consuming item and `CAD_CI_BUILDER_PATH` for
+their implementation directory.
+
+Legacy item-local `steps` remain readable in lib.py.cad.ci 0.12.0 so existing
+repositories can migrate deliberately. New item configuration should use a
+builder reference instead of embedding `run` commands in `ci.yml`.
 
 Root `variables` are validated by the pinned library, injected into every
 consumer command and included in SCons target signatures. Repository variables

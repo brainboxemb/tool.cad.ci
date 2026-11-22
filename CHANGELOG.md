@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.25.0 - 2026-11-22
+
+- consume released `lib.py.cad.ci 0.12.0` at exact commit
+  `64656db8df528a5c0de799e62c0f028fd0133486`;
+- expose repository-owned declarative builder configuration through the existing
+  CLI and reusable workflows without adding tool-owned builder parsing,
+  scheduling or execution semantics;
+- document the preferred consumer boundary as root builder aliases, declarative
+  item `ci.yml` files and separate `builder.yml` implementation;
+- retain legacy inline item steps as a library-owned migration path;
+- update copy-ready workflow templates to the exact `v0.25.0` release tag
+  without changing their template versions.
+
 ## 0.24.0 - 2026-11-22
 
 - remove the root `action.yml` composite-action execution route and its

@@ -10,16 +10,16 @@ keeps only its trigger, permissions and exact released tool version tag:
 ```yaml
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.24.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.25.0
 ```
 
 The reusable workflow owns generic checkout, Python/tool setup and one
 repository run. The consumer does not duplicate those steps.
 
 **Credential rule:** untrusted PR verification uses read-only workflow
-permissions. Repository-specific build, verification or site-generation work
-belongs in root `cad-ci.yml` and item `ci.yml` steps when it is part of the
-repository CI graph. A need for work after CAD-CI is not a reason to add a
+permissions. Repository-specific build, verification or site-generation implementation
+belongs in repository-owned builders referenced from item `ci.yml` when it is
+part of the repository CI graph. A need for work after CAD-CI is not a reason to add a
 second execution API or a consumer-local orchestration workaround.
 
 A consumer that genuinely needs **selection only** may use the documented
@@ -39,7 +39,8 @@ persistent cache transport or rebuild decisions.
 
 ## Repository config
 
-Root `cad-ci.yml` discovers items and can define repository defaults:
+Root `cad-ci.yml` discovers items, defines repository defaults and names
+repository-owned builders:
 
 ```yaml
 schema: 1
@@ -50,38 +51,51 @@ defaults:
 items:
   - tool
   - cases/*
+
+builders:
+  python-model: ci/builders/python-model
 ```
 
-Each item owns its behaviour:
+A normal item `ci.yml` stays declarative:
 
 ```yaml
 id: simple-case
+builder: python-model
 
 needs:
   - tool
 
 watch:
-  - cases/simple_case/**
-  - shared/**
+  item:
+    - input/**
+  repo:
+    - shared/**
+```
+
+The builder directory owns the executable implementation:
+
+```yaml
+# ci/builders/python-model/builder.yml
+schema: 1
 
 steps:
   - id: build
-    inputs:
-      - cases/simple_case/build.py
-      - cases/simple_case/input/**
-      - shared/**
-    run: [python, build.py]
+    run: 'python "$CAD_CI_BUILDER_PATH/build.py"'
     outputs: [generated]
 
   - id: verify
-    inputs:
-      - cases/simple_case/verify.py
-    run: [python, verify.py]
+    run: 'python "$CAD_CI_BUILDER_PATH/verify.py"'
     outputs: [verify.json]
 ```
 
-`watch` selects top-level items from a Git diff. Step `inputs` drive SCons
-incremental decisions.
+`watch` selects top-level items from a Git diff. Builder step `inputs` drive
+SCons incremental decisions when a narrower input set is useful. The complete
+builder directory is automatically selection- and signature-significant for
+every using item.
+
+Legacy item-local `steps` remain accepted by the pinned library during
+migration, but new repositories should keep executable `run` commands out of
+item `ci.yml`.
 
 One tool run makes one SCons-backed library run. The consumer does not need to
 know or reproduce the dependency execution order.
