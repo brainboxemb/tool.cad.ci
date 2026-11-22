@@ -63,6 +63,22 @@ class MergeCommandTests(unittest.TestCase):
         with self.assertRaisesRegex(command.Refused, "checks are not green"):
             command.validated_checks(checks, [])
 
+    def test_current_command_run_is_excluded_before_actions_indexing(self):
+        checks = [
+            {"name": "merge / merge", "id": 9, "app": {"id": 1},
+             "status": "in_progress", "conclusion": None,
+             "details_url": "https://github.com/o/r/actions/runs/77/job/9"},
+            {"name": "acceptance / cad_ci / run", "id": 10, "app": {"id": 1},
+             "status": "completed", "conclusion": "success",
+             "details_url": "https://github.com/o/r/actions/runs/76/job/10"},
+        ]
+        accepted = command.validated_checks(checks, [], current_run_id="77")
+        self.assertEqual([check["id"] for check in accepted], [10])
+
+    def test_invalid_current_run_id_fails_closed(self):
+        with self.assertRaisesRegex(command.Refused, "numeric"):
+            command.validated_checks([], [], current_run_id="not-a-run")
+
     def test_old_command_run_excluded_but_failed_pr_check_blocks(self):
         checks = [
             {"name": "merge", "id": 1, "app": {"id": 1}, "status": "completed",
