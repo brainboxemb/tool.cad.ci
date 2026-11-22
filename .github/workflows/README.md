@@ -1,6 +1,6 @@
 # GitHub Actions interfaces
 
-Read the [public API contract](../../docs/api.md) **before selecting a workflow**. For a new consumer, start from the [versioned consumer templates](../../templates/github/workflows/README.md) rather than writing a wrapper from scratch. This directory mixes consumer interfaces with internal repository CI; a YAML filename alone does not establish a stable API.
+Read the [public API contract](../../docs/api.md) **before selecting a workflow**. For a new consumer, start from the [copy-ready repository manual](../../docs/manual/README.md) rather than writing a wrapper from scratch. This directory mixes consumer interfaces with internal repository CI; a YAML filename alone does not establish a stable API.
 
 | File | Role | Who should invoke it? |
 | --- | --- | --- |
@@ -27,14 +27,14 @@ The executable helpers are in [`scripts/`](../../scripts/); generic CI mechanics
 ## Canonical consumer wrappers
 
 The executable workflows in this directory are owned here; the files consumers
-copy live under [`templates/github/workflows/`](../../templates/github/workflows/README.md).
+copy live under [`docs/manual/`](../../docs/manual/README.md).
 
 | Public surface | Canonical wrapper |
 | --- | --- |
-| `reusable-ci.yml` | `templates/github/workflows/cad-ci.yml` |
-| `reusable-pr.yml` | `templates/github/workflows/cad-ci-pr.yml` |
-| root `action.yml` | `templates/github/workflows/cad-ci-same-runner.yml` |
-| `reusable-merge-policy.yml` | `templates/github/workflows/merge-policy.yml` |
+| `reusable-ci.yml` | `docs/manual/cad-ci.yml` or `docs/manual/cad-ci-lanes.yml` |
+| `reusable-pr.yml` | `docs/manual/cad-ci-pr.yml` |
+| root `action.yml` | `docs/manual/cad-ci-same-runner.yml` |
+| `reusable-merge-policy.yml` | `docs/manual/merge-policy.yml` |
 
 Do not add consumer-specific wrapper examples here. Update the canonical
-template, its integer template version when needed, manifest and tests together.
+manual template, its integer template version when needed, release pin and tests together.
