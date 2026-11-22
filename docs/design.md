@@ -30,6 +30,29 @@ Item-level `process` participation is one such library feature. The tool does
 not parse or interpret `process`; it exposes the released library behavior
 through the existing plan/run commands.
 
+## Declarative builder boundary
+
+Declarative builder resolution is library-owned. The tool does not parse root
+`builders`, item `builder`, `builder.yml`, builder paths or
+`CAD_CI_BUILDER_PATH`. It exposes the exact released library behavior through
+the unchanged plan/run surfaces.
+
+```text
+cad-ci.yml
+  -> builder alias
+item/ci.yml
+  -> builder name
+builder/builder.yml
+  -> executable implementation
+lib.py.cad.ci
+  -> normalize to Item / Step graph
+tool.cad.ci
+  -> no additional interpretation
+```
+
+This keeps `ci.yml` declarative without moving domain execution semantics into
+the tool.
+
 ## Command environment
 
 The reusable workflow may receive optional non-secret `environment_json`
