@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.20.0 - 2026-11-22
+
+- add an explicit history-preserving stable-to-configured-lane synchronization
+  class to the reusable merge policy;
+- use normal merge commits for both permanent lane directions while keeping
+  promotion lane-advance behavior separate from stable-to-lane synchronization;
+- require same-repository heads for both permanent merge classes;
+- keep lane-to-lane and ordinary short-lived pull requests on the existing
+  squash policy and preserve the current cleanup allow-list;
+- dispatch configured integration for the synchronized lane/base without
+  mutating the stable source ref;
+- retain the exact lib.py.cad.ci 0.11.0 pin and add no CAD-CI planning or
+  execution behavior.
+
 ## 0.19.0 - 2026-11-22
 
 - add a released reusable dev-lane merge-policy workflow for repositories with

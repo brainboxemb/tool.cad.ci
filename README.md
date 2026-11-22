@@ -182,6 +182,24 @@ When a downstream consumer job must publish or transform generated output, set
 `build_artifact_name`. Private `.cache/cad-ci` SCons state is never part of
 that artifact.
 
+## Shared merge policy
+
+The released reusable merge-policy workflow derives merge method from configured
+permanent branch roles; callers do not choose a method manually.
+
+- configured long-lived lane -> stable: normal merge, then preserve/advance the
+  lane at the resulting stable merge commit;
+- stable -> configured long-lived lane: normal history-preserving merge into the
+  lane, with the stable source ref left unchanged;
+- all other supported pull requests: squash merge;
+- permanent/generated/backup refs are never cleanup targets; only explicitly
+  allow-listed temporary heads may be deleted.
+
+Both permanent-direction operations require the source head to belong to the
+caller repository. The same exact-head/check/status gate is applied immediately
+before every merge. Optional consumer integration dispatch runs for the updated
+durable base; a promotion additionally dispatches the retained lane.
+
 ## Durable build output
 
 Fetch the generated build branch:

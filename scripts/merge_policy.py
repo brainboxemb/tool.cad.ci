@@ -25,6 +25,7 @@ class MergePolicy:
 
     merge_method: str
     direct_lane_promotion: bool
+    direct_lane_synchronization: bool
     cleanup_head: bool
     integrate_base: bool
 
@@ -53,6 +54,18 @@ def is_direct_lane_promotion(
     """Return whether one configured long-lived lane is promoted to stable."""
 
     return base == stable_ref and head in lane_refs
+
+
+def is_direct_lane_synchronization(
+    *,
+    base: str,
+    head: str,
+    stable_ref: str,
+    lane_refs: tuple[str, ...],
+) -> bool:
+    """Return whether stable is synchronized into a configured long-lived lane."""
+
+    return base in lane_refs and head == stable_ref
 
 
 def is_cleanup_eligible(
@@ -90,12 +103,20 @@ def evaluate(
         stable_ref=stable_ref,
         lane_refs=lane_refs,
     )
+    synchronization = is_direct_lane_synchronization(
+        base=base,
+        head=head,
+        stable_ref=stable_ref,
+        lane_refs=lane_refs,
+    )
+    permanent_merge = promotion or synchronization
     durable_refs = {stable_ref, *lane_refs}
     return MergePolicy(
-        merge_method="merge" if promotion else "squash",
+        merge_method="merge" if permanent_merge else "squash",
         direct_lane_promotion=promotion,
+        direct_lane_synchronization=synchronization,
         cleanup_head=(
-            not promotion
+            not permanent_merge
             and is_cleanup_eligible(
                 head,
                 stable_ref=stable_ref,
