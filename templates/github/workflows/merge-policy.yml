@@ -27,4 +27,5 @@ jobs:
       stable_ref: main
       lane_refs_json: '["dev-cad","dev-ci"]'
       permanent_refs_json: '["build","gh-pages"]'
-      integration_workflow: cad.yml
+      # Optional: add integration_workflow only when this repository has a
+      # workflow_dispatch integration workflow to run after the merge.
