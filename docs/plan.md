@@ -36,15 +36,30 @@ and cleanup. Do not add a second publication runner or artifact handoff.
 
 ## Current work
 
-No CAD-CI product implementation is active. Cross-repository consumer adoption
-of 0.21.0 is tracked in `meta.cad.solidcraft` #2.
+### #119 — versioned consumer setup templates
 
-Do not repin consumers to moving main; use the exact released SHA above.
+Make `tool.cad.ci` the single place where an engineer can configure a new
+consumer repository without inventing a workflow.
+
+Execution order:
+
+1. ship versioned canonical templates for run-only, complete PR, same-runner
+   action and merge-policy consumers;
+2. ship a machine-readable template manifest and onboarding guide;
+3. test metadata, supported public surfaces and the absence of copied generic
+   implementation logic;
+4. release only after repository CI is green;
+5. externally accept the released template/tool stack;
+6. then migrate Forge/CAD consumer wrappers to the canonical released
+   templates.
+
+Do not repin consumers to moving main; use an exact released SHA.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
+| #119 Provide versioned consumer setup templates and new-repository onboarding | **now** | Implement/test/release canonical consumer wrappers before further Forge/CAD cleanup. |
 | #117 Align historical changelog with shared meta template and guidance | **later / docs-only** | Apply shared changelog presentation without changing release history or product behavior. |
 
 ## Recently completed
