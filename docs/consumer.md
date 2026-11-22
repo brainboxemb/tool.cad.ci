@@ -19,6 +19,40 @@ instead use `reusable-plan.yml` and `reusable-run.yml` at that same exact
 tool commit. Forge's immutable runtime-image preparation is an example of such
 domain work.
 
+A consumer that needs later domain-owned work on the **same runner** can use the
+released root composite action instead of reproducing generic setup locally.
+
+For a long-lived durable lane, the same action resolves the previous build
+scope, runs one CAD-CI graph, prepares/publishes the complete durable scope and
+returns the prepared scope to later consumer steps without a job boundary:
+
+```yaml
+jobs:
+  durable:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - id: cad
+        uses: brainboxemb/tool.cad.ci@<exact-release-commit>
+        with:
+          source_sha: ${{ github.sha }}
+          durable_scope: ${{ github.ref_name }}
+          source_ref: ${{ github.ref_name }}
+          jobs: "2"
+          github_token: ${{ github.token }}
+
+      - run: ./consumer-site-build \
+          --build-evidence "${{ steps.cad.outputs.prepared_scope }}"
+
+      - run: python -m cad_ci_tool publish pages ...
+```
+
+This is deliberately one runner/workspace: no artifact upload/download, no
+second checkout/bootstrap and no second SCons run. Site generation and Pages
+content remain consumer-owned.
+
 Local/manual use still invokes the released CLI directly:
 
 ```text
