@@ -1,0 +1,26 @@
+# template: tool.cad.ci/cad-ci
+# template-version: 1
+# tool-release: 0.23.0
+# tool-release-sha: bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+#
+# Copy this file to:
+#   .github/workflows/cad-ci.yml
+#
+# Normal read-only CAD-CI for repositories without permanent-lane policy.
+
+name: CAD CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  cad-ci:
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+    with:
+      source_sha: ${{ github.event.pull_request.head.sha }}
+      base_sha: ${{ github.event.pull_request.base.sha }}
