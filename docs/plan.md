@@ -23,7 +23,7 @@ the tool only pins and exposes the released library behavior.
 
 ### #137 — one config-driven durable-lane reusable workflow
 
-**Now, blocked on the released result of lib.py.cad.ci #94.**
+**Now. lib.py.cad.ci 0.13.0 is released at `8f0516a484e3eac11758b498ca181d5e39ed1efe`.**
 
 Add one public `reusable-durable.yml` for permanent source branches. One job
 and runner resolve the stored complete scope, run CAD-CI exactly once, publish
@@ -40,7 +40,7 @@ migrate CAD #288 and Forge #740.
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #137 Config-driven durable-lane workflow | **now / blocked on lib #94 release** | Implement against the released library contract, then release and externally qualify. |
+| #137 Config-driven durable-lane workflow | **now** | Implement against released lib 0.13.0, release tool, then qualify in test #141. |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
