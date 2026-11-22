@@ -419,3 +419,29 @@ the resulting stable merge commit.
 Lane-to-lane, temporary-to-lane, temporary-to-stable and other ordinary
 supported pull requests remain squash merges unless a separate future contract
 explicitly changes them.
+
+## Merge-command check isolation
+
+The reusable merge policy must evaluate PR validation independently from
+command workflows triggered by `issue_comment`.
+
+For the exact current PR head SHA:
+
+- fetch commit check-runs;
+- fetch GitHub Actions workflow runs for the same head with
+  `event=issue_comment`;
+- exclude only check-runs whose Actions run ID belongs to that command-run set;
+- group/evaluate the latest remaining validation check per check name;
+- require at least one remaining validation check;
+- accept only completed checks with conclusion `success`, `neutral` or
+  `skipped`;
+- continue rejecting pending, cancelled or failed non-command validation
+  checks;
+- keep commit status-context validation unchanged.
+
+The filter is event/identity based. It must not hard-code a consumer branch,
+repository, workflow title or check name.
+
+This rule applies to all merge classes, but is required for stable-to-lane
+synchronization because the stable PR head is also the commit on which the
+issue-comment command workflow executes.

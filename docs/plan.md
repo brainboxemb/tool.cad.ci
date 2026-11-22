@@ -7,65 +7,67 @@ The repository is the thin CLI/GitHub Actions surface above
 
 ## Current released and accepted state
 
-`tool.cad.ci 0.19.0` is released at exact commit
-`5677c41a61929b32ab2cb07087a6505f7b9347d8`.
+`tool.cad.ci 0.20.0` is released at exact commit
+`d45cdcef33cf1035311bab9a88c3f99208ef3b29`.
 
 It pins released `lib.py.cad.ci 0.11.0` at exact commit
 `e621daf6e309bdd0e3f643a12007f1b66490696d`.
 
-External acceptance for 0.19.0 is complete:
+External acceptance for 0.20.0 is complete:
 
-- `tool.cad.ci.test` #80 / PR #81;
-- acceptance run `45022699789` — success;
-- Forge #674 subsequently qualified and adopted the exact released merge-policy
-  workflow for short-lived squash merges and direct lane-to-main promotions.
+- `tool.cad.ci.test` #82 / PR #83;
+- acceptance run `45031453651` — success;
+- accepted test-repository main commit
+  `125e19b95c6cf4892f5d65aa6162cf71d4f89c57`.
 
-Current `main` includes the completed post-release plan reconciliation at
-`9da97ea60f38468481c614dd1a39f952d23365f9`.
+Forge adopted 0.20.0 and proved:
+
+- short-lived merge behavior remains functional;
+- exact `main -> dev-cad` PR #721 can be made clean;
+- full PR validation run `45032993674` is green.
 
 ## Current work
 
-Issue #106 — **now**: extend the released shared merge policy with a
-history-preserving stable-to-lane synchronization path.
+Issue #108 — **now**: remove the stable-to-lane merge-policy self-check
+deadlock exposed by Forge #721.
 
-Consumer evidence is Forge #714/#717: exact `dev-cad -> main` promotion is
-conflicted because stable `main` contains accepted commits that are not
-ancestors of the lane. Released 0.19.0 currently squashes the required inverse
-`main -> dev-cad` synchronization, which cannot establish that ancestry.
+When the stable branch itself is the PR head, the `issue_comment`
+merge-policy workflow runs on that same commit. Released 0.20.0 currently
+includes its own in-progress `merge / merge` check in the PR green gate and
+refuses itself.
 
 Required order:
 
-1. freeze stable-to-lane semantics in requirements/design;
-2. classify exact configured `stable -> lane` separately from
-   `lane -> stable` promotion;
-3. use a normal merge commit for both permanent-lane directions while keeping
-   their lifecycle behavior distinct;
-4. preserve all ordinary short-lived PRs as squash merges;
-5. require same-repository source for permanent stable/lane operations;
-6. test merge method, cleanup protection and integration dispatch;
-7. release the completed tool change as the next tool version;
-8. black-box accept that exact release in `tool.cad.ci.test`;
-9. only then let Forge adopt it and synchronize `main -> dev-cad`.
+1. keep the existing check/status gate and permanent merge classification;
+2. query Actions runs for the exact PR head whose event is
+   `issue_comment`;
+3. exclude check-runs that belong to those command-run IDs before selecting the
+   latest validation check per name;
+4. require at least one remaining PR validation check;
+5. keep failed/pending normal validation checks blocking;
+6. release the fix as patch version 0.20.1 with the exact 0.11.0 library pin;
+7. externally accept exact 0.20.1 in `tool.cad.ci.test`;
+8. let Forge adopt that exact release and retry #721.
 
-No `lib.py.cad.ci` change is expected: this remains GitHub merge/lifecycle
-workflow orchestration.
+No `lib.py.cad.ci` change is expected.
 
 ## Open issue assessment — 2026-11-22
 
 | Issue | Status | Current interpretation |
 | --- | --- | --- |
-| #106 stable-to-lane synchronization | **now** | Generic tool-owned merge/lifecycle gap exposed by Forge #717; release and externally accept before consumer adoption. |
+| #108 ignore merge-command checks in stable-to-lane green gate | **now** | Patch the shared workflow, release 0.20.1, externally accept, then let Forge retry its real sync. |
 
 ## Next release checkpoint
 
-The next tool release must include #106 and retain the exact
-`lib.py.cad.ci 0.11.0` pin unless an independent library requirement appears.
+Publish **0.20.1** only after #108 tests are green.
 
-Do not let Forge consume moving tool `main`; consumer adoption waits for the
-immutable tool release and `tool.cad.ci.test` acceptance.
+The release must retain exact `lib.py.cad.ci 0.11.0`. After publication,
+`tool.cad.ci.test` must repin the exact immutable tool release and rerun the
+complete black-box suite before any Forge consumer pin changes.
 
 ## Recently completed
 
-- #103 reusable dev-lane merge policy workflow — released as tool.cad.ci 0.19.0,
-  external acceptance run `45022699789` green, and adopted/qualified by Forge
-  #674.
+- #106 stable-to-lane synchronization — released in tool.cad.ci 0.20.0 and
+  externally accepted in run `45031453651`.
+- #103 reusable dev-lane merge policy workflow — released as tool.cad.ci 0.19.0
+  and accepted in run `45022699789`.

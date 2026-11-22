@@ -544,3 +544,42 @@ the normal PR merge already writes the lane base and preserves both histories.
 The existing `integrate_base` rule remains appropriate for synchronization
 because the base is a configured durable lane. Promotion additionally dispatches
 the retained lane exactly as in 0.19.0.
+
+## Command-workflow isolation in the PR green gate
+
+Issue #108 keeps the existing merge-policy order but separates validation
+checks from merge/release command runs.
+
+The reusable workflow obtains two API snapshots for the immutable PR head:
+
+```text
+GET /repos/{repo}/commits/{head}/check-runs
+GET /repos/{repo}/actions/runs?head_sha={head}&event=issue_comment
+```
+
+The second response supplies the Actions run IDs that represent command
+workflows on that head. Before the existing latest-check grouping, the policy
+drops a check-run only when its `details_url` identifies one of those run IDs.
+
+Conceptually:
+
+```text
+all check-runs at PR head
+  - check-runs owned by issue_comment Actions runs at the same head
+  = validation check-runs
+
+validation check-runs
+  -> latest by check name
+  -> non-empty
+  -> all completed + success/neutral/skipped
+```
+
+This removes both the current in-progress merge-policy check and any previous
+failed issue-comment command checks from the validation set. It does not ignore
+ordinary `pull_request`, `push` or other validation checks merely because
+they are GitHub Actions checks.
+
+Commit status contexts are evaluated exactly as before.
+
+The filter remains in the reusable workflow because the command-run identity is
+GitHub orchestration state, not CAD-CI planning behavior.
