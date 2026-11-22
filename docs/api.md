@@ -28,6 +28,26 @@ A consumer pins an immutable release commit rather than a moving branch. Inputs 
 
 **Usage evidence:** Forge's `merge-policy.yml` calls the released merge-policy workflow at `eb64a46...`. Forge and CAD invoke a released root action. `tool.cad.ci.test` calls the released `reusable-ci.yml` and root action. Not seeing a call in the reviewed consumers is not proof that an interface is unused everywhere.
 
+## Versioned consumer wrappers
+
+The executable public API is defined by the workflows/action below. New
+repositories do not invent their own generic wrapper around those surfaces:
+they copy a versioned canonical wrapper from
+[`templates/github/workflows/`](../templates/github/workflows/README.md).
+
+Template provenance is recorded twice:
+
+- header: `# template: ...` and `# template-version: N`;
+- manifest: [`templates/manifest.json`](../templates/manifest.json).
+
+The integer template version changes when the copied consumer structure or
+required repository-owned configuration changes. It is separate from the
+semantic `tool.cad.ci` release version. Every copied template still pins one
+immutable released tool commit.
+
+Templates are not an additional execution API. They may only select and
+configure the supported surfaces documented below.
+
 ## GitHub Actions API (observed, not yet approved as a stable specification)
 
 ### `reusable-plan.yml`
