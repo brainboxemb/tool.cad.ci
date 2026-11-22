@@ -39,7 +39,6 @@ Consumer migration remains owned by the consumers:
 | --- | --- | --- |
 | #124 Define conflict-resolution contract for permanent-lane merge policy | **now** | Release v0.28.0 and live-qualify reviewed conflict recovery on `tool.cad.ci.test` PR #200. |
 | #138 Reusable conservative stale-branch cleanup | **complete** | Released in v0.26.0 and live-qualified in `tool.cad.ci.test` #180; keep the automatic policy conservative. |
-| #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
 
 ## Boundary
