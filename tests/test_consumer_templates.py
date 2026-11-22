@@ -58,6 +58,9 @@ class ConsumerTemplateTests(unittest.TestCase):
             "github/workflows/cad-ci.yml":
                 "brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@"
                 + RELEASE_MARKER,
+            "github/workflows/cad-ci-lanes.yml":
+                "brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@"
+                + RELEASE_MARKER,
             "github/workflows/cad-ci-pr.yml":
                 "brainboxemb/tool.cad.ci/.github/workflows/reusable-pr.yml@"
                 + RELEASE_MARKER,
@@ -130,11 +133,38 @@ class ConsumerTemplateTests(unittest.TestCase):
         self.assertIn("durable_scope", action_steps[0]["with"])
         self.assertIn("source_ref", action_steps[0]["with"])
 
-    def test_merge_template_only_supplies_repository_policy(self):
+    def test_lane_template_delegates_policy_without_local_classifier(self):
+        wf = load_yaml(WORKFLOW_ROOT / "cad-ci-lanes.yml")
+        job = wf["jobs"]["cad-ci"]
+        self.assertNotIn("runs-on", job)
+        self.assertIn("reusable-ci.yml@" + RELEASE_MARKER, job["uses"])
+        self.assertEqual(
+            job["with"]["pr_policy_json"],
+            '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+            '"docs_only_prefixes":["docs/"]}',
+        )
+        text = (WORKFLOW_ROOT / "cad-ci-lanes.yml").read_text(encoding="utf-8")
+        for forbidden in ("gh api", "git diff", "docs_only=true", "full_run:"):
+            self.assertNotIn(forbidden, text)
+
+    def test_merge_template_supplies_required_permission_ceiling_and_policy(self):
         wf = load_yaml(WORKFLOW_ROOT / "merge-policy.yml")
+        entry = self.templates["github/workflows/merge-policy.yml"]
+        self.assertEqual(entry["version"], 2)
         job = wf["jobs"]["merge"]
         self.assertNotIn("runs-on", job)
         self.assertIn("reusable-merge-policy.yml@" + RELEASE_MARKER, job["uses"])
+        self.assertEqual(
+            job["permissions"],
+            {
+                "actions": "write",
+                "contents": "write",
+                "pull-requests": "write",
+                "issues": "write",
+                "checks": "read",
+                "statuses": "read",
+            },
+        )
         self.assertEqual(job["with"]["stable_ref"], "main")
         self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
         self.assertNotIn("integration_workflow", job["with"])
