@@ -99,18 +99,20 @@ End-to-end released-stack acceptance belongs in `tool.cad.ci.test`.
 
 ## Consumer templates
 
-`templates/github/workflows/` is the canonical source for consumer workflow
-wrappers. Each template must have a stable `template` id and integer
-`template-version` matching `templates/manifest.json`.
+`docs/manual/` is the canonical repository-handoff/manual location. Copy-ready
+workflow files live directly there. Each template must have a stable `template`
+id, integer `template-version`, `tool-release` and exact `tool-release-sha` in
+its header.
 
-A consumer repository must start from these templates rather than inventing
-generic CAD-CI orchestration. Templates may contain caller triggers,
+A consumer repository must start from these manual templates rather than
+inventing generic CAD-CI orchestration. Templates may contain caller triggers,
 permissions and repository-owned policy values, but never generic
 checkout/bootstrap, changed-path classification, CAD-CI execution, durable
 state/publication or merge API implementation.
 
 When the copied workflow structure changes, increment that template's integer
-version and update tests/onboarding in the same change.
+version and update tests/manual in the same change. Keep the manual files
+copy-ready: no release-SHA placeholder.
 
 ## GitHub Actions
 
