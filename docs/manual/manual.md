@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.25.0**
+- tool release: **v0.26.0**
 
 Each YAML template contains:
 
@@ -23,7 +23,8 @@ placeholder to replace.
 
 | File | Template version | Use |
 | --- | ---: | --- |
-| `merge-policy.yml` | 2 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |\n| `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
+| `merge-policy.yml` | 2 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
+| `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
 | `cad-ci-lanes.yml` | 1 | PR validation for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
@@ -54,7 +55,9 @@ dispatch its integration workflow.
 
 Do not copy merge implementation, GitHub API calls, check/status evaluation,
 branch cleanup or merge-method logic into the consumer. Those stay in the
-released reusable workflow.
+released reusable workflows.
+
+For maintenance cleanup, copy `branch-cleanup.yml` beside the merge wrapper. The command only deletes allow-listed temporary refs with positive integration or exact merged-PR-head SHA evidence; open PR heads, moved refs, unique history and `backup/*` refs are retained and reported.
 
 ## New CAD-CI repository
 
