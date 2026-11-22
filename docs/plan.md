@@ -2,69 +2,42 @@
 
 Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
 
-This repository owns the released CLI and GitHub Actions adapters above
-`lib.py.cad.ci`. Generic planning/execution, durable build-store state, Pages
-and generated-branch publication semantics are library-owned.
+## Released baseline
 
-## Released and accepted baseline
-
-- `tool.cad.ci 0.21.0` @
-  `b1474f6be66dc0236f2a5c2555af07a100447255`.
-- Exact `lib.py.cad.ci 0.11.1` @
-  `fa6bf244381dde609a0b04de673d774911c52fea`.
-- Main CI/release run `45045119748` succeeded.
-- External released-stack acceptance run `45045346481` succeeded.
-- Permanent `tool.cad.ci.test` baseline is main @
-  `8218effedfc25c70b76d4237c15d1ff7aa47b709`.
-
-The standalone API audit (#110) is complete. Merge-policy findings #112/#113
-are closed. The unnecessary #114–#116 side tracks are closed.
-
-## Public surfaces
-
-- stable public: CLI, root `action.yml`, `reusable-ci.yml`,
-  `reusable-pr.yml`;
-- advanced public: `reusable-plan.yml`;
-- internal implementation: `reusable-run.yml`;
-- optional separate repository-governance API:
-  `reusable-merge-policy.yml`;
-- repository-local only: `ci.yml` and helper scripts unless explicitly
-  documented otherwise.
-
-`reusable-pr.yml` remains one job / one runner, including optional publication
-and cleanup. Do not add a second publication runner or artifact handoff.
+- `tool.cad.ci 0.22.0` @
+  `76b5ba24084a09a69e6f25b34c16e869f7240a58`;
+- `lib.py.cad.ci 0.11.1` @
+  `fa6bf244381dde609a0b04de673d774911c52fea`;
+- external 0.22.0 template acceptance completed in `tool.cad.ci.test`.
 
 ## Current work
 
-### #119 — versioned consumer setup templates
+### #121 — complete canonical permanent-lane consumers
 
-Make `tool.cad.ci` the single place where an engineer can configure a new
-consumer repository without inventing a workflow.
+Consumer migration exposed two owner gaps:
+
+1. Forge/CAD still carry local docs-only/promotion PR classifiers.
+2. merge-policy template v1 lacks the calling-job permission ceiling.
 
 Execution order:
 
-1. ship versioned canonical templates for run-only, complete PR, same-runner
-   action and merge-policy consumers;
-2. ship a machine-readable template manifest and onboarding guide;
-3. test metadata, supported public surfaces and the absence of copied generic
-   implementation logic;
-4. release candidate is `0.22.0`; release only after repository CI is green;
-5. externally accept the released template/tool stack;
-6. then migrate Forge/CAD consumer wrappers to the canonical released
-   templates.
-
-Do not repin consumers to moving main; use an exact released SHA.
+1. add optional lane PR policy to the existing `reusable-ci -> reusable-run`
+   one-runner path;
+2. add canonical `cad-ci-lanes` template version 1;
+3. correct merge-policy wrapper and increment that template to version 2;
+4. prove helper classification and no extra runner/bootstrap on docs-only skip;
+5. release candidate `0.23.0` after repository CI;
+6. externally accept the exact release in `tool.cad.ci.test`;
+7. migrate Forge/CAD dev-ci wrappers and remove their local classifiers.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #119 Provide versioned consumer setup templates and new-repository onboarding | **now** | Implement/test/release canonical consumer wrappers before further Forge/CAD cleanup. |
-| #117 Align historical changelog with shared meta template and guidance | **later / docs-only** | Apply shared changelog presentation without changing release history or product behavior. |
+| #121 Complete canonical lane consumer templates | **now** | Implement/test/release 0.23.0 then migrate consumers. |
+| #117 Align historical changelog with shared meta template and guidance | **later / docs-only** | No behavior impact. |
 
-## Recently completed
+## Boundary
 
-- #110 standalone product/API audit — tool 0.21.0;
-- #112 post-merge lifecycle/outcome — observable/manual recovery contract in 0.21.0;
-- #113 merge readiness/check evaluation — fixed in 0.21.0;
-- lib.py.cad.ci #87 durable complete-scope ownership correction — library 0.11.1.
+No second classifier job or runner. No consumer GitHub PR pagination/path loop.
+`reusable-pr.yml` remains one job/one runner and is unchanged by #121.

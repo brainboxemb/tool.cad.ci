@@ -644,3 +644,38 @@ The one-runner design is intentional. Same-repository PR publication uses the
 same runner by contract; fork PRs do not publish. Consumers needing a strict
 read-only path use `reusable-ci.yml`. This trust assumption is documented so
 future fixes do not reintroduce extra runners or artifact handoff.
+
+## Same-runner lane PR preflight
+
+The optional lane policy is implemented inside the existing internal
+`reusable-run.yml` job:
+
+```text
+checkout exact caller source
+  -> fetch exact base when incremental
+  -> remove caller Git credential
+  -> checkout exact called tool revision
+  -> tool-owned pr-policy helper
+       -> promotion: effective full_run=true
+       -> docs-only lane diff: run_cad=false
+       -> otherwise: run_cad=true
+  -> if run_cad:
+       setup Python + pinned library + GHCR
+       -> exactly one cad-ci run
+```
+
+The tool-owned helper validates policy JSON and obtains changed paths from
+rename-disabled exact Git diff. The workflow does not contain changed-path
+rules. A docs-only skip avoids expensive bootstrap but still uses the same one
+runner; no second classification job is introduced.
+
+The canonical `cad-ci-lanes.yml` wrapper supplies the common
+main/dev-cad/dev-ci policy. Consumers may change documented policy values but
+must not duplicate the classifier.
+
+## Merge template caller permissions
+
+Reusable workflow permissions are bounded by the caller. Therefore canonical
+merge template version 2 explicitly grants the same privileged job ceiling
+required by `reusable-merge-policy.yml`; the called workflow still owns all
+merge implementation and owner-command validation.

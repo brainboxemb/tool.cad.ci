@@ -1,5 +1,6 @@
 # Internal single-run implementation used by reusable-ci.yml.
-# Not a supported direct consumer API. Optional artifact handoff stays behind reusable-ci. Contract: docs/api.md.
+# Not a supported direct consumer API. Optional PR lane policy can skip
+# expensive CAD-CI bootstrap on a docs-only development-lane PR.
 
 name: Reusable CAD CI run
 
@@ -21,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      pr_policy_json:
+        description: Optional stable/lane/docs-only pull-request policy JSON.
+        required: false
+        type: string
+        default: ""
       jobs:
         description: Maximum parallel SCons jobs; must be a positive integer.
         required: false
@@ -69,46 +75,9 @@ jobs:
           ref: ${{ env.CAD_CI_SOURCE_SHA }}
           fetch-depth: 1
           fetch-tags: false
-          # Only needed for exact-base fetch on private caller repositories.
-          # Removed before any consumer-provided command or configuration is run.
+          # Private-repository base fetch may need this read-scoped credential.
+          # It is removed immediately after the exact base is materialized.
           persist-credentials: true
-
-      - name: Checkout called tool revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          repository: ${{ job.workflow_repository }}
-          ref: ${{ job.workflow_sha }}
-          path: .cache/cad-ci-tool-source
-          fetch-depth: 1
-          fetch-tags: false
-          persist-credentials: false
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: "3.12"
-
-      - name: Resolve exact pinned CAD CI library revision
-        id: library
-        run: |
-          python "$TOOL_ROOT/scripts/reusable_ci.py" library-revision \
-            --tool-root "$TOOL_ROOT" \
-            --github-output "$GITHUB_OUTPUT"
-
-      - name: Checkout pinned CAD CI library source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          repository: brainboxemb/lib.py.cad.ci
-          ref: ${{ steps.library.outputs.revision }}
-          path: .cache/cad-ci-lib-source
-          fetch-depth: 1
-          fetch-tags: false
-          persist-credentials: false
-
-      - name: Install external CAD CI dependencies
-        run: >-
-          python -m pip install --disable-pip-version-check
-          --no-deps --no-compile
-          "PyYAML>=6.0" "SCons==4.11.1"
 
       - name: Fetch exact base revision for incremental selection
         if: "!inputs.full_run"
@@ -123,30 +92,121 @@ jobs:
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
           fi
 
-      - name: Drop caller Git credentials before consumer execution
+      - name: Drop caller Git credentials after exact base fetch
         shell: bash
         run: |
           git config --local --unset-all http.https://github.com/.extraheader || :
 
+      - name: Checkout called tool revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .cache/cad-ci-tool-source
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Classify configured development-lane pull request
+        id: pr_policy
+        if: inputs.pr_policy_json != ''
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python3 "$TOOL_ROOT/scripts/reusable_ci.py" pr-policy \
+            --repo . \
+            --policy-json '${{ inputs.pr_policy_json }}' \
+            --event-name "$EVENT_NAME" \
+            --base-ref "$BASE_REF" \
+            --head-ref "$HEAD_REF" \
+            --base-sha "$CAD_CI_BASE_SHA" \
+            --source-sha "$CAD_CI_SOURCE_SHA" \
+            --full-run "${{ inputs.full_run }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Resolve effective CAD CI selection
+        id: selection
+        shell: bash
+        env:
+          INPUT_FULL_RUN: ${{ inputs.full_run }}
+          POLICY_RUN_CAD: ${{ steps.pr_policy.outputs.run_cad }}
+          POLICY_FULL_RUN: ${{ steps.pr_policy.outputs.full_run }}
+          POLICY_CLASSIFICATION: ${{ steps.pr_policy.outputs.classification }}
+        run: |
+          if [ "$POLICY_RUN_CAD" = "false" ]; then
+            echo "run_cad=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_cad=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$INPUT_FULL_RUN" = "true" ] || [ "$POLICY_FULL_RUN" = "true" ]; then
+            echo "full_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "full_run=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "classification=${POLICY_CLASSIFICATION:-default}" >> "$GITHUB_OUTPUT"
+
+      - name: Report docs-only lane validation
+        if: steps.selection.outputs.run_cad == 'false'
+        shell: bash
+        run: >-
+          echo "CAD-CI bootstrap skipped:
+          ${{ steps.selection.outputs.classification }}"
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        if: steps.selection.outputs.run_cad == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Resolve exact pinned CAD CI library revision
+        id: library
+        if: steps.selection.outputs.run_cad == 'true'
+        run: |
+          python "$TOOL_ROOT/scripts/reusable_ci.py" library-revision \
+            --tool-root "$TOOL_ROOT" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned CAD CI library source
+        if: steps.selection.outputs.run_cad == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: brainboxemb/lib.py.cad.ci
+          ref: ${{ steps.library.outputs.revision }}
+          path: .cache/cad-ci-lib-source
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Install external CAD CI dependencies
+        if: steps.selection.outputs.run_cad == 'true'
+        run: >-
+          python -m pip install --disable-pip-version-check
+          --no-deps --no-compile
+          "PyYAML>=6.0" "SCons==4.11.1"
+
       - name: Authenticate Docker to GHCR
+        if: steps.selection.outputs.run_cad == 'true'
         env:
           GHCR_TOKEN: ${{ github.token }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Run selected CAD CI graph
+        if: steps.selection.outputs.run_cad == 'true'
         env:
           CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.environment_json }}
         run: |
-          python .cache/cad-ci-tool-source/scripts/reusable_ci.py run \
+          python "$TOOL_ROOT/scripts/reusable_ci.py" run \
             --repo . \
             --source-sha "$CAD_CI_SOURCE_SHA" \
             --base-sha "$CAD_CI_BASE_SHA" \
-            --full-run "${{ inputs.full_run }}" \
+            --full-run "${{ steps.selection.outputs.full_run }}" \
             --jobs "${{ inputs.jobs }}"
 
       - name: Check materialized build output
         id: build_output
-        if: inputs.upload_build
+        if: steps.selection.outputs.run_cad == 'true' && inputs.upload_build
         shell: bash
         run: |
           if [ -d build ] && find build -mindepth 1 -print -quit | grep -q .; then
@@ -157,11 +217,11 @@ jobs:
 
       - name: Record build artifact name
         id: build_artifact
-        if: inputs.upload_build && steps.build_output.outputs.available == 'true'
+        if: steps.selection.outputs.run_cad == 'true' && inputs.upload_build && steps.build_output.outputs.available == 'true'
         run: echo "name=${{ inputs.build_artifact_name }}" >> "$GITHUB_OUTPUT"
 
       - name: Upload CAD CI build output
-        if: inputs.upload_build && steps.build_output.outputs.available == 'true'
+        if: steps.selection.outputs.run_cad == 'true' && inputs.upload_build && steps.build_output.outputs.available == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.build_artifact_name }}

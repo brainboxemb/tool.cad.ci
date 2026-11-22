@@ -132,7 +132,9 @@ Keep workflow YAML thin. It may own permissions, checkout, runner setup,
 credentials and GitHub-required artifact transport.
 
 Do not put changed-path rules, item loops, consumer commands, rebuild decisions
-or execution timeout policy in workflow YAML. Consumer-specific runtime/image
+or execution timeout policy in consumer workflow YAML. Generic lane PR
+classification belongs in the released reusable-ci preflight/helper, not in a
+consumer. Consumer-specific runtime/image
 or publication work stays in the consumer until it has its own generic contract.
 
 ## PR lifecycle architectural invariant

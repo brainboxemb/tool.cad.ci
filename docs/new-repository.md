@@ -53,6 +53,7 @@ Canonical templates live in
 Choose the smallest public surface that matches the repository:
 
 - **normal run-only CI** → `cad-ci.yml`;
+- **stable `main` + permanent `dev-cad`/`dev-ci` lane PR validation** → `cad-ci-lanes.yml`;
 - **complete pull-request lifecycle** → `cad-ci-pr.yml`;
 - **same-runner repository-owned post-processing** → `cad-ci-same-runner.yml`;
 - **owner-issued merge governance** → additionally copy `merge-policy.yml`.
@@ -81,7 +82,7 @@ The consumer may own:
 
 - event triggers;
 - the minimum caller permissions;
-- lane names and integration workflow name for merge governance;
+- intentional lane/docs-prefix policy values and integration workflow name for merge governance;
 - repository/domain commands that run before or after the generic CAD-CI call;
 - repository secrets and domain runtime configuration.
 
@@ -125,3 +126,11 @@ Before promoting a consumer change:
 
 The exact released tool/library stack is black-box accepted in
 `tool.cad.ci.test` before real consumers repin to it.
+
+
+### Lane template rule
+
+When `cad-ci-lanes.yml` is used, do not add a local PR file query or
+docs-only/full-promotion classifier. Those mechanics are part of the released
+`reusable-ci.yml` API. Change only the JSON policy values when the repository
+intentionally uses different stable/lane names or docs prefixes.

@@ -164,3 +164,14 @@ documented repository-owned values, but it must not silently grow generic
 checkout/bootstrap, changed-path, CAD-CI execution, durable-state or merge API
 logic. When the canonical template version changes, consumers can compare their
 header against the released template before adopting it.
+
+
+## Permanent development lanes
+
+A repository using stable `main` plus long-lived `dev-cad` / `dev-ci`
+starts from `cad-ci-lanes.yml`, not a local classifier.
+
+The template configures the released `reusable-ci.yml` lane policy. The
+consumer does not paginate pull-request files, loop over docs paths or compute
+promotion `full_run` expressions. Repository-owned changes are limited to
+intentional lane names/docs prefixes and ordinary workflow/job dependencies.

@@ -29,6 +29,9 @@ and follow [the new-repository guide](docs/new-repository.md).
 Each copied template keeps a `template` id and integer `template-version`.
 The consumer replaces only `TOOL_CAD_CI_RELEASE_SHA` with one immutable
 released tool commit and changes documented repository-owned policy values.
+Repositories with permanent `main`/`dev-cad`/`dev-ci` lanes use the canonical
+`cad-ci-lanes.yml` wrapper; docs-only classification and promotion full-run
+selection stay inside the released reusable CI stack, not consumer YAML.
 
 ## Consumer layout
 

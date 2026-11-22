@@ -9,9 +9,10 @@ header. The same values are recorded in [the template manifest](../../manifest.j
 | Template | Use when |
 | --- | --- |
 | `cad-ci.yml` | The workflow only needs a normal read-only CAD-CI run. |
+| `cad-ci-lanes.yml` | PR validation uses stable `main` plus permanent `dev-cad` / `dev-ci` lanes with docs-only skip and full promotion validation. |
 | `cad-ci-pr.yml` | The repository wants the complete one-runner PR lifecycle, including optional PR build publication/cleanup. |
 | `cad-ci-same-runner.yml` | Repository-owned steps must run after CAD-CI in the same job/workspace. |
-| `merge-policy.yml` | The repository uses the shared owner-issued `/merge` governance policy. |
+| `merge-policy.yml` | The repository uses the shared owner-issued `/merge` governance policy. Current template version 2 includes the required caller permission ceiling. |
 
 Copy the chosen file into the consumer repository under
 `.github/workflows/`, replace `TOOL_CAD_CI_RELEASE_SHA` with one exact

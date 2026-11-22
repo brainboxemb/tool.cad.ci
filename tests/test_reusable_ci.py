@@ -250,6 +250,117 @@ class ReusableCiHelperTests(unittest.TestCase):
             self.assertIn('[{"id":"case-a"}]', text)
 
 
+    def test_pr_policy_validates_lane_configuration(self):
+        policy = self.helper.parse_pr_policy(
+            '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+            '"docs_only_prefixes":["docs/"]}'
+        )
+        self.assertEqual(policy["stable_ref"], "main")
+        self.assertEqual(policy["lane_refs"], ("dev-cad", "dev-ci"))
+        self.assertEqual(policy["docs_only_prefixes"], ("docs/",))
+
+        for value in (
+            '{"stable_ref":"main","lane_refs":[]}',
+            '{"stable_ref":"main","lane_refs":["main"]}',
+            '{"stable_ref":"main","lane_refs":["dev-ci","dev-ci"]}',
+            '{"stable_ref":"main","lane_refs":["../dev-ci"]}',
+            '{"stable_ref":"main","lane_refs":["dev-ci"],"unknown":true}',
+        ):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                self.helper.parse_pr_policy(value)
+
+    def test_pr_policy_promotes_exact_lane_to_full_run(self):
+        with patch.object(self.helper, "git_changed_paths") as changed:
+            result = self.helper.resolve_pr_policy(
+                repo=Path("."),
+                policy_json=(
+                    '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+                    '"docs_only_prefixes":["docs/"]}'
+                ),
+                event_name="pull_request",
+                base_ref="main",
+                head_ref="dev-ci",
+                base_sha="a" * 40,
+                source_sha="b" * 40,
+                explicit_full_run=False,
+            )
+        self.assertEqual(
+            result,
+            {
+                "run_cad": True,
+                "full_run": True,
+                "classification": "lane-promotion",
+            },
+        )
+        changed.assert_not_called()
+
+    def test_pr_policy_skips_only_nonempty_docs_only_lane_diff(self):
+        policy = (
+            '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+            '"docs_only_prefixes":["docs/"]}'
+        )
+        with patch.object(
+            self.helper,
+            "git_changed_paths",
+            return_value=("docs/plan.md", "docs/design.md"),
+        ):
+            docs = self.helper.resolve_pr_policy(
+                repo=Path("."),
+                policy_json=policy,
+                event_name="pull_request",
+                base_ref="dev-ci",
+                head_ref="issue/docs",
+                base_sha="a" * 40,
+                source_sha="b" * 40,
+                explicit_full_run=False,
+            )
+        self.assertEqual(docs["run_cad"], False)
+        self.assertEqual(docs["classification"], "docs-only")
+
+        for changed_paths in (
+            (),
+            ("docs/plan.md", "cad-ci.yml"),
+        ):
+            with patch.object(
+                self.helper,
+                "git_changed_paths",
+                return_value=changed_paths,
+            ):
+                result = self.helper.resolve_pr_policy(
+                    repo=Path("."),
+                    policy_json=policy,
+                    event_name="pull_request",
+                    base_ref="dev-ci",
+                    head_ref="issue/mixed",
+                    base_sha="a" * 40,
+                    source_sha="b" * 40,
+                    explicit_full_run=False,
+                )
+            self.assertTrue(result["run_cad"])
+            self.assertFalse(result["full_run"])
+            self.assertEqual(result["classification"], "lane-incremental")
+
+    def test_pr_policy_explicit_full_run_wins_without_diff(self):
+        with patch.object(self.helper, "git_changed_paths") as changed:
+            result = self.helper.resolve_pr_policy(
+                repo=Path("."),
+                policy_json=(
+                    '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+                    '"docs_only_prefixes":["docs/"]}'
+                ),
+                event_name="pull_request",
+                base_ref="dev-ci",
+                head_ref="issue/docs",
+                base_sha="a" * 40,
+                source_sha="b" * 40,
+                explicit_full_run=True,
+            )
+        self.assertTrue(result["run_cad"])
+        self.assertTrue(result["full_run"])
+        self.assertEqual(result["classification"], "explicit-full")
+        changed.assert_not_called()
+
+
 class SameRunnerActionTests(unittest.TestCase):
     def read(self) -> str:
         return (ROOT / "action.yml").read_text(encoding="utf-8")
@@ -388,7 +499,7 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("workflow_call:", text)
         self.assertIn("repository: ${{ job.workflow_repository }}", text)
         self.assertIn("ref: ${{ job.workflow_sha }}", text)
-        self.assertEqual(text.count("scripts/reusable_ci.py run"), 1)
+        self.assertEqual(text.count('scripts/reusable_ci.py" run'), 1)
         self.assertNotIn("actions/cache/restore", text)
         self.assertNotIn("actions/cache/save", text)
         self.assertNotIn("cache-primary-key", text)
@@ -451,13 +562,18 @@ class ReusableWorkflowTests(unittest.TestCase):
                 self.assertIn("--no-deps --no-compile", text)
                 self.assertIn("persist-credentials: true", text)
                 self.assertIn("persist-credentials: false", text)
-                self.assertIn("Drop caller Git credentials before consumer execution", text)
+                scrub = (
+                    "Drop caller Git credentials before consumer execution"
+                    if name == "reusable-plan.yml"
+                    else "Drop caller Git credentials after exact base fetch"
+                )
+                self.assertIn(scrub, text)
                 self.assertLess(
                     text.index("Fetch exact base revision for incremental selection"),
-                    text.index("Drop caller Git credentials before consumer execution"),
+                    text.index(scrub),
                 )
                 self.assertLess(
-                    text.index("Drop caller Git credentials before consumer execution"),
+                    text.index(scrub),
                     text.index(
                         "Record source revisions" if name == "reusable-plan.yml"
                         else "Authenticate Docker to GHCR"
@@ -500,10 +616,39 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("actions/checkout@", text)
         self.assertNotIn("actions/setup-python@", text)
         self.assertNotIn("scripts/reusable_ci.py", text)
+        self.assertIn("pr_policy_json:", text)
+        self.assertIn("pr_policy_json: ${{ inputs.pr_policy_json }}", text)
         self.assertIn("upload_build: ${{ inputs.upload_build }}", text)
         self.assertIn(
             "value: ${{ jobs.cad_ci.outputs.build_artifact_name }}",
             text,
+        )
+
+    def test_lane_policy_runs_on_same_runner_before_cad_bootstrap(self):
+        run = self.read("reusable-run.yml")
+        for value in (
+            "pr_policy_json:",
+            "Classify configured development-lane pull request",
+            'scripts/reusable_ci.py" pr-policy',
+            "Resolve effective CAD CI selection",
+            "Report docs-only lane validation",
+        ):
+            self.assertIn(value, run)
+        self.assertLess(
+            run.index("Fetch exact base revision for incremental selection"),
+            run.index("Classify configured development-lane pull request"),
+        )
+        self.assertLess(
+            run.index("Classify configured development-lane pull request"),
+            run.index("actions/setup-python@"),
+        )
+        self.assertIn(
+            "if: steps.selection.outputs.run_cad == 'true'",
+            run,
+        )
+        self.assertIn(
+            '--full-run "${{ steps.selection.outputs.full_run }}"',
+            run,
         )
 
     def test_run_workflow_can_upload_build_with_hidden_evidence(self):
@@ -515,7 +660,8 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("find build -mindepth 1 -print -quit", text)
         self.assertEqual(
             text.count(
-                "if: inputs.upload_build && "
+                "steps.selection.outputs.run_cad == 'true' && "
+                "inputs.upload_build && "
                 "steps.build_output.outputs.available == 'true'"
             ),
             2,

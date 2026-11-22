@@ -140,6 +140,187 @@ def consumer_environment(raw: str) -> dict[str, str]:
     return result
 
 
+def _policy_ref(value: object, name: str) -> str:
+    """Validate one configured branch/ref name used by PR policy."""
+
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string")
+    normalized = value.strip()
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or ".." in normalized.split("/")
+        or any(character.isspace() for character in normalized)
+    ):
+        raise ValueError(f"{name} must be a safe non-empty ref name")
+    return normalized
+
+
+def _policy_prefix(value: object) -> str:
+    """Validate one repository-relative docs-only path prefix."""
+
+    if not isinstance(value, str):
+        raise ValueError("docs_only_prefixes entries must be strings")
+    normalized = value.strip()
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or ".." in Path(normalized).parts
+    ):
+        raise ValueError("docs_only_prefixes entries must be safe relative paths")
+    return normalized
+
+
+def parse_pr_policy(raw: str) -> dict[str, object]:
+    """Validate optional long-lived-lane pull-request policy JSON."""
+
+    text = raw.strip()
+    if not text:
+        return {}
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError("PR policy must be valid JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError("PR policy must be a JSON object")
+
+    allowed = {"stable_ref", "lane_refs", "docs_only_prefixes"}
+    extra = set(value) - allowed
+    if extra:
+        raise ValueError(f"unsupported PR policy field(s): {sorted(extra)}")
+
+    stable_ref = _policy_ref(value.get("stable_ref", "main"), "stable_ref")
+    lane_value = value.get("lane_refs", [])
+    if not isinstance(lane_value, list):
+        raise ValueError("lane_refs must be a JSON list")
+    lane_refs = tuple(
+        _policy_ref(item, "lane_refs entry")
+        for item in lane_value
+    )
+    if not lane_refs:
+        raise ValueError("lane_refs must contain at least one ref")
+    if len(set(lane_refs)) != len(lane_refs):
+        raise ValueError("lane_refs must not contain duplicates")
+    if stable_ref in lane_refs:
+        raise ValueError("stable_ref must not also be a lane ref")
+
+    prefix_value = value.get("docs_only_prefixes", [])
+    if not isinstance(prefix_value, list):
+        raise ValueError("docs_only_prefixes must be a JSON list")
+    prefixes = tuple(_policy_prefix(item) for item in prefix_value)
+
+    return {
+        "stable_ref": stable_ref,
+        "lane_refs": lane_refs,
+        "docs_only_prefixes": prefixes,
+    }
+
+
+def git_changed_paths(
+    repo: Path,
+    *,
+    base_sha: str,
+    source_sha: str,
+) -> tuple[str, ...]:
+    """Return rename-disabled changed paths for one exact Git range."""
+
+    base_sha = exact_sha(base_sha, "base_sha")
+    source_sha = exact_sha(source_sha, "source_sha")
+    completed = subprocess.run(
+        [
+            "git",
+            "diff",
+            "--name-only",
+            "-z",
+            "--no-renames",
+            base_sha,
+            source_sha,
+        ],
+        cwd=repo,
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    return tuple(
+        item.decode("utf-8", errors="surrogateescape")
+        for item in completed.stdout.split(b"\0")
+        if item
+    )
+
+
+def resolve_pr_policy(
+    *,
+    repo: Path,
+    policy_json: str,
+    event_name: str,
+    base_ref: str,
+    head_ref: str,
+    base_sha: str,
+    source_sha: str,
+    explicit_full_run: bool,
+) -> dict[str, object]:
+    """Resolve whether one PR should run and whether it requires full CI."""
+
+    policy = parse_pr_policy(policy_json)
+    if not policy:
+        return {
+            "run_cad": True,
+            "full_run": explicit_full_run,
+            "classification": "default",
+        }
+    if event_name != "pull_request":
+        return {
+            "run_cad": True,
+            "full_run": explicit_full_run,
+            "classification": "non-pr",
+        }
+    if explicit_full_run:
+        return {
+            "run_cad": True,
+            "full_run": True,
+            "classification": "explicit-full",
+        }
+
+    stable_ref = policy["stable_ref"]
+    lane_refs = policy["lane_refs"]
+    prefixes = policy["docs_only_prefixes"]
+
+    if base_ref == stable_ref and head_ref in lane_refs:
+        return {
+            "run_cad": True,
+            "full_run": True,
+            "classification": "lane-promotion",
+        }
+
+    if base_ref in lane_refs and prefixes:
+        changed = git_changed_paths(
+            repo,
+            base_sha=base_sha,
+            source_sha=source_sha,
+        )
+        if changed and all(
+            any(path.startswith(prefix) for prefix in prefixes)
+            for path in changed
+        ):
+            return {
+                "run_cad": False,
+                "full_run": False,
+                "classification": "docs-only",
+            }
+        return {
+            "run_cad": True,
+            "full_run": False,
+            "classification": "lane-incremental",
+        }
+
+    return {
+        "run_cad": True,
+        "full_run": False,
+        "classification": (
+            "stable-target" if base_ref == stable_ref else "unmanaged-base"
+        ),
+    }
+
+
 def library_revision(tool_root: Path) -> str:
     """Return the exact lib.py.cad.ci commit pinned by this tool revision."""
 
@@ -253,6 +434,17 @@ def main() -> int:
     library.add_argument("--tool-root", type=Path, required=True)
     library.add_argument("--github-output", type=Path, required=True)
 
+    pr_policy = commands.add_parser("pr-policy")
+    pr_policy.add_argument("--repo", type=Path, required=True)
+    pr_policy.add_argument("--policy-json", required=True)
+    pr_policy.add_argument("--event-name", required=True)
+    pr_policy.add_argument("--base-ref", default="")
+    pr_policy.add_argument("--head-ref", default="")
+    pr_policy.add_argument("--base-sha", required=True)
+    pr_policy.add_argument("--source-sha", required=True)
+    pr_policy.add_argument("--full-run", default="false")
+    pr_policy.add_argument("--github-output", type=Path, required=True)
+
     plan = commands.add_parser("plan")
     plan.add_argument("--repo", type=Path, required=True)
     plan.add_argument("--source-sha", default="")
@@ -316,6 +508,24 @@ def main() -> int:
                 "revision",
                 library_revision(args.tool_root),
             )
+            return 0
+
+        if args.command == "pr-policy":
+            resolution = resolve_pr_policy(
+                repo=args.repo,
+                policy_json=args.policy_json,
+                event_name=args.event_name,
+                base_ref=args.base_ref,
+                head_ref=args.head_ref,
+                base_sha=args.base_sha,
+                source_sha=args.source_sha,
+                explicit_full_run=parse_bool(args.full_run),
+            )
+            for key in ("run_cad", "full_run", "classification"):
+                value = resolution[key]
+                if isinstance(value, bool):
+                    value = str(value).lower()
+                write_github_output(args.github_output, key, str(value))
             return 0
 
         if args.command == "durable-resolve":
