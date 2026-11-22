@@ -9,7 +9,6 @@ non-secret consumer environment passed to domain commands.
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -18,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+from typing import NamedTuple
 
 
 _ENV_NAME = re.compile(r"^[A-Z_][A-Z0-9_]*$")
@@ -26,8 +26,7 @@ _SCOPE = re.compile(r"^[A-Za-z0-9._-]+$")
 _RESERVED_ENV_PREFIXES = ("GITHUB_", "RUNNER_", "ACTIONS_")
 
 
-@dataclass(frozen=True)
-class DurableResolution:
+class DurableResolution(NamedTuple):
     """Resolved durable build-scope selection for one source revision."""
 
     scope: str
