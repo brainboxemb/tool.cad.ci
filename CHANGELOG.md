@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.1 - 2026-11-22
+
+- consume released `lib.py.cad.ci 0.10.0` at exact commit
+  `397fb04005b46de8d433cb18c091b1e73714b877`;
+- expose the library-owned dependency-output `copy:` step through the existing
+  CLI/workflow/action stack without adding tool-owned copy, SCons, bundle,
+  scheduling or cache logic;
+- keep the public CLI arguments, reusable workflow inputs, same-runner action
+  inputs and default jobs behavior unchanged.
+
 ## 0.17.0 - 2026-11-21
 
 - expose released library-owned bounded SCons parallelism through
