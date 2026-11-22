@@ -14,6 +14,43 @@ jobs:
 
 The reusable workflow owns generic checkout, Python/tool setup and one repository run. The consumer does not duplicate those steps.
 
+A long-lived branch that needs later domain-owned work on the **same runner**
+uses the root composite action in durable mode rather than splitting the flow
+across reusable-workflow jobs:
+
+```yaml
+jobs:
+  durable:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - id: cad
+        uses: brainboxemb/tool.cad.ci@<exact-release-commit>
+        with:
+          source_sha: ${{ github.sha }}
+          durable_scope: ${{ github.ref_name }}
+          source_ref: ${{ github.ref_name }}
+          jobs: "2"
+          github_token: ${{ github.token }}
+
+      - name: Build consumer site
+        run: >-
+          python site/build.py
+          --build-evidence "${{ steps.cad.outputs.prepared_scope }}"
+          --build-commit "${{ steps.cad.outputs.build_commit }}"
+
+      - name: Publish consumer Pages
+        run: python -m cad_ci_tool publish pages ...
+```
+
+The durable action keeps checkout, exact tool/library bootstrap, one SCons run,
+complete build-scope preparation and durable build publication in one runner
+workspace. It does not upload/download build artifacts and does not start a
+second CAD-CI job. Consumer site generation and Pages content remain outside the
+action.
+
 A consumer that needs domain preparation between planning and execution may
 instead use `reusable-plan.yml` and `reusable-run.yml` at that same exact
 tool commit. Forge's immutable runtime-image preparation is an example of such
