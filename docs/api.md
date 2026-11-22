@@ -6,7 +6,7 @@ Status: **audit draft**, 2026-11-22. This document distinguishes observed entry 
 
 `tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (currently released 0.11.1 for this candidate). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
 
-A consumer pins an immutable release commit rather than a moving branch. Inputs are not interchangeable across the three interface types: CLI arguments, workflow_call inputs and composite-action inputs.
+A consumer uses an exact released version tag rather than a moving branch. CLI arguments and workflow_call inputs are separate interface types and are not interchangeable.
 
 ## Surface inventory
 
@@ -29,7 +29,7 @@ A consumer pins an immutable release commit rather than a moving branch. Inputs 
 
 ## Versioned consumer wrappers
 
-The executable public API is defined by the workflows/action below. New
+The executable GitHub Actions API is defined by the reusable workflows below. New
 repositories do not invent their own generic wrapper around those surfaces:
 they copy a versioned canonical wrapper from
 [`docs/manual/templates/`](manual/README.md).
