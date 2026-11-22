@@ -25,7 +25,7 @@ consumer needs a temporary workaround.
 ## Library boundary
 
 `lib.py.cad.ci` owns:
-- configuration loading/validation;
+- configuration loading/validation, including builder resolution;
 - coarse affected-item selection;
 - explanatory dependency planning;
 - the SCons execution adapter;
@@ -147,9 +147,9 @@ tool.cad.ci version tag instead of copying checkout/Python/tool-install/plan/run
 steps. Lower-level plan/run workflows exist only for explicitly documented
 advanced use.
 
-Repository-specific build, verification, site or publication preparation belongs
-in root `cad-ci.yml` and item `ci.yml` configuration where the generic
-library contract can express it. Do not add a second GitHub Actions execution
+Repository-specific build, verification, site or publication implementation
+belongs in repository-owned builders referenced by root `cad-ci.yml` and
+declarative item `ci.yml` where the generic library contract can express it. Do not add a second GitHub Actions execution
 route merely to preserve a runner for consumer-owned post steps.
 
 The reusable workflow revision is also the tool revision. Checkout the workflow
