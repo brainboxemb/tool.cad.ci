@@ -18,6 +18,8 @@ CALLABLE = (
     "reusable-plan.yml",
     "reusable-run.yml",
     "reusable-merge-policy.yml",
+    "reusable-branch-cleanup.yml",
+    "reusable-branch-retirement.yml",
 )
 
 
@@ -94,6 +96,26 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertEqual(checkout["with"]["persist-credentials"], "false")
         cmd = next(step for step in job["steps"] if "run" in step)
         self.assertIn("scripts/branch_cleanup.py", cmd["run"])
+        self.assertNotIn("gh api", cmd["run"])
+
+    def test_branch_retirement_api_is_declared_once_and_implementation_is_not_inline_yaml(self):
+        wf = load_yaml(WORKFLOWS / "reusable-branch-retirement.yml")
+        contract = wf["on"]["workflow_call"]
+        self.assertEqual(
+            set(contract["inputs"]),
+            {"command", "issue_number", "stable_ref", "lane_refs_json",
+             "permanent_refs_json"},
+        )
+        self.assertEqual(set(wf["jobs"]), {"retire"})
+        job = wf["jobs"]["retire"]
+        self.assertEqual(job["permissions"]["contents"], "write")
+        self.assertEqual(job["permissions"]["pull-requests"], "read")
+        self.assertEqual(job["permissions"]["issues"], "write")
+        checkout = next(step for step in job["steps"] if "uses" in step)
+        self.assertEqual(len(checkout["uses"].split("@")[-1]), 40)
+        self.assertEqual(checkout["with"]["persist-credentials"], "false")
+        cmd = next(step for step in job["steps"] if "run" in step)
+        self.assertIn("scripts/branch_retirement.py", cmd["run"])
         self.assertNotIn("gh api", cmd["run"])
 
     def test_pr_workflow_rejects_unsupported_event_before_checkout(self):
