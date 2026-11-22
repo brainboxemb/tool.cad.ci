@@ -28,18 +28,20 @@ Issue #95 is complete and closed.
 
 ### #99 repin released lib.py.cad.ci 0.11.0
 
-Status: **now**.
+Status: **blocked on external acceptance**.
 
 `lib.py.cad.ci 0.11.0` is released at exact commit
 `e621daf6e309bdd0e3f643a12007f1b66490696d`.
 
+`tool.cad.ci 0.18.1` is now released at exact commit
+`e29d3127d5d3f9310f3cab4e27430a64a61c21cc`. Its implementation/release work is complete; consumer adoption remains blocked on `tool.cad.ci.test` #77 / PR #78.
+
 This tool change is a thin repin/release only:
 
-- pin that exact library commit;
-- release `tool.cad.ci 0.18.1`;
-- keep CLI/workflow/root-action behavior unchanged;
-- correct the stale README library-pin text;
-- after release, hand off to `tool.cad.ci.test` for black-box acceptance.
+- exact library pin and `tool.cad.ci 0.18.1` release are complete;
+- CLI/workflow/root-action behavior remains unchanged;
+- stale README library-pin text is corrected;
+- current next action is external black-box acceptance in `tool.cad.ci.test` #77 / PR #78.
 
 Generic active-dependent selection semantics remain wholly library-owned.
 
@@ -47,7 +49,7 @@ Generic active-dependent selection semantics remain wholly library-owned.
 
 | Issue | Status | Next action |
 | --- | --- | --- |
-| #99 lib.py.cad.ci 0.11.0 repin / tool 0.18.1 | **now** | Pin exact released library, test, release, then external acceptance in `tool.cad.ci.test`. |
+| #99 lib.py.cad.ci 0.11.0 repin / tool 0.18.1 | **blocked** | Tool 0.18.1 is released at `e29d3127…`; close after `tool.cad.ci.test` #77 / PR #78 accepts the exact pair. |
 
 ## Next trigger
 
