@@ -76,6 +76,26 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertIn("scripts/merge_command.py", cmd["run"])
         self.assertNotIn("gh api", cmd["run"])
 
+    def test_branch_cleanup_api_is_declared_once_and_implementation_is_not_inline_yaml(self):
+        wf = load_yaml(WORKFLOWS / "reusable-branch-cleanup.yml")
+        contract = wf["on"]["workflow_call"]
+        self.assertEqual(
+            set(contract["inputs"]),
+            {"command", "issue_number", "stable_ref", "lane_refs_json",
+             "permanent_refs_json", "temporary_prefixes_json"},
+        )
+        self.assertEqual(set(wf["jobs"]), {"cleanup"})
+        job = wf["jobs"]["cleanup"]
+        self.assertEqual(job["permissions"]["contents"], "write")
+        self.assertEqual(job["permissions"]["pull-requests"], "read")
+        self.assertEqual(job["permissions"]["issues"], "write")
+        checkout = next(step for step in job["steps"] if "uses" in step)
+        self.assertEqual(len(checkout["uses"].split("@")[-1]), 40)
+        self.assertEqual(checkout["with"]["persist-credentials"], "false")
+        cmd = next(step for step in job["steps"] if "run" in step)
+        self.assertIn("scripts/branch_cleanup.py", cmd["run"])
+        self.assertNotIn("gh api", cmd["run"])
+
     def test_pr_workflow_rejects_unsupported_event_before_checkout(self):
         wf = load_yaml(WORKFLOWS / "reusable-pr.yml")
         self.assertEqual(set(wf["jobs"]), {"pr"})
