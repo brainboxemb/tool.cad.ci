@@ -16,8 +16,10 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The 0.25.0 release pins `lib.py.cad.ci` 0.12.0 at exact commit
-`64656db8df528a5c0de799e62c0f028fd0133486`.
+The current #137 development baseline pins released `lib.py.cad.ci` 0.13.0
+at exact commit `8f0516a484e3eac11758b498ca181d5e39ed1efe`.
+`tool.cad.ci v0.25.0` remains the latest released tool until the durable
+workflow candidate is released and externally accepted.
 
 ## Starting a consumer repository
 
@@ -97,7 +99,7 @@ for every item that uses it. Shared builder commands receive
 `CAD_CI_ITEM_PATH` for the consuming item and `CAD_CI_BUILDER_PATH` for
 their implementation directory.
 
-Legacy item-local `steps` remain readable in lib.py.cad.ci 0.12.0 so existing
+Legacy item-local `steps` remain readable in lib.py.cad.ci 0.13.0 so existing
 repositories can migrate deliberately. New item configuration should use a
 builder reference instead of embedding `run` commands in `ci.yml`.
 
