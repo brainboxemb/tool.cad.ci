@@ -69,18 +69,10 @@ runs:
         CAD_CI_DURABLE_SCOPE: ${{ inputs.durable_scope }}
         CAD_CI_SOURCE_REF: ${{ inputs.source_ref }}
       run: |
-        case "$CAD_CI_SOURCE_SHA_INPUT" in
-          [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*)
-            test "${#CAD_CI_SOURCE_SHA_INPUT}" -eq 40 || {
-              echo "ERROR: source_sha must be an exact 40-character Git SHA" >&2
-              exit 2
-            }
-            ;;
-          *)
-            echo "ERROR: source_sha must be an exact 40-character Git SHA" >&2
-            exit 2
-            ;;
-        esac
+        if ! [[ "$CAD_CI_SOURCE_SHA_INPUT" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "ERROR: source_sha must be an exact 40-character Git SHA" >&2
+          exit 2
+        fi
         case "$CAD_CI_FULL_RUN" in
           true|false) ;;
           *)
