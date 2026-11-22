@@ -5,7 +5,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LIB_COMMIT = "74486c441f1f2b170ff3dc06e0edcaf662fbec6b"
+LIB_COMMIT = "397fb04005b46de8d433cb18c091b1e73714b877"
 
 
 class LibraryBoundaryTests(unittest.TestCase):
