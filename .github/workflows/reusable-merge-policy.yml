@@ -89,6 +89,7 @@ jobs:
           COMMAND: ${{ inputs.command }}
           ACTOR: ${{ github.actor }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
         run: |
           python3 "$TOOL_ROOT/scripts/merge_command.py" \
             --command "$COMMAND" \
@@ -100,4 +101,5 @@ jobs:
             --lane-refs-json "$LANE_REFS_JSON" \
             --permanent-refs-json "$PERMANENT_REFS_JSON" \
             --temporary-prefixes-json "$TEMPORARY_PREFIXES_JSON" \
-            --integration-workflow "$INTEGRATION_WORKFLOW"
+            --integration-workflow "$INTEGRATION_WORKFLOW" \
+            --current-run-id "$CURRENT_RUN_ID"
