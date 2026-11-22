@@ -282,3 +282,71 @@ without implementing parallel execution in this repository.
 - Default behavior remains serial (`jobs=1`) for backward compatibility.
 - Consumers may opt into `jobs > 1` only after the exact released tool stack
   has external black-box acceptance.
+
+
+## Same-runner durable-lane action
+
+The root composite `action.yml` supports two modes.
+
+### Run-only mode
+
+This remains the existing public behavior:
+
+- caller supplies `source_sha`;
+- caller supplies `base_sha` for incremental selection or `full_run=true`;
+- action checks out/bootstrap/authenticates once;
+- action runs exactly one CAD-CI graph;
+- later caller steps may use the exposed tool/library stack on the same runner.
+
+### Durable mode
+
+The caller additionally supplies:
+
+- `durable_scope`: one safe scope name; `main` selects stable-main semantics,
+  every other safe name selects named-scope semantics;
+- `source_ref`: the caller source ref recorded in durable publication
+  provenance.
+
+When `durable_scope` is non-empty:
+
+- caller must not supply a manual `base_sha`;
+- caller must not force `full_run=true`;
+- the action fetches the current generated `build` branch once after exact
+  tool/library bootstrap;
+- if `<scope>/build.json` exists, its exact 40-character
+  `source_commit` becomes the incremental base;
+- missing `main/build.json` is an error;
+- a missing named scope is an initial full run with `base_sha=source_sha`;
+- the action fetches the resolved base commit only for incremental runs;
+- the action executes exactly one CAD-CI graph;
+- the same runner/workspace then prepares the complete scope with the existing
+  `cad-ci build update-main|update-named|prepare-named` contracts;
+- the same runner publishes that prepared scope with the existing
+  `cad-ci publish build` contract;
+- no artifact upload/download or second runner is used.
+
+Durable mode exposes:
+
+- `scope`;
+- resolved `base_sha`;
+- effective `full_run`;
+- `scope_exists`;
+- exact published `build_commit`;
+- absolute `prepared_scope` path;
+- existing exact `library_revision`.
+
+The action does not build consumer sites and does not publish Pages. Consumer
+site generation remains domain-owned and may run immediately after the action
+on the same runner. Generic Pages publication remains a normal tool CLI call
+from that same job.
+
+The action must not implement a second selection engine, build-store format,
+freshness model or publication mechanism. It orchestrates existing released
+tool/library contracts only.
+
+The caller job needs `contents: write` for durable publication and
+`packages: read` for runtime image authentication.
+
+Scope names are simple non-empty identifiers containing only letters, numbers,
+dot, underscore and dash. Path separators, traversal and reserved generated
+path fragments are invalid.
