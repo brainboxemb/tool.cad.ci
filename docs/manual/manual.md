@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.26.0**
+- tool release: **v0.27.0**
 
 Each YAML template contains:
 
@@ -25,6 +25,7 @@ placeholder to replace.
 | --- | ---: | --- |
 | `merge-policy.yml` | 2 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
 | `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
+| `branch-retirement.yml` | 1 | Owner-issued exact-SHA retirement for separately reviewed unique history. |
 | `cad-ci-lanes.yml` | 1 | PR validation for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
@@ -58,6 +59,8 @@ branch cleanup or merge-method logic into the consumer. Those stay in the
 released reusable workflows.
 
 For maintenance cleanup, copy `branch-cleanup.yml` beside the merge wrapper. The command only deletes allow-listed temporary refs with positive integration or exact merged-PR-head SHA evidence; open PR heads, moved refs, unique history and `backup/*` refs are retained and reported.
+
+When unique history has been separately reviewed and intentionally declared disposable, use `branch-retirement.yml` instead of weakening cleanup. The issue comment carries one exact `branch SHA` pair per line after `/retire-branches`; permanent refs and open-PR heads are refused, and each SHA is re-read immediately before deletion.
 
 ## New CAD-CI repository
 
