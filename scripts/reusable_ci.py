@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -111,6 +112,235 @@ def library_revision(tool_root: Path) -> str:
     if len(matches) != 1 or not re.fullmatch(r"[0-9a-f]{40}", matches[0]):
         raise ValueError("tool pyproject must pin one exact lib.py.cad.ci commit")
     return matches[0]
+
+
+_SCOPE_NAME = re.compile(r"^[A-Za-z0-9._-]+$")
+_SHA = re.compile(r"^[0-9a-f]{40}$")
+
+
+def durable_scope_name(value: str) -> str:
+    """Validate one generated long-lived build scope name."""
+
+    scope = value.strip()
+    if (
+        not scope
+        or not _SCOPE_NAME.fullmatch(scope)
+        or scope == ".cad-ci"
+    ):
+        raise ValueError(f"invalid durable scope name: {value!r}")
+    return scope
+
+
+def exact_sha(value: str, label: str) -> str:
+    """Validate one exact lowercase 40-character Git SHA."""
+
+    sha = value.strip()
+    if not _SHA.fullmatch(sha):
+        raise ValueError(f"{label} must be an exact 40-character Git SHA")
+    return sha
+
+
+def resolve_durable_scope(
+    *,
+    repo: Path,
+    generated_build: Path,
+    scope: str,
+    source_sha: str,
+) -> dict[str, str]:
+    """Fetch durable build state and resolve one lane's incremental base."""
+
+    repo = repo.resolve()
+    generated_build = generated_build.resolve()
+    scope = durable_scope_name(scope)
+    source_sha = exact_sha(source_sha, "source_sha")
+
+    if generated_build.exists():
+        shutil.rmtree(generated_build)
+
+    subprocess.run(
+        _tool_command(
+            "build",
+            "fetch",
+            "--repo",
+            str(repo),
+            "--out",
+            str(generated_build),
+        ),
+        cwd=repo,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+
+    manifest = generated_build / scope / "build.json"
+    if not manifest.is_file():
+        if scope == "main":
+            raise ValueError(
+                "durable main scope is missing; stable integration cannot "
+                "be updated incrementally"
+            )
+        return {
+            "scope": scope,
+            "base_sha": source_sha,
+            "full_run": "true",
+            "scope_exists": "false",
+            "generated_build": str(generated_build),
+        }
+
+    try:
+        value = json.loads(manifest.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"durable scope has invalid build.json: {scope}"
+        ) from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"durable scope has invalid build.json: {scope}")
+
+    base_sha = value.get("source_commit")
+    if not isinstance(base_sha, str) or not _SHA.fullmatch(base_sha):
+        raise ValueError(
+            f"durable scope has invalid source_commit: {scope}"
+        )
+
+    return {
+        "scope": scope,
+        "base_sha": base_sha,
+        "full_run": "false",
+        "scope_exists": "true",
+        "generated_build": str(generated_build),
+    }
+
+
+def publish_durable_scope(
+    *,
+    repo: Path,
+    generated_build: Path,
+    prepared_scope: Path,
+    candidate_root: Path,
+    scope: str,
+    scope_exists: bool,
+    source_sha: str,
+    base_sha: str,
+    source_ref: str,
+) -> dict[str, str]:
+    """Prepare and publish one complete long-lived build scope."""
+
+    repo = repo.resolve()
+    generated_build = generated_build.resolve()
+    prepared_scope = prepared_scope.resolve()
+    candidate_root = candidate_root.resolve()
+    scope = durable_scope_name(scope)
+    source_sha = exact_sha(source_sha, "source_sha")
+    base_sha = exact_sha(base_sha, "base_sha")
+    source_ref = source_ref.strip()
+    if not source_ref:
+        raise ValueError("source_ref is required for durable publication")
+
+    if prepared_scope.exists():
+        shutil.rmtree(prepared_scope)
+
+    if scope == "main":
+        prepare = _tool_command(
+            "build",
+            "update-main",
+            "--repo",
+            str(repo),
+            "--candidate-root",
+            str(candidate_root),
+            "--main",
+            str(generated_build / "main"),
+            "--out",
+            str(prepared_scope),
+            "--source-commit",
+            source_sha,
+            "--base",
+            base_sha,
+            "--head",
+            source_sha,
+        )
+    elif scope_exists:
+        prepare = _tool_command(
+            "build",
+            "update-named",
+            "--repo",
+            str(repo),
+            "--candidate-root",
+            str(candidate_root),
+            "--named",
+            str(generated_build / scope),
+            "--name",
+            scope,
+            "--out",
+            str(prepared_scope),
+            "--source-commit",
+            source_sha,
+            "--base",
+            base_sha,
+            "--head",
+            source_sha,
+        )
+    else:
+        prepare = _tool_command(
+            "build",
+            "prepare-named",
+            "--repo",
+            str(repo),
+            "--candidate-root",
+            str(candidate_root),
+            "--name",
+            scope,
+            "--out",
+            str(prepared_scope),
+            "--source-commit",
+            source_sha,
+        )
+
+    subprocess.run(
+        prepare,
+        cwd=repo,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+
+    publish = _tool_command(
+        "publish",
+        "build",
+        "--repo",
+        str(repo),
+        "--candidate",
+        str(prepared_scope),
+        "--scope",
+        "main" if scope == "main" else "named",
+        *(
+            []
+            if scope == "main"
+            else ["--scope-name", scope]
+        ),
+        "--message",
+        f"build: {scope} {source_sha}",
+        "--source-ref",
+        source_ref,
+        "--expected-source",
+        source_sha,
+    )
+    completed = subprocess.run(
+        publish,
+        cwd=repo,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+    build_commit = completed.stdout.strip()
+    if not _SHA.fullmatch(build_commit):
+        raise ValueError(
+            "durable build publication did not return an exact commit"
+        )
+
+    return {
+        "build_commit": build_commit,
+        "prepared_scope": str(prepared_scope),
+    }
 
 
 def _tool_command(*arguments: str) -> list[str]:
@@ -212,6 +442,53 @@ def main() -> int:
     plan.add_argument("--full-run", default="false")
     plan.add_argument("--github-output", type=Path, required=True)
 
+    durable_resolve = commands.add_parser("durable-resolve")
+    durable_resolve.add_argument("--repo", type=Path, required=True)
+    durable_resolve.add_argument(
+        "--generated-build",
+        type=Path,
+        required=True,
+    )
+    durable_resolve.add_argument("--scope", required=True)
+    durable_resolve.add_argument("--source-sha", required=True)
+    durable_resolve.add_argument(
+        "--github-output",
+        type=Path,
+        required=True,
+    )
+
+    durable_publish = commands.add_parser("durable-publish")
+    durable_publish.add_argument("--repo", type=Path, required=True)
+    durable_publish.add_argument(
+        "--generated-build",
+        type=Path,
+        required=True,
+    )
+    durable_publish.add_argument(
+        "--prepared-scope",
+        type=Path,
+        required=True,
+    )
+    durable_publish.add_argument(
+        "--candidate-root",
+        type=Path,
+        required=True,
+    )
+    durable_publish.add_argument("--scope", required=True)
+    durable_publish.add_argument(
+        "--scope-exists",
+        choices=("true", "false"),
+        required=True,
+    )
+    durable_publish.add_argument("--source-sha", required=True)
+    durable_publish.add_argument("--base-sha", required=True)
+    durable_publish.add_argument("--source-ref", required=True)
+    durable_publish.add_argument(
+        "--github-output",
+        type=Path,
+        required=True,
+    )
+
     run_parser = commands.add_parser("run")
     run_parser.add_argument("--repo", type=Path, required=True)
     run_parser.add_argument("--source-sha", default="")
@@ -232,6 +509,41 @@ def main() -> int:
                 "revision",
                 library_revision(args.tool_root),
             )
+            return 0
+
+        if args.command == "durable-resolve":
+            resolved = resolve_durable_scope(
+                repo=args.repo,
+                generated_build=args.generated_build,
+                scope=args.scope,
+                source_sha=args.source_sha,
+            )
+            for key, value in resolved.items():
+                write_github_output(
+                    args.github_output,
+                    key,
+                    value,
+                )
+            return 0
+
+        if args.command == "durable-publish":
+            published = publish_durable_scope(
+                repo=args.repo,
+                generated_build=args.generated_build,
+                prepared_scope=args.prepared_scope,
+                candidate_root=args.candidate_root,
+                scope=args.scope,
+                scope_exists=args.scope_exists == "true",
+                source_sha=args.source_sha,
+                base_sha=args.base_sha,
+                source_ref=args.source_ref,
+            )
+            for key, value in published.items():
+                write_github_output(
+                    args.github_output,
+                    key,
+                    value,
+                )
             return 0
 
         full_run = parse_bool(args.full_run)
