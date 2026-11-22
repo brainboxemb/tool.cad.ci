@@ -18,8 +18,13 @@
     },
     "github/workflows/merge-policy.yml": {
       "id": "tool.cad.ci/merge-policy",
-      "version": 1,
+      "version": 2,
       "surface": "reusable-merge-policy.yml"
+    },
+    "github/workflows/cad-ci-lanes.yml": {
+      "id": "tool.cad.ci/cad-ci-lanes",
+      "version": 1,
+      "surface": "reusable-ci.yml"
     }
   }
 }
