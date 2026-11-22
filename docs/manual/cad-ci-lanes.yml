@@ -1,0 +1,29 @@
+# template: tool.cad.ci/cad-ci-lanes
+# template-version: 1
+# tool-release: 0.23.0
+# tool-release-sha: bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+#
+# Copy this file to:
+#   .github/workflows/cad-ci.yml
+#
+# Works as-is for repositories using main + dev-cad + dev-ci.
+# Docs-only lane PRs use the released cheap path; lane -> main promotions run
+# complete validation. The classifier stays inside released tool.cad.ci.
+
+name: CAD CI
+
+on:
+  pull_request:
+    branches: [main, dev-cad, dev-ci]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  cad-ci:
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@bc0a7b716f67a20e63eaf8b89a2c35c381fb8bf1
+    with:
+      # Repository policy: change only when branch/docs policy differs.
+      pr_policy_json: '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],"docs_only_prefixes":["docs/"]}'
