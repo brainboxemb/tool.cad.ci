@@ -22,7 +22,7 @@ on:
         type: boolean
         default: false
       pull_request_policy:
-        description: Optional stable/lane/docs-only pull-request policy JSON.
+        description: Optional JSON object describing stable/development/docs-only pull-request policy.
         required: false
         type: string
         default: ""
@@ -32,7 +32,7 @@ on:
         type: number
         default: 1
       command_environment:
-        description: Optional non-secret environment values for consumer commands.
+        description: Optional JSON object of non-secret string environment values for consumer commands.
         required: false
         type: string
         default: "{}"
