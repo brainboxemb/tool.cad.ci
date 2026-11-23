@@ -10,7 +10,7 @@ keeps only its trigger, permissions and exact released tool version tag:
 ```yaml
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.30.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.31.0
 ```
 
 The reusable workflow owns generic checkout, Python/tool setup and one
@@ -142,24 +142,26 @@ their copied header with the released file under `docs/manual/templates/` before
 adopting it.
 
 
-## Permanent development lanes
+## Permanent development branches
 
 A repository using stable `main` plus long-lived `dev-cad` / `dev-ci`
 starts from `cad-ci-lanes.yml`, not a local classifier.
 
-Template version 3 configures both released lane surfaces. Pull requests use
-`reusable-ci.yml` lane policy; permanent `push` and
+Template version 4 configures both released permanent-development-branch surfaces. Pull requests use
+`reusable-ci.yml` development-branch policy; permanent `push` and
 `workflow_dispatch` events use `reusable-durable.yml` with the current
 branch name as source ref and durable scope. The durable route performs one
 CAD-CI graph and library-owned build/Pages publication on one runner.
 
-The wrapper exposes `build_branch` and `pages_branch` as repository-owned
-generated-ref settings. Their defaults are `build` and `gh-pages`; isolated
+The PR route uses `pull_request_policy` with consumer-facing keys such as
+`stable_branch` and `development_branches`. The durable route exposes
+`build_branch` and `pages_branch` as repository-owned generated-ref
+settings. Their defaults are `build` and `gh-pages`; isolated
 acceptance or staging repositories may use values such as
 `test-output/build` and `test-output/gh-pages`.
 
 The consumer does not paginate pull-request files, loop over docs paths, compute
 promotion `full_run` expressions, or add its own durable publication steps.
-Repository-owned changes are limited to intentional branch/lane/docs-prefix
+Repository-owned changes are limited to intentional stable/development/docs-prefix
 values, generated output branch names, permissions and ordinary workflow
 dependencies.
