@@ -287,7 +287,10 @@ GitHub release implementation. Any required `tool.py.lib.ci` version is pinned
 by the released CAD release workflow, so a consumer does not invent a second
 moving dependency.
 
-Implementation starts only after this manual/API/design contract is accepted.
+The implementation uses the pinned library through `scripts/reusable_ci.py release-check`.
+Strict release-command parsing and the final tag/GitHub Release transaction are
+both taken from exact released tool.py.lib.ci v0.2.1 source; tool.cad.ci does
+not carry a second parser or publisher.
 
 ## Build artifact transport
 
