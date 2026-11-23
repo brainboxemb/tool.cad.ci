@@ -11,7 +11,7 @@ consume `tool.cad.ci`.
 The templates are deliberately kept in their own directory. Do not place YAML
 templates beside the Markdown manual files.
 
-Current copy-ready baseline: `tool.cad.ci v0.31.0`.
+Current copy-ready baseline: `tool.cad.ci v0.32.0`.
 
 Start with [manual.md](manual.md); do not design generic CAD-CI orchestration
 from scratch in a consumer repository.
