@@ -163,6 +163,7 @@ A consumer may own:
 - event triggers;
 - caller permissions;
 - intentional branch/lane/docs-prefix values;
+- generated build/Page branch names when defaults need isolation;
 - optional integration workflow name;
 - repository secrets and domain runtime configuration.
 
