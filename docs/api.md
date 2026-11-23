@@ -25,7 +25,7 @@ reinterpret that configuration.
 | `cad-ci publish ...` | Public CLI, generated branches and Pages | `cad_ci_tool/publication_cli.py` | `tests/test_publication_cli.py`; external acceptance | Retain, audit subcommand contracts |
 | `reusable-ci.yml` | **Public stable** run-only workflow | `.github/workflows/reusable-ci.yml` | `tests/test_reusable_ci.py`; `tool.cad.ci.test` | Retain |
 | `reusable-durable.yml` | **Public candidate** one-runner permanent-branch durable lifecycle | `.github/workflows/reusable-durable.yml` | unit/schema; external acceptance required in test #141 | Add for action-free durable consumer migration |
-| planned CAD release workflow (#176) | **Planned public** exact-release gate for CAD-CI consumers | not implemented yet | documentation first; tool tests + external acceptance required | Check stable main ci-build-record, then delegate to released tool.py.lib.ci release workflow |
+| `reusable-release.yml` | **Public candidate** CAD release gate | `.github/workflows/reusable-release.yml` | helper/workflow/template tests; external acceptance required | Check stable main ci-build-record, then delegate to released tool.py.lib.ci release workflow |
 | `reusable-pr.yml` | **Public stable** complete PR verification/publication lifecycle | `.github/workflows/reusable-pr.yml` | `tests/test_reusable_ci.py`; candidate acceptance | Retain |
 | `reusable-plan.yml` | **Public advanced** selection-only workflow | `.github/workflows/reusable-plan.yml` | unit/schema + external candidate plan output | Retain as explicit plan-only API; not default |
 | `reusable-run.yml` | **Internal workflow implementation** delegated from `reusable-ci.yml` | `.github/workflows/reusable-run.yml` | unit/schema via public `reusable-ci.yml` | Not a supported direct consumer API |
@@ -102,12 +102,9 @@ select only the generated Git refs; values such as `test-output/build` and
 Pages semantics and durable scope inventory are library-owned. It requires
 `contents: write` and `packages: read`.
 
-### Planned CAD release workflow — issue #176
+### `reusable-release.yml` — CAD release workflow
 
-This surface is documented before implementation and is **not yet a released
-consumer API**.
-
-Its intended contract is:
+This is the v0.36.0 candidate public release surface. Its contract is:
 
 - accept the exact owner-issued release command / requested source commit;
 - read the stable `main/build.json` ci-build-record from the configured
@@ -121,8 +118,11 @@ Its intended contract is:
 - optionally pass a repository-owned validator only for repository/domain
   release rules.
 
-The public filename, workflow inputs/outputs and template id are fixed only when
-the implementation issue completes its API review and external acceptance.
+Public inputs are `command`, `issue_number`, `stable_ref`, `build_branch` and
+optional `validator_path`. Outputs are `tag`, `target_sha` and `release_url`.
+The canonical wrapper is `docs/manual/templates/cad-release.yml`. Consumer
+migration remains blocked until the exact released v0.36.0 stack passes
+external acceptance.
 
 ### `reusable-pr.yml`
 
