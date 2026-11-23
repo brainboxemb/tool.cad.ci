@@ -55,7 +55,7 @@ the tool.
 
 ## Command environment
 
-The reusable workflow may receive optional non-secret `environment_json`
+The reusable workflow may receive optional non-secret `command_environment`
 values from its caller. The workflow helper validates those values and places
 them in the inherited process environment before invoking `cad-ci run`.
 
@@ -64,7 +64,7 @@ owned and parsed by `lib.py.cad.ci`, not by this tool.
 
 The effective command precedence is therefore:
 
-1. runner/caller environment, including validated `environment_json`;
+1. runner/caller environment, including validated `command_environment`;
 2. repository variables from root `cad-ci.yml`, applied by the library;
 3. CAD-CI-owned `CAD_CI_*` runtime values, applied by the library.
 
@@ -407,9 +407,10 @@ consumer /merge trigger
 
 The reusable workflow should accept repository-neutral configuration for:
 
-- stable branch name (default may be `main`);
-- long-lived lane names;
-- temporary cleanup prefix allow-list;
+- stable branch name (public input `stable_branch`, default `main`);
+- long-lived development branch names (public input `development_branches`);
+- additional permanent/generated branch names (public input `permanent_branches`);
+- temporary cleanup prefix allow-list (public input `temporary_branch_prefixes`);
 - optional post-merge integration workflow identifier/ref inputs.
 
 The caller must not pass an arbitrary merge method. Merge method is derived by
@@ -516,9 +517,10 @@ all other supported PRs
 ```
 
 The classifier should return explicit booleans (or one equivalent explicit
-classification) for promotion and lane synchronization. The reusable workflow
-must not infer synchronization from branch naming outside `stable_ref` and
-`lane_refs_json`.
+classification) for promotion and lane synchronization. The reusable workflow must not infer synchronization from branch naming
+outside public `stable_branch` / `development_branches` configuration.
+Those values are converted only at the thin workflow boundary to the existing
+internal stable/lane classifier inputs.
 
 Permanent-direction PRs require the head repository to equal the caller
 repository. This prevents a fork branch named `main` or like a configured lane
@@ -696,3 +698,27 @@ Reusable workflow permissions are bounded by the caller. Therefore canonical
 merge template version 2 explicitly grants the same privileged job ceiling
 required by `reusable-merge-policy.yml`; the called workflow still owns all
 merge implementation and owner-command validation.
+
+
+## Public workflow naming adapter
+
+Workflow-call inputs use consumer vocabulary. JSON serialization is documented
+in descriptions but omitted from public names.
+
+The thin YAML adapter translates:
+
+```text
+stable_branch              -> --stable-ref
+development_branches       -> --lane-refs-json
+permanent_branches         -> --permanent-refs-json
+temporary_branch_prefixes  -> --temporary-prefixes-json
+pull_request_policy        -> --policy-json
+command_environment        -> --environment-json / CAD_CI_CONSUMER_ENV_JSON
+```
+
+The structured `pull_request_policy` object likewise exposes
+`stable_branch`, `development_branches` and `docs_only_prefixes`; the
+Python helper maps those values to its existing classifier semantics.
+
+This adapter is intentionally one-way. v0.31.0 does not carry deprecated
+workflow aliases. Exact older release tags remain the compatibility surface.
