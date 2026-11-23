@@ -16,10 +16,7 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The current #137 development candidate pins released `lib.py.cad.ci` 0.13.0
-at exact commit `8f0516a484e3eac11758b498ca181d5e39ed1efe`.
-`tool.cad.ci v0.28.0` remains the latest released tool until the durable
-workflow candidate is released and externally accepted.
+The 0.29.0 release candidate pins released `lib.py.cad.ci` 0.13.0 at exact\ncommit `8f0516a484e3eac11758b498ca181d5e39ed1efe` and exposes the\none-runner permanent-branch durable lifecycle needed by config-driven consumers.
 
 ## Starting a consumer repository
 
@@ -30,8 +27,7 @@ Each copied template keeps a `template` id, integer `template-version`,
 and the exact released tool version tag it calls. The copy-ready files contain no
 release placeholder; change only values explicitly marked as repository policy.
 Repositories with permanent `main`/`dev-cad`/`dev-ci` lanes use the canonical
-`cad-ci-lanes.yml` wrapper; docs-only classification and promotion full-run
-selection stay inside the released reusable CI stack, not consumer YAML.
+`cad-ci-lanes.yml` wrapper; PR classification plus permanent-branch durable\nbuild/Pages integration stay inside the released reusable stack, not consumer\nYAML.
 
 ## Consumer layout
 
