@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.34.1 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.18.1` at exact commit
+  `6064a53b9ea1c340d49893ca0f8d1fa5e3e138ea`;
+- carry the library-owned CadQuery Assembly STL export correction without
+  adding tool-owned model detection, export logic or runtime behavior;
+- preserve all public CLI/workflow inputs, one-runner lifecycle semantics and
+  template-version numbers;
+- repin all copy-ready workflow templates to exact `v0.34.1`.
+
 ## 0.34.0 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.18.0` at exact commit
