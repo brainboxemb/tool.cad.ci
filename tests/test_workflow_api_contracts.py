@@ -55,6 +55,16 @@ class WorkflowApiContractTests(unittest.TestCase):
                     "permissions" in job for job in wf.get("jobs", {}).values()
                 ))
 
+    def test_public_input_names_do_not_expose_json_transport(self):
+        for filename in CALLABLE:
+            with self.subTest(filename=filename):
+                wf = load_yaml(WORKFLOWS / filename)
+                names = set(wf["on"]["workflow_call"]["inputs"])
+                self.assertFalse(
+                    {name for name in names if name.endswith("_json")},
+                    (filename, names),
+                )
+
     def test_merge_api_is_declared_once_and_implementation_is_not_inline_yaml(self):
         wf = load_yaml(WORKFLOWS / "reusable-merge-policy.yml")
         contract = wf["on"]["workflow_call"]
