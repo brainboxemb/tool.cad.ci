@@ -55,14 +55,24 @@ class WorkflowApiContractTests(unittest.TestCase):
                     "permissions" in job for job in wf.get("jobs", {}).values()
                 ))
 
+    def test_public_input_names_do_not_expose_json_transport(self):
+        for filename in CALLABLE:
+            with self.subTest(filename=filename):
+                wf = load_yaml(WORKFLOWS / filename)
+                names = set(wf["on"]["workflow_call"]["inputs"])
+                self.assertFalse(
+                    {name for name in names if name.endswith("_json")},
+                    (filename, names),
+                )
+
     def test_merge_api_is_declared_once_and_implementation_is_not_inline_yaml(self):
         wf = load_yaml(WORKFLOWS / "reusable-merge-policy.yml")
         contract = wf["on"]["workflow_call"]
         self.assertEqual(
             set(contract["inputs"]),
-            {"command", "pull_request_number", "stable_ref", "lane_refs_json",
-             "permanent_refs_json", "temporary_prefixes_json", "integration_workflow",
-             "resolution_prefix"},
+            {"command", "pull_request_number", "stable_branch", "development_branches",
+             "permanent_branches", "temporary_branch_prefixes", "integration_workflow",
+             "resolution_branch_prefix"},
         )
         self.assertEqual(set(wf["jobs"]), {"merge"})
         job = wf["jobs"]["merge"]
@@ -98,7 +108,7 @@ class WorkflowApiContractTests(unittest.TestCase):
                 "build_branch",
                 "pages_branch",
                 "jobs",
-                "environment_json",
+                "command_environment",
             },
         )
         self.assertEqual(inputs["build_branch"]["default"], "build")
@@ -140,8 +150,8 @@ class WorkflowApiContractTests(unittest.TestCase):
         contract = wf["on"]["workflow_call"]
         self.assertEqual(
             set(contract["inputs"]),
-            {"command", "issue_number", "stable_ref", "lane_refs_json",
-             "permanent_refs_json", "temporary_prefixes_json"},
+            {"command", "issue_number", "stable_branch", "development_branches",
+             "permanent_branches", "temporary_branch_prefixes"},
         )
         self.assertEqual(set(wf["jobs"]), {"cleanup"})
         job = wf["jobs"]["cleanup"]
@@ -160,8 +170,8 @@ class WorkflowApiContractTests(unittest.TestCase):
         contract = wf["on"]["workflow_call"]
         self.assertEqual(
             set(contract["inputs"]),
-            {"command", "issue_number", "stable_ref", "lane_refs_json",
-             "permanent_refs_json"},
+            {"command", "issue_number", "stable_branch", "development_branches",
+             "permanent_branches"},
         )
         self.assertEqual(set(wf["jobs"]), {"retire"})
         job = wf["jobs"]["retire"]

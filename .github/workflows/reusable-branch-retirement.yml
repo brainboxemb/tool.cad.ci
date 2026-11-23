@@ -14,17 +14,17 @@ on:
         description: Issue or PR conversation that receives the retirement audit.
         required: true
         type: number
-      stable_ref:
-        description: Stable ref that can never be retired.
+      stable_branch:
+        description: Stable branch that can never be retired.
         required: false
         type: string
         default: main
-      lane_refs_json:
-        description: JSON list of long-lived lane refs that can never be retired.
+      development_branches:
+        description: JSON-encoded list of long-lived development branch names that can never be retired.
         required: true
         type: string
-      permanent_refs_json:
-        description: JSON list of additional permanent/generated refs that can never be retired.
+      permanent_branches:
+        description: JSON-encoded list of additional permanent/generated branch names that can never be retired.
         required: false
         type: string
         default: '["build","gh-pages"]'
@@ -48,9 +48,9 @@ jobs:
       REPOSITORY: ${{ github.repository }}
       ISSUE_NUMBER: ${{ inputs.issue_number }}
       TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
-      STABLE_REF: ${{ inputs.stable_ref }}
-      LANE_REFS_JSON: ${{ inputs.lane_refs_json }}
-      PERMANENT_REFS_JSON: ${{ inputs.permanent_refs_json }}
+      STABLE_REF: ${{ inputs.stable_branch }}
+      LANE_REFS_JSON: ${{ inputs.development_branches }}
+      PERMANENT_REFS_JSON: ${{ inputs.permanent_branches }}
     steps:
       - name: Checkout called tool revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

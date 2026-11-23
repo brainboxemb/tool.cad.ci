@@ -151,31 +151,32 @@ class ReusableCiHelperTests(unittest.TestCase):
             self.assertIn('[{"id":"case-a"}]', text)
 
 
-    def test_pr_policy_validates_lane_configuration(self):
+    def test_pr_policy_validates_development_branch_configuration(self):
         policy = self.helper.parse_pr_policy(
-            '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+            '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}'
         )
-        self.assertEqual(policy["stable_ref"], "main")
-        self.assertEqual(policy["lane_refs"], ("dev-cad", "dev-ci"))
+        self.assertEqual(policy["stable_branch"], "main")
+        self.assertEqual(policy["development_branches"], ("dev-cad", "dev-ci"))
         self.assertEqual(policy["docs_only_prefixes"], ("docs/",))
 
         for value in (
-            '{"stable_ref":"main","lane_refs":[]}',
-            '{"stable_ref":"main","lane_refs":["main"]}',
-            '{"stable_ref":"main","lane_refs":["dev-ci","dev-ci"]}',
-            '{"stable_ref":"main","lane_refs":["../dev-ci"]}',
-            '{"stable_ref":"main","lane_refs":["dev-ci"],"unknown":true}',
+            '{"stable_ref":"main","lane_refs":["dev-ci"]}',
+            '{"stable_branch":"main","development_branches":[]}',
+            '{"stable_branch":"main","development_branches":["main"]}',
+            '{"stable_branch":"main","development_branches":["dev-ci","dev-ci"]}',
+            '{"stable_branch":"main","development_branches":["../dev-ci"]}',
+            '{"stable_branch":"main","development_branches":["dev-ci"],"unknown":true}',
         ):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 self.helper.parse_pr_policy(value)
 
-    def test_pr_policy_promotes_exact_lane_to_full_run(self):
+    def test_pr_policy_promotes_exact_development_branch_to_full_run(self):
         with patch.object(self.helper, "git_changed_paths") as changed:
             result = self.helper.resolve_pr_policy(
                 repo=Path("."),
                 policy_json=(
-                    '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+                    '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
                     '"docs_only_prefixes":["docs/"]}'
                 ),
                 event_name="pull_request",
@@ -195,9 +196,9 @@ class ReusableCiHelperTests(unittest.TestCase):
         )
         changed.assert_not_called()
 
-    def test_pr_policy_skips_only_nonempty_docs_only_lane_diff(self):
+    def test_pr_policy_skips_only_nonempty_docs_only_development_branch_diff(self):
         policy = (
-            '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+            '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}'
         )
         with patch.object(
@@ -246,7 +247,7 @@ class ReusableCiHelperTests(unittest.TestCase):
             result = self.helper.resolve_pr_policy(
                 repo=Path("."),
                 policy_json=(
-                    '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+                    '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
                     '"docs_only_prefixes":["docs/"]}'
                 ),
                 event_name="pull_request",
@@ -464,9 +465,10 @@ class ReusableWorkflowTests(unittest.TestCase):
     def test_free_environment_input_is_documented_as_non_secret(self):
         text = self.read("reusable-run.yml")
         self.assertIn(
-            "Optional non-secret environment values for consumer commands.",
+            "Optional JSON object of non-secret string environment values for consumer commands.",
             text,
         )
+        self.assertIn("command_environment:", text)
     def test_high_level_workflow_cancels_same_caller_scope(self):
         """Only the high-level normal-consumer workflow owns concurrency."""
 
@@ -495,30 +497,30 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("actions/checkout@", text)
         self.assertNotIn("actions/setup-python@", text)
         self.assertNotIn("scripts/reusable_ci.py", text)
-        self.assertIn("pr_policy_json:", text)
-        self.assertIn("pr_policy_json: ${{ inputs.pr_policy_json }}", text)
+        self.assertIn("pull_request_policy:", text)
+        self.assertIn("pull_request_policy: ${{ inputs.pull_request_policy }}", text)
         self.assertIn("upload_build: ${{ inputs.upload_build }}", text)
         self.assertIn(
             "value: ${{ jobs.cad_ci.outputs.build_artifact_name }}",
             text,
         )
 
-    def test_lane_policy_runs_on_same_runner_before_cad_bootstrap(self):
+    def test_development_branch_policy_runs_on_same_runner_before_cad_bootstrap(self):
         run = self.read("reusable-run.yml")
         for value in (
-            "pr_policy_json:",
-            "Classify configured development-lane pull request",
+            "pull_request_policy:",
+            "Classify configured development-branch pull request",
             'scripts/reusable_ci.py" pr-policy',
             "Resolve effective CAD CI selection",
-            "Report docs-only lane validation",
+            "Report docs-only development-branch validation",
         ):
             self.assertIn(value, run)
         self.assertLess(
             run.index("Fetch exact base revision for incremental selection"),
-            run.index("Classify configured development-lane pull request"),
+            run.index("Classify configured development-branch pull request"),
         )
         self.assertLess(
-            run.index("Classify configured development-lane pull request"),
+            run.index("Classify configured development-branch pull request"),
             run.index("actions/setup-python@"),
         )
         self.assertIn(

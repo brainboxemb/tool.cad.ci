@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.31.0 - 2026-11-23
+
+- replace consumer-facing JSON transport suffixes and internal lane/ref
+  terminology with literal workflow configuration names;
+- expose `stable_branch`, `development_branches`, `permanent_branches`
+  and `temporary_branch_prefixes` on branch-governance workflows;
+- expose `pull_request_policy` and `command_environment` on CAD-CI
+  workflows while retaining JSON serialization as the documented value format;
+- change the public pull-request policy object to
+  `stable_branch` / `development_branches` / `docs_only_prefixes`;
+- keep internal helper flags such as `--lane-refs-json`, `--policy-json`
+  and `--environment-json` unchanged;
+- keep `plan_json` unchanged because JSON is its public output format;
+- update canonical merge-policy template to version 4, branch-cleanup and
+  branch-retirement to version 2, and cad-ci-lanes to version 4;
+- preserve exact older release tags as the compatibility surface; v0.31.0
+  intentionally does not duplicate deprecated workflow input aliases;
+- keep merge, cleanup, retirement, CAD-CI execution and publication behavior
+  unchanged.
+
 ## 0.30.0 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.14.0` at exact commit

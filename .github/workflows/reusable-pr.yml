@@ -17,8 +17,8 @@ on:
         required: false
         type: number
         default: 1
-      environment_json:
-        description: Optional non-secret environment values for consumer commands.
+      command_environment:
+        description: Optional JSON object of non-secret string environment values for consumer commands.
         required: false
         type: string
         default: "{}"
@@ -124,7 +124,7 @@ jobs:
       - name: Run selected CAD CI graph
         if: github.event.action != 'closed'
         env:
-          CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.environment_json }}
+          CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.command_environment }}
         run: |
           python "$TOOL_ROOT/scripts/reusable_ci.py" run \
             --repo . \

@@ -1,6 +1,6 @@
 # template: tool.cad.ci/cad-ci-lanes
-# template-version: 3
-# tool-release: v0.30.0
+# template-version: 4
+# tool-release: v0.31.0
 #
 # Copy this file to:
 #   .github/workflows/cad-ci.yml
@@ -26,10 +26,10 @@ permissions:
 jobs:
   pr:
     if: github.event_name == 'pull_request'
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.30.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.31.0
     with:
       # Repository policy: change only when branch/docs policy differs.
-      pr_policy_json: '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],"docs_only_prefixes":["docs/"]}'
+      pull_request_policy: '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],"docs_only_prefixes":["docs/"]}'
 
   durable:
     if: >-
@@ -41,7 +41,7 @@ jobs:
     permissions:
       contents: write
       packages: read
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-durable.yml@v0.30.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-durable.yml@v0.31.0
     with:
       source_sha: ${{ github.sha }}
       source_ref: ${{ github.ref_name }}
