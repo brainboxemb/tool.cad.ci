@@ -465,7 +465,7 @@ class ReusableWorkflowTests(unittest.TestCase):
     def test_free_environment_input_is_documented_as_non_secret(self):
         text = self.read("reusable-run.yml")
         self.assertIn(
-            "Optional non-secret environment values for consumer commands.",
+            "Optional JSON object of non-secret string environment values for consumer commands.",
             text,
         )
         self.assertIn("command_environment:", text)
