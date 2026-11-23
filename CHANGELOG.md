@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.35.0 - 2026-11-23
+
+- add optional public `item` and newline-separated `changed_paths` selectors
+  to the read-only reusable CI workflow, forwarding directly to the existing
+  `cad-ci --item` / `--changed` selection surfaces;
+- keep explicit targeted selection mutually exclusive with effective full-run
+  policy so a lane-to-stable promotion cannot be silently narrowed;
+- add canonical manual lane probes for staged 1 -> 5 -> 10 -> full consumer
+  migration without editing item `process` configuration or publishing
+  durable partial state;
+- bump the canonical `cad-ci-lanes` wrapper to template version 5 and repin
+  all copy-ready templates to exact `v0.35.0`;
+- retain exact `lib.py.cad.ci v0.18.2`; no planner, dependency-closure, SCons
+  or cache behavior is reimplemented in the tool.
+
+
 ## 0.34.2 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.18.2` at exact commit

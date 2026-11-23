@@ -61,16 +61,56 @@ def positive_int(value: str) -> int:
     return result
 
 
+def parse_changed_paths(value: str) -> tuple[str, ...]:
+    """Validate newline-separated repository-relative explicit selection paths."""
+
+    result: list[str] = []
+    for raw in value.splitlines():
+        path = raw.strip()
+        if not path:
+            continue
+        if (
+            path.startswith("/")
+            or "\\x00" in path
+            or ".." in Path(path).parts
+        ):
+            raise ValueError(
+                "changed_paths entries must be safe repository-relative paths"
+            )
+        result.append(path)
+
+    if len(set(result)) != len(result):
+        raise ValueError("changed_paths must not contain duplicates")
+    return tuple(result)
+
+
 def selection_args(
     *,
     source_sha: str,
     base_sha: str,
     full_run: bool,
+    item: str = "",
+    changed_paths: str = "",
 ) -> list[str]:
-    """Return the exact generic selection arguments for plan/run."""
+    """Return exact CLI selection arguments without owning selection semantics."""
 
     source_sha = source_sha.strip()
     base_sha = base_sha.strip()
+    item = item.strip()
+    paths = parse_changed_paths(changed_paths)
+
+    explicit_count = int(bool(item)) + int(bool(paths))
+    if explicit_count > 1:
+        raise ValueError("item and changed_paths are mutually exclusive")
+    if full_run and explicit_count:
+        raise ValueError(
+            "targeted item/changed_paths selection cannot be combined with full_run"
+        )
+
+    if item:
+        return ["--item", item]
+    if paths:
+        return ["--changed", *paths]
     if full_run:
         # For local callers a full run need not compare Git revisions.
         return []
@@ -370,6 +410,8 @@ def run_ci(
     full_run: bool,
     environment_json: str,
     jobs: int,
+    item: str = "",
+    changed_paths: str = "",
 ) -> None:
     """Run exactly one released cad-ci repository execution."""
 
@@ -381,6 +423,8 @@ def run_ci(
             source_sha=source_sha,
             base_sha=base_sha,
             full_run=full_run,
+            item=item,
+            changed_paths=changed_paths,
         ),
         "--jobs",
         str(jobs),
@@ -552,6 +596,8 @@ def main() -> int:
     run_parser.add_argument("--source-sha", default="")
     run_parser.add_argument("--base-sha", default="")
     run_parser.add_argument("--full-run", default="false")
+    run_parser.add_argument("--item", default="")
+    run_parser.add_argument("--changed-paths", default="")
     run_parser.add_argument("--jobs", type=positive_int, default=1)
     run_parser.add_argument(
         "--environment-json",
@@ -647,6 +693,8 @@ def main() -> int:
             full_run=full_run,
             environment_json=args.environment_json,
             jobs=args.jobs,
+            item=args.item,
+            changed_paths=args.changed_paths,
         )
         return 0
     except (
