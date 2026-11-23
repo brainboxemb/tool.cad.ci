@@ -1,6 +1,6 @@
 # Internal single-run implementation used by reusable-ci.yml.
-# Not a supported direct consumer API. Optional PR lane policy can skip
-# expensive CAD-CI bootstrap on a docs-only development-lane PR.
+# Not a supported direct consumer API. Optional PR development-branch policy can skip
+# expensive CAD-CI bootstrap on a docs-only development-branch PR.
 
 name: Reusable CAD CI run
 
@@ -107,7 +107,7 @@ jobs:
           fetch-tags: false
           persist-credentials: false
 
-      - name: Classify configured development-lane pull request
+      - name: Classify configured development-branch pull request
         id: pr_policy
         if: inputs.pull_request_policy != ''
         shell: bash
@@ -148,7 +148,7 @@ jobs:
           fi
           echo "classification=${POLICY_CLASSIFICATION:-default}" >> "$GITHUB_OUTPUT"
 
-      - name: Report docs-only lane validation
+      - name: Report docs-only development-branch validation
         if: steps.selection.outputs.run_cad == 'false'
         shell: bash
         run: >-
