@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.35.0**
+- tool release: **v0.36.0**
 
 Each YAML template contains:
 
@@ -29,6 +29,7 @@ placeholder to replace.
 | `cad-ci-lanes.yml` | 5 | PR validation, read-only targeted manual qualification, plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
+| `cad-release.yml` | 1 | Owner-issued CAD release: check the stable main ci-build-record, then call the shared Python-library release workflow. |
 
 ## First handoff: merge policy
 
@@ -244,10 +245,9 @@ It must not reimplement:
 - tag/GitHub Release creation;
 - Pages checks as release evidence.
 
-Issue #176 defines the public workflow and copy-ready template that will expose
-this path. Until that release is externally accepted, existing consumers remain
-pinned to their last accepted release procedure; do not add a new local
-workaround.
+The public workflow is `reusable-release.yml`; the copy-ready wrapper is
+`cad-release.yml`. They ship together in tool.cad.ci v0.36.0. Consumers must
+wait for released-stack acceptance in `tool.cad.ci.test` before migrating.
 
 ## What the consumer may own
 
