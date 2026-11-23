@@ -2,7 +2,7 @@
 
 ## 0.35.0 - 2026-11-23
 
-- add optional public `item` and newline-separated `changed_paths` selectors
+- add optional public `item` and JSON-list `changed_paths` selectors
   to the read-only reusable CI workflow, forwarding directly to the existing
   `cad-ci --item` / `--changed` selection surfaces;
 - keep explicit targeted selection mutually exclusive with effective full-run
