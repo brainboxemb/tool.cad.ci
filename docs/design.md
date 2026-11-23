@@ -243,6 +243,52 @@ repository-local site-generation code.
 This is separate from the product's generic Pages/publication commands, which
 remain thin CLI exposure of library-owned behavior.
 
+## Central CAD release flow
+
+Issue #176 adds a shared release entry point for CAD-CI consumers. The workflow
+composes two existing ownership layers instead of adding consumer-local release
+logic.
+
+```text
+consumer issue comment
+  |
+  v
+tool.cad.ci reusable release
+  |
+  +-> exact requested source commit
+  |
+  +-> generated build branch
+  |     -> main/build.json (ci-build-record)
+  |     -> released lib.py.cad.ci validation
+  |
+  +-> if CAD build check passes
+        -> exact released tool.py.lib.ci reusable release
+             -> optional consumer validator
+             -> tag / GitHub Release
+```
+
+Ownership:
+
+- `lib.py.cad.ci`: build-record schema and validation;
+- `tool.cad.ci`: GitHub Actions adapter that obtains the generated build
+  branch and invokes the released build-record check;
+- `tool.py.lib.ci`: generic release command, tag and GitHub Release
+  transaction;
+- consumer: only repository/domain-specific validation and documented policy
+  values.
+
+Pages is outside this path. The release workflow does not fetch
+`gh-pages`, read a Pages manifest or infer release readiness from a website
+build.
+
+The consumer template should call one public `tool.cad.ci` release workflow
+at an exact released tag. It must not contain build-record parsing or a second
+GitHub release implementation. Any required `tool.py.lib.ci` version is pinned
+by the released CAD release workflow, so a consumer does not invent a second
+moving dependency.
+
+Implementation starts only after this manual/API/design contract is accepted.
+
 ## Build artifact transport
 
 Artifact transport is conditional on materialized output, not only on caller
