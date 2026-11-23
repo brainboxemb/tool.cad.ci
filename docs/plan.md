@@ -16,7 +16,7 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
 
 ### #176 — central CAD release flow
 
-**Now. Documentation first.**
+**Now. Candidate implementation is on PR #177.**
 
 The Forge v0.12.0 release attempt exposed a missing shared contract: a CAD-CI
 consumer must not parse Pages or invent repository-local build checks before a
@@ -24,17 +24,17 @@ release.
 
 Required order:
 
-1. document the release flow in the consumer manual;
-2. align requirements/design/API with that manual;
-3. define the public workflow/template names and exact inputs/outputs;
-4. implement the shared CAD release workflow:
+1. **complete** — document the release flow in the consumer manual;
+2. **complete** — align requirements/design/API with that manual;
+3. **complete** — define `reusable-release.yml` + `cad-release.yml` and their exact inputs/outputs;
+4. **complete in candidate** — implement the shared CAD release workflow:
    - check the stable main ci-build-record from the generated build branch;
    - do not read `gh-pages`;
-   - delegate tag/GitHub Release creation to an exact released
-     `tool.py.lib.ci` reusable release workflow;
-5. update the copy-ready consumer template;
-6. test the workflow contract here;
-7. release `tool.cad.ci`;
+   - delegate tag/GitHub Release creation to exact released
+     `tool.py.lib.ci v0.2.1`;
+5. **complete in candidate** — copy-ready templates pin `v0.36.0`;
+6. **now** — pass repository workflow/helper/template tests;
+7. merge and release `tool.cad.ci v0.36.0`;
 8. black-box accept the exact released flow in `tool.cad.ci.test`;
 9. only then migrate Forge.
 
@@ -42,7 +42,7 @@ Required order:
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #176 central CAD release flow | **now** | Finish docs contract first, then workflow/template, release and external acceptance. |
+| #176 central CAD release flow | **now** | PR #177 contains docs + reusable workflow + template; pass tests, release v0.36.0, then external acceptance. |
 | #175 duplicate-looking main/dev runs | **next CI cleanup** | Decide whether the second post-merge run can be removed or reduced. |
 | #174 readable CAD-CI names | **next CI cleanup** | Audit code/API/workflow names after #176's public names are chosen. |
 | #173 duplicate CAD rebuild after permanent merge | **next CI cleanup** | Combine with #175 where behavior overlaps; prove required work before changing topology. |
