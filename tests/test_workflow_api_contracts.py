@@ -117,6 +117,11 @@ class WorkflowApiContractTests(unittest.TestCase):
         )
         text = (WORKFLOWS / "reusable-release.yml").read_text(encoding="utf-8")
         self.assertNotIn("gh-pages", text)
+        self.assertIn(
+            "Install external CAD CI runtime dependencies",
+            text,
+        )
+        self.assertIn('"PyYAML>=6.0" "SCons==4.11.1"', text)
         self.assertNotIn("provenance.json", text)
 
     def test_durable_workflow_is_one_runner_and_one_run(self):
