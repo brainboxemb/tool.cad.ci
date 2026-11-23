@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.36.1 - 2026-11-23
+
+- install the pinned CAD-CI library runtime dependencies before the reusable
+  release workflow runs the stable main ci-build-record check;
+- keep the release workflow bootstrap consistent with reusable run/durable
+  workflows;
+- repin all copy-ready consumer templates to v0.36.1;
+- add workflow-contract coverage for the dependency bootstrap found by external
+  acceptance in tool.cad.ci.test #256.
+
+
 ## 0.36.0 - 2026-11-23
 
 - add the central CAD release workflow and copy-ready `cad-release` template;
