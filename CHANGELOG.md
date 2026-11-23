@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.34.0 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.18.0` at exact commit
+  `eb291abd6bb34b585d04019d154e7756d36436f9`;
+- expose the library-owned wildcard-aware recursive path matching and public
+  repository-builder verification-package capability through the existing
+  CLI/reusable workflows without adding tool-owned parsing, package wiring or
+  execution behavior;
+- preserve all public workflow inputs, one-runner lifecycle semantics and
+  copy-ready template structures;
+- repin all copy-ready workflow templates to exact `v0.34.0` without changing
+  template-version numbers.
+
 ## 0.33.2 - 2026-11-23
 
 - repin the thin tool to released `lib.py.cad.ci 0.17.2` at exact commit
