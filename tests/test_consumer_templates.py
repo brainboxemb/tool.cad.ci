@@ -12,12 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "v0.35.0"
+RELEASE = "v0.36.0"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
     "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 5, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
+    "cad-release.yml": ("tool.cad.ci/cad-release", 1, "reusable-release.yml"),
     "merge-policy.yml": ("tool.cad.ci/merge-policy", 4, "reusable-merge-policy.yml"),
     "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 2, "reusable-branch-cleanup.yml"),
     "branch-retirement.yml": ("tool.cad.ci/branch-retirement", 2, "reusable-branch-retirement.yml"),
@@ -155,6 +156,24 @@ class ConsumerTemplateTests(unittest.TestCase):
         text = (TEMPLATES / "cad-ci-lanes.yml").read_text(encoding="utf-8")
         for forbidden in ("gh api", "git diff", "docs_only=true", "full_run:"):
             self.assertNotIn(forbidden, text)
+
+    def test_cad_release_template_is_copy_ready(self):
+        wf = load_yaml(TEMPLATES / "cad-release.yml")
+        job = wf["jobs"]["release"]
+        self.assertEqual(
+            job["permissions"],
+            {"contents": "write", "issues": "write"},
+        )
+        self.assertEqual(job["with"]["stable_ref"], "main")
+        self.assertEqual(job["with"]["build_branch"], "build")
+        self.assertEqual(
+            job["uses"],
+            "brainboxemb/tool.cad.ci/.github/workflows/"
+            "reusable-release.yml@" + RELEASE,
+        )
+        text = (TEMPLATES / "cad-release.yml").read_text(encoding="utf-8")
+        self.assertNotIn("gh-pages", text)
+        self.assertNotIn("provenance.json", text)
 
     def test_branch_cleanup_template_is_copy_ready(self):
         wf = load_yaml(TEMPLATES / "branch-cleanup.yml")
