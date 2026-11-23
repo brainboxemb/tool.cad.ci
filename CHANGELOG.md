@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.32.0 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.15.0` at exact commit
+  `24c3abb267feea9ae91f24f8fdb435cba68f089a`;
+- expose the library-owned post-build Pages renderer through the existing
+  one-runner `reusable-durable.yml` lifecycle without adding workflow inputs,
+  jobs, runners or consumer post steps;
+- support declarative `publication.pages.builder/output` repository config
+  for sites that require complete-scope evidence and the exact generated build
+  commit during rendering;
+- preserve existing `publication.pages.item/output`, workflow input names,
+  generated branch settings and governance behavior;
+- repin all copy-ready workflow templates to exact `v0.32.0` without changing
+  template versions because consumer wrapper structure is unchanged.
+
 ## 0.31.0 - 2026-11-23
 
 - replace consumer-facing JSON transport suffixes and internal lane/ref
