@@ -70,9 +70,11 @@ class ReusableCiHelperTests(unittest.TestCase):
                 source_sha="",
                 base_sha="",
                 full_run=False,
-                changed_paths=(
-                    "examples/simple-box/ci.yml\n"
-                    "examples/components/ci.yml\n"
+                changed_paths=json.dumps(
+                    [
+                        "examples/simple-box/ci.yml",
+                        "examples/components/ci.yml",
+                    ]
                 ),
             ),
             [
@@ -105,7 +107,16 @@ class ReusableCiHelperTests(unittest.TestCase):
                 source_sha="",
                 base_sha="",
                 full_run=False,
-                changed_paths="../outside/ci.yml",
+                changed_paths=json.dumps(["../outside/ci.yml"]),
+            )
+
+    def test_changed_paths_requires_json_list(self):
+        with self.assertRaisesRegex(ValueError, "JSON list"):
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=False,
+                changed_paths="examples/simple-box/ci.yml",
             )
 
     def test_incremental_selection_uses_exact_base_and_source(self):
