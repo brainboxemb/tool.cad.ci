@@ -161,6 +161,7 @@ class ReusableCiHelperTests(unittest.TestCase):
         self.assertEqual(policy["docs_only_prefixes"], ("docs/",))
 
         for value in (
+            '{"stable_ref":"main","lane_refs":["dev-ci"]}',
             '{"stable_branch":"main","development_branches":[]}',
             '{"stable_branch":"main","development_branches":["main"]}',
             '{"stable_branch":"main","development_branches":["dev-ci","dev-ci"]}',
