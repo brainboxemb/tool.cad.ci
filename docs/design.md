@@ -109,6 +109,36 @@ preparation between generic stages.
 Workflow YAML remains orchestration-only. It does not own changed-item logic,
 SCons decisions, item loops or consumer commands.
 
+## Durable source-lane workflow
+
+The permanent-lane execution topology is:
+
+```text
+consumer main/dev-* trigger
+  -> reusable-durable.yml
+       one runner
+       -> exact caller/tool/library sources
+       -> durable state resolve
+       -> exact incremental base fetch when needed
+       -> one cad-ci run
+       -> durable build-scope publication
+       -> optional configured Pages publication
+```
+
+The workflow has one public lifecycle even though state resolution must happen
+before the SCons run and publication after it. Internal helper calls are adapter
+phases only; all scope validation, selection semantics, builder resolution,
+build-store mutation, named-scope inventory and Pages publication semantics
+remain library-owned.
+
+`source_ref` identifies the permanent source branch whose freshness is checked
+during generated-branch publication. `scope` identifies its durable complete
+scope: stable uses `main`, while another safe permanent branch uses the same
+name as its named scope.
+
+The workflow never parses `publication.pages` or `builder.yml`. It invokes
+the exact tool/library stack, which resolves those contracts.
+
 ## Verification and release
 
 A tool revision is released only after its own tests pass against the exact

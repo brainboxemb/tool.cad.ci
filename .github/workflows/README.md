@@ -5,6 +5,7 @@ Read the [public API contract](../../docs/api.md) **before selecting a workflow*
 | File | Role | Who should invoke it? |
 | --- | --- | --- |
 | `reusable-ci.yml` | High-level run-only CAD-CI workflow with concurrency | Normal run-only consumers |
+| `reusable-durable.yml` | One-runner permanent-branch run + durable build/optional configured Pages publication | Permanent `main` / named-lane consumers |
 | `reusable-pr.yml` | Complete PR verification, optional publication/cleanup on **one runner** | PR consumers requiring the complete lifecycle |
 | `reusable-plan.yml` | **Public advanced** selection-only API; returns plan JSON and exact source/base commits | Callers that need planning without execution; not the normal run entry point |
 | `reusable-run.yml` | **Internal** single-run implementation behind `reusable-ci.yml` | Do not call directly from consumers |
@@ -26,7 +27,8 @@ copy live under [`docs/manual/`](../../docs/manual/README.md).
 
 | Public surface | Canonical wrapper |
 | --- | --- |
-| `reusable-ci.yml` | `docs/manual/templates/cad-ci.yml` or `docs/manual/templates/cad-ci-lanes.yml` |
+| `reusable-ci.yml` | `docs/manual/templates/cad-ci.yml` or PR job in `cad-ci-lanes.yml` |
+| `reusable-durable.yml` | Durable push job in `docs/manual/templates/cad-ci-lanes.yml` (updated with the release that ships this workflow) |
 | `reusable-pr.yml` | `docs/manual/templates/cad-ci-pr.yml` |
 | `reusable-merge-policy.yml` | `docs/manual/templates/merge-policy.yml` |\n| `reusable-branch-cleanup.yml` | `docs/manual/templates/branch-cleanup.yml` |
 | `reusable-branch-retirement.yml` | `docs/manual/templates/branch-retirement.yml` |

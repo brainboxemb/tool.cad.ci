@@ -12,3 +12,14 @@ These files are **implementation helpers**, not a separate public command API. P
 A helper becomes public only by an explicit API decision, documentation, tests and a compatible release. Do not add another script to work around a missing library API; file the library requirement first. Do not move large business logic into workflow inline Bash as a substitute for a proper implementation boundary.
 
 Changes to these helpers need traceable requirements/design justification and behavioral tests. See [AGENTS.md](../AGENTS.md).
+
+
+## Reusable durable-lane helpers
+
+`scripts/reusable_ci.py durable-state` and `durable-publish` are internal
+phases of the public `reusable-durable.yml` workflow.
+
+They are not separate consumer APIs. `durable-state` delegates complete-scope
+resolution to the pinned library before the single SCons run.
+`durable-publish` delegates build-scope and optional configured Pages
+publication to that same library afterward.

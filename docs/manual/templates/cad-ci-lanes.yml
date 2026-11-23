@@ -1,13 +1,13 @@
 # template: tool.cad.ci/cad-ci-lanes
-# template-version: 1
-# tool-release: v0.28.0
+# template-version: 2
+# tool-release: v0.29.0
 #
 # Copy this file to:
 #   .github/workflows/cad-ci.yml
 #
 # Works as-is for repositories using main + dev-cad + dev-ci.
-# Docs-only lane PRs use the released cheap path; lane -> main promotions run
-# complete validation. The classifier stays inside released tool.cad.ci.
+# Pull requests use released lane policy. Permanent branch push/dispatch uses
+# the released one-runner durable build/Pages lifecycle.
 
 name: CAD CI
 
@@ -15,14 +15,34 @@ on:
   pull_request:
     branches: [main, dev-cad, dev-ci]
     types: [opened, synchronize, reopened]
+  push:
+    branches: [main, dev-cad, dev-ci]
+  workflow_dispatch:
 
 permissions:
   contents: read
   packages: read
 
 jobs:
-  cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.28.0
+  pr:
+    if: github.event_name == 'pull_request'
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.29.0
     with:
       # Repository policy: change only when branch/docs policy differs.
       pr_policy_json: '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],"docs_only_prefixes":["docs/"]}'
+
+  durable:
+    if: >-
+      (github.event_name == 'push' ||
+       github.event_name == 'workflow_dispatch') &&
+      (github.ref_name == 'main' ||
+       github.ref_name == 'dev-cad' ||
+       github.ref_name == 'dev-ci')
+    permissions:
+      contents: write
+      packages: read
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-durable.yml@v0.29.0
+    with:
+      source_sha: ${{ github.sha }}
+      source_ref: ${{ github.ref_name }}
+      scope: ${{ github.ref_name }}

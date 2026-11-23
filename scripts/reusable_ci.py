@@ -385,6 +385,82 @@ def run_ci(
     subprocess.run(command, cwd=repo, env=env, check=True)
 
 
+def durable_state(
+    *,
+    repo: Path,
+    generated_build: Path,
+    scope: str,
+    source_sha: str,
+) -> dict[str, object]:
+    """Resolve one complete durable scope through the pinned library."""
+
+    from cad_ci.durable import fetch_durable_scope_state
+
+    state = fetch_durable_scope_state(
+        repo=repo.resolve(),
+        generated_build=generated_build.resolve(),
+        scope=scope,
+        source_sha=exact_sha(source_sha, "source_sha"),
+    )
+    return {
+        "scope": state.scope,
+        "base_sha": state.base_sha,
+        "full_run": state.full_run,
+        "exists": state.exists,
+    }
+
+
+def durable_publish(
+    *,
+    repo: Path,
+    generated_build: Path,
+    prepared_scope: Path,
+    candidate_root: Path,
+    scope: str,
+    base_sha: str,
+    full_run: bool,
+    exists: bool,
+    source_sha: str,
+    source_ref: str,
+) -> tuple[str, str]:
+    """Publish one complete build scope and its optional configured Pages site."""
+
+    from cad_ci.durable import (
+        DurableScopeState,
+        publish_durable_pages,
+        publish_durable_scope,
+    )
+
+    source_sha = exact_sha(source_sha, "source_sha")
+    state = DurableScopeState(
+        scope=scope.strip(),
+        base_sha=exact_sha(base_sha, "base_sha"),
+        full_run=full_run,
+        exists=exists,
+    )
+    source_ref = _policy_ref(source_ref, "source_ref")
+
+    build_commit = publish_durable_scope(
+        repo=repo.resolve(),
+        generated_build=generated_build.resolve(),
+        prepared_scope=prepared_scope.resolve(),
+        candidate_root=candidate_root.resolve(),
+        state=state,
+        source_sha=source_sha,
+        source_ref=source_ref,
+    )
+    pages_commit = publish_durable_pages(
+        repo=repo.resolve(),
+        generated_build=generated_build.resolve(),
+        prepared_scope=prepared_scope.resolve(),
+        state=state,
+        source_sha=source_sha,
+        source_ref=source_ref,
+        build_commit=build_commit,
+    )
+    return build_commit, pages_commit or ""
+
+
 def write_github_output(path: Path, key: str, value: str) -> None:
     """Append one multiline-safe GitHub Actions step output."""
 
@@ -422,6 +498,38 @@ def main() -> int:
     plan.add_argument("--base-sha", default="")
     plan.add_argument("--full-run", default="false")
     plan.add_argument("--github-output", type=Path, required=True)
+
+    durable_state_parser = commands.add_parser("durable-state")
+    durable_state_parser.add_argument("--repo", type=Path, required=True)
+    durable_state_parser.add_argument(
+        "--generated-build", type=Path, required=True
+    )
+    durable_state_parser.add_argument("--scope", required=True)
+    durable_state_parser.add_argument("--source-sha", required=True)
+    durable_state_parser.add_argument(
+        "--github-output", type=Path, required=True
+    )
+
+    durable_publish_parser = commands.add_parser("durable-publish")
+    durable_publish_parser.add_argument("--repo", type=Path, required=True)
+    durable_publish_parser.add_argument(
+        "--generated-build", type=Path, required=True
+    )
+    durable_publish_parser.add_argument(
+        "--prepared-scope", type=Path, required=True
+    )
+    durable_publish_parser.add_argument(
+        "--candidate-root", type=Path, required=True
+    )
+    durable_publish_parser.add_argument("--scope", required=True)
+    durable_publish_parser.add_argument("--base-sha", required=True)
+    durable_publish_parser.add_argument("--full-run", required=True)
+    durable_publish_parser.add_argument("--exists", required=True)
+    durable_publish_parser.add_argument("--source-sha", required=True)
+    durable_publish_parser.add_argument("--source-ref", required=True)
+    durable_publish_parser.add_argument(
+        "--github-output", type=Path, required=True
+    )
 
     run_parser = commands.add_parser("run")
     run_parser.add_argument("--repo", type=Path, required=True)
@@ -461,6 +569,41 @@ def main() -> int:
                 if isinstance(value, bool):
                     value = str(value).lower()
                 write_github_output(args.github_output, key, str(value))
+            return 0
+
+        if args.command == "durable-state":
+            resolution = durable_state(
+                repo=args.repo,
+                generated_build=args.generated_build,
+                scope=args.scope,
+                source_sha=args.source_sha,
+            )
+            for key in ("scope", "base_sha", "full_run", "exists"):
+                value = resolution[key]
+                if isinstance(value, bool):
+                    value = str(value).lower()
+                write_github_output(args.github_output, key, str(value))
+            return 0
+
+        if args.command == "durable-publish":
+            build_commit, pages_commit = durable_publish(
+                repo=args.repo,
+                generated_build=args.generated_build,
+                prepared_scope=args.prepared_scope,
+                candidate_root=args.candidate_root,
+                scope=args.scope,
+                base_sha=args.base_sha,
+                full_run=parse_bool(args.full_run),
+                exists=parse_bool(args.exists),
+                source_sha=args.source_sha,
+                source_ref=args.source_ref,
+            )
+            write_github_output(
+                args.github_output, "build_commit", build_commit
+            )
+            write_github_output(
+                args.github_output, "pages_commit", pages_commit
+            )
             return 0
 
         full_run = parse_bool(args.full_run)

@@ -63,6 +63,34 @@
   exposes registry credentials through `environment_json` or CAD-CI-owned
   environment.
 
+## Durable source-lane reusable workflow
+
+`reusable-durable.yml` is the one public workflow for permanent source
+branches that own durable build/Pages state.
+
+It runs on one runner and performs, in order:
+
+1. check out the exact caller source, called tool and tool-pinned library;
+2. resolve the existing complete `main` or named scope through the released
+   library durable-state API;
+3. fetch only the exact stored source commit needed for incremental selection;
+4. run exactly one `cad-ci run` graph;
+5. publish the complete build scope through the released durable API;
+6. if root `cad-ci.yml` configures `publication.pages`, publish that exact
+   item output as stable or named Pages.
+
+The public inputs identify source commit/ref, complete scope, bounded SCons jobs
+and optional non-secret command environment. They do not contain builder
+commands, Pages paths, domain generators or a second lane-name inventory.
+
+The workflow requires `contents: write` and `packages: read`. Generated
+branches are published with source-freshness checking and never force-pushed.
+
+There is no artifact handoff, second runner, second SCons run, root composite
+action or consumer-owned post-step phase. `reusable-ci.yml` remains the
+read-only/run-only high-level surface and `reusable-pr.yml` remains the PR
+lifecycle surface.
+
 ## CI use
 
 - Local and GitHub Actions use the same `cad-ci` commands.

@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "v0.28.0"
+RELEASE = "v0.29.0"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
-    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 1, "reusable-ci.yml"),
+    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 2, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
     "merge-policy.yml": ("tool.cad.ci/merge-policy", 3, "reusable-merge-policy.yml"),
     "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 1, "reusable-branch-cleanup.yml"),
@@ -97,15 +97,40 @@ class ConsumerTemplateTests(unittest.TestCase):
                 for value in forbidden:
                     self.assertNotIn(value, text)
 
-    def test_lane_template_delegates_policy_without_local_classifier(self):
+    def test_lane_template_delegates_pr_and_durable_lifecycles(self):
         wf = load_yaml(TEMPLATES / "cad-ci-lanes.yml")
-        job = wf["jobs"]["cad-ci"]
-        self.assertNotIn("runs-on", job)
+        self.assertEqual(set(wf["jobs"]), {"pr", "durable"})
+
+        pr = wf["jobs"]["pr"]
+        self.assertNotIn("runs-on", pr)
         self.assertEqual(
-            job["with"]["pr_policy_json"],
+            pr["uses"],
+            "brainboxemb/tool.cad.ci/.github/workflows/"
+            "reusable-ci.yml@" + RELEASE,
+        )
+        self.assertEqual(
+            pr["with"]["pr_policy_json"],
             '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}',
         )
+
+        durable = wf["jobs"]["durable"]
+        self.assertNotIn("runs-on", durable)
+        self.assertEqual(
+            durable["permissions"],
+            {"contents": "write", "packages": "read"},
+        )
+        self.assertEqual(
+            durable["uses"],
+            "brainboxemb/tool.cad.ci/.github/workflows/"
+            "reusable-durable.yml@" + RELEASE,
+        )
+        self.assertEqual(durable["with"]["source_sha"], "${{ github.sha }}")
+        self.assertEqual(durable["with"]["source_ref"], "${{ github.ref_name }}")
+        self.assertEqual(durable["with"]["scope"], "${{ github.ref_name }}")
+        self.assertIn("workflow_dispatch", wf["on"])
+        self.assertIn("push", wf["on"])
+
         text = (TEMPLATES / "cad-ci-lanes.yml").read_text(encoding="utf-8")
         for forbidden in ("gh api", "git diff", "docs_only=true", "full_run:"):
             self.assertNotIn(forbidden, text)
