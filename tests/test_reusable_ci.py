@@ -151,7 +151,7 @@ class ReusableCiHelperTests(unittest.TestCase):
             self.assertIn('[{"id":"case-a"}]', text)
 
 
-    def test_pr_policy_validates_lane_configuration(self):
+    def test_pr_policy_validates_development_branch_configuration(self):
         policy = self.helper.parse_pr_policy(
             '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}'
@@ -171,7 +171,7 @@ class ReusableCiHelperTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 self.helper.parse_pr_policy(value)
 
-    def test_pr_policy_promotes_exact_lane_to_full_run(self):
+    def test_pr_policy_promotes_exact_development_branch_to_full_run(self):
         with patch.object(self.helper, "git_changed_paths") as changed:
             result = self.helper.resolve_pr_policy(
                 repo=Path("."),
@@ -196,7 +196,7 @@ class ReusableCiHelperTests(unittest.TestCase):
         )
         changed.assert_not_called()
 
-    def test_pr_policy_skips_only_nonempty_docs_only_lane_diff(self):
+    def test_pr_policy_skips_only_nonempty_docs_only_development_branch_diff(self):
         policy = (
             '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}'
@@ -505,22 +505,22 @@ class ReusableWorkflowTests(unittest.TestCase):
             text,
         )
 
-    def test_lane_policy_runs_on_same_runner_before_cad_bootstrap(self):
+    def test_development_branch_policy_runs_on_same_runner_before_cad_bootstrap(self):
         run = self.read("reusable-run.yml")
         for value in (
             "pull_request_policy:",
-            "Classify configured development-lane pull request",
+            "Classify configured development-branch pull request",
             'scripts/reusable_ci.py" pr-policy',
             "Resolve effective CAD CI selection",
-            "Report docs-only lane validation",
+            "Report docs-only development-branch validation",
         ):
             self.assertIn(value, run)
         self.assertLess(
             run.index("Fetch exact base revision for incremental selection"),
-            run.index("Classify configured development-lane pull request"),
+            run.index("Classify configured development-branch pull request"),
         )
         self.assertLess(
-            run.index("Classify configured development-lane pull request"),
+            run.index("Classify configured development-branch pull request"),
             run.index("actions/setup-python@"),
         )
         self.assertIn(
