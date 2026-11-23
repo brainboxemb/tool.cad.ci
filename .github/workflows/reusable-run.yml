@@ -28,7 +28,7 @@ on:
         type: string
         default: ""
       changed_paths:
-        description: Optional newline-separated repository-relative paths for explicit affected-item selection.
+        description: Optional JSON list of repository-relative paths for explicit affected-item selection.
         required: false
         type: string
         default: ""
