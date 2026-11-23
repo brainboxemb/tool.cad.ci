@@ -14,21 +14,21 @@ on:
         description: Issue or PR conversation that receives the cleanup audit.
         required: true
         type: number
-      stable_ref:
+      stable_branch:
         description: Stable integration branch.
         required: false
         type: string
         default: main
-      lane_refs_json:
+      development_branches:
         description: JSON list of long-lived development lane refs.
         required: true
         type: string
-      permanent_refs_json:
+      permanent_branches:
         description: JSON list of additional permanent/generated refs that cleanup must never delete.
         required: false
         type: string
         default: '["build","gh-pages"]'
-      temporary_prefixes_json:
+      temporary_branch_prefixes:
         description: JSON allow-list of temporary branch prefixes eligible for maintenance cleanup.
         required: false
         type: string
@@ -53,10 +53,10 @@ jobs:
       REPOSITORY: ${{ github.repository }}
       ISSUE_NUMBER: ${{ inputs.issue_number }}
       TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
-      STABLE_REF: ${{ inputs.stable_ref }}
-      LANE_REFS_JSON: ${{ inputs.lane_refs_json }}
-      PERMANENT_REFS_JSON: ${{ inputs.permanent_refs_json }}
-      TEMPORARY_PREFIXES_JSON: ${{ inputs.temporary_prefixes_json }}
+      STABLE_REF: ${{ inputs.stable_branch }}
+      LANE_REFS_JSON: ${{ inputs.development_branches }}
+      PERMANENT_REFS_JSON: ${{ inputs.permanent_branches }}
+      TEMPORARY_PREFIXES_JSON: ${{ inputs.temporary_branch_prefixes }}
     steps:
       - name: Checkout called tool revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
