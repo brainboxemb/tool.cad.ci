@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.30.0**
+- tool release: **v0.31.0**
 
 Each YAML template contains:
 
@@ -23,10 +23,10 @@ placeholder to replace.
 
 | File | Template version | Use |
 | --- | ---: | --- |
-| `merge-policy.yml` | 3 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
-| `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
-| `branch-retirement.yml` | 1 | Owner-issued exact-SHA retirement for separately reviewed unique history. |
-| `cad-ci-lanes.yml` | 3 | PR validation plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes, with explicit generated branch names. |
+| `merge-policy.yml` | 4 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
+| `branch-cleanup.yml` | 2 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
+| `branch-retirement.yml` | 2 | Owner-issued exact-SHA retirement for separately reviewed unique history. |
+| `cad-ci-lanes.yml` | 4 | PR validation plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes, with explicit generated branch names. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
 
@@ -50,7 +50,16 @@ gh-pages
 ```
 
 Only change values explicitly marked `Repository policy` when the consumer
-repository intentionally differs. For example, uncomment
+repository intentionally differs. Public branch-role configuration uses:
+
+```yaml
+stable_branch: main
+development_branches: '["dev-cad","dev-ci"]'
+permanent_branches: '["build","gh-pages"]'
+```
+
+The list values are JSON-encoded because GitHub Actions transports workflow
+inputs as strings. JSON is not part of the public field names. For example, uncomment
 `integration_workflow` only when a repository wants the merge workflow to
 dispatch its integration workflow.
 
@@ -58,7 +67,7 @@ Do not copy merge implementation, GitHub API calls, check/status evaluation,
 branch cleanup or merge-method logic into the consumer. Those stay in the
 released reusable workflows.
 
-For a conflicted permanent-lane promotion or synchronization, do **not**
+For a conflicted permanent-development-branch promotion or synchronization, do **not**
 create a temporary merge workaround. Create a short-lived `resolve/*` branch
 whose tree is the reviewed resolved result, open a normal review PR from that
 branch to the same permanent base, and let its normal validation finish green.
@@ -130,7 +139,7 @@ The name `solidcraft-model` is repository configuration; generic CAD-CI does
 not contain SolidCraft-specific behavior. A repository may instead name any
 builder that fits its own domain.
 
-Use `cad-ci-lanes.yml` when the repository follows the permanent-lane model.
+Use `cad-ci-lanes.yml` when the repository follows the permanent-development-branch model.
 The same wrapper has two released routes: pull requests call
 `reusable-ci.yml`; `push` or `workflow_dispatch` on `main`, `dev-cad`
 or `dev-ci` calls `reusable-durable.yml` with the exact branch SHA/name as
@@ -154,7 +163,11 @@ set its optional `integration_workflow` to `cad-ci.yml`. The dispatched
 branch then enters the same durable route.
 
 Do not add a local PR-files query or docs-only/promotion classifier; that policy
-is already part of the released reusable CI API.
+is already part of the released reusable CI API. The optional
+`pull_request_policy` input uses `stable_branch`,
+`development_branches` and `docs_only_prefixes`. Optional non-secret
+command values use `command_environment`; the JSON serialization remains an
+input value format, not a field-name suffix.
 
 ## What the consumer may own
 
@@ -162,7 +175,7 @@ A consumer may own:
 
 - event triggers;
 - caller permissions;
-- intentional branch/lane/docs-prefix values;
+- intentional stable/development/docs-prefix values;
 - generated build/Page branch names when defaults need isolation;
 - optional integration workflow name;
 - repository secrets and domain runtime configuration.
