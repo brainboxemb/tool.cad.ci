@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.29.0 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.13.0` at exact commit
+  `8f0516a484e3eac11758b498ca181d5e39ed1efe` for config-owned complete
+  durable scope and Pages publication;
+- add one public `reusable-durable.yml` workflow for permanent source branches,
+  keeping state resolution, one CAD-CI/SCons graph, build publication and
+  optional configured Pages publication on one runner;
+- keep source branch/scope explicit, use exact source/tool/library revisions,
+  and add no artifact handoff, consumer post-step phase or second execution
+  route;
+- update canonical `cad-ci-lanes.yml` to template version 2 so PR validation
+  uses `reusable-ci.yml` while permanent push/workflow dispatch uses
+  `reusable-durable.yml`;
+- update all copy-ready consumer templates to the exact `v0.29.0` release tag.
+
 ## 0.28.0 - 2026-11-22
 
 - add owner-reviewed `/merge-resolved` recovery for genuinely conflicted permanent-lane promotion/synchronization without squash, rebase or force-push;
