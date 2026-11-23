@@ -22,7 +22,7 @@ on:
         required: false
         type: boolean
         default: false
-      pr_policy_json:
+      pull_request_policy:
         description: Optional stable/lane/docs-only pull-request policy JSON.
         required: false
         type: string
@@ -32,7 +32,7 @@ on:
         required: false
         type: number
         default: 1
-      environment_json:
+      command_environment:
         description: Optional non-secret environment values for consumer commands.
         required: false
         type: string
@@ -109,7 +109,7 @@ jobs:
 
       - name: Classify configured development-lane pull request
         id: pr_policy
-        if: inputs.pr_policy_json != ''
+        if: inputs.pull_request_policy != ''
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -118,7 +118,7 @@ jobs:
         run: |
           python3 "$TOOL_ROOT/scripts/reusable_ci.py" pr-policy \
             --repo . \
-            --policy-json '${{ inputs.pr_policy_json }}' \
+            --policy-json '${{ inputs.pull_request_policy }}' \
             --event-name "$EVENT_NAME" \
             --base-ref "$BASE_REF" \
             --head-ref "$HEAD_REF" \
@@ -195,7 +195,7 @@ jobs:
       - name: Run selected CAD CI graph
         if: steps.selection.outputs.run_cad == 'true'
         env:
-          CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.environment_json }}
+          CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.command_environment }}
         run: |
           python "$TOOL_ROOT/scripts/reusable_ci.py" run \
             --repo . \
