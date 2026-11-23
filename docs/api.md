@@ -4,7 +4,7 @@ Status: **audit draft**, 2026-11-22. This document distinguishes observed entry 
 
 ## Product boundary
 
-`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (0.14.0 for this candidate). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
+`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (0.15.0 for this release). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
 
 A consumer uses an exact released version tag rather than a moving branch. CLI arguments and workflow_call inputs are separate interface types and are not interchangeable.
 
@@ -83,7 +83,7 @@ commit.
 Exactly one job/runner resolves the existing complete scope through the pinned
 library, fetches only the exact stored source base when incremental, runs one
 CAD-CI graph, publishes the complete build scope, then publishes the root
-`cad-ci.yml:publication.pages` output when configured.
+`cad-ci.yml:publication.pages` site when configured. The pinned library supports both the existing item/output source and the post-build builder/output source; no additional workflow input is required.
 
 The workflow does not accept builder commands, site paths, named-subtree keep
 lists or consumer publication steps. `build_branch` and `pages_branch`

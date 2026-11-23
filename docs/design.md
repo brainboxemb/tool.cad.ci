@@ -144,7 +144,8 @@ scope: stable uses `main`, while another safe permanent branch uses the same
 name as its named scope.
 
 The workflow never parses `publication.pages` or `builder.yml`. It invokes
-the exact tool/library stack, which resolves those contracts.
+the exact tool/library stack, which resolves both normal item/output Pages and
+post-build builder/output Pages through the same durable publication call.
 
 ## Verification and release
 

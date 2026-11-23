@@ -16,11 +16,11 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The 0.30.0 release candidate pins released `lib.py.cad.ci` 0.14.0 at
-exact commit `b24e9a3826dfc07e07b4f3fd9971fcb4ab5aa12d`. The one-runner
-durable workflow keeps `build` / `gh-pages` defaults while allowing
-repository-owned generated refs such as `test-output/build` and
-`test-output/gh-pages`.
+The 0.32.0 release pins released `lib.py.cad.ci` 0.15.0 at exact commit
+`24c3abb267feea9ae91f24f8fdb435cba68f089a`. The one-runner durable
+workflow keeps `build` / `gh-pages` defaults and can publish either a
+normal configured item output or a repository-owned post-build Pages renderer
+defined declaratively in root `cad-ci.yml`.
 
 ## Starting a consumer repository
 

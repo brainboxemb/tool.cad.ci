@@ -83,7 +83,9 @@ It runs on one runner and performs, in order:
 4. run exactly one `cad-ci run` graph;
 5. publish the complete build scope through the released durable API;
 6. if root `cad-ci.yml` configures `publication.pages`, publish that exact
-   item output as stable or named Pages.
+   library-resolved site source as stable or named Pages, whether it is the
+   existing item/output mode or the post-build builder/output mode; workflow
+   YAML does not interpret either mode.
 
 The public inputs identify source commit/ref, complete scope, generated build
 branch, generated Pages branch, bounded SCons jobs and optional non-secret
