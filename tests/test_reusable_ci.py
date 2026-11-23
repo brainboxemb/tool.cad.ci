@@ -514,6 +514,11 @@ class ReusableWorkflowTests(unittest.TestCase):
             text,
         )
         self.assertIn("scripts/release_command.py", text)
+        self.assertIn(
+            "Install external CAD CI runtime dependencies",
+            text,
+        )
+        self.assertIn('"PyYAML>=6.0" "SCons==4.11.1"', text)
         self.assertIn("validator_path: ${{ inputs.validator_path }}", text)
         self.assertNotIn("gh-pages", text)
         self.assertNotIn("provenance.json", text)
