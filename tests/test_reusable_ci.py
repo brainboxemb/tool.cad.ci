@@ -264,7 +264,7 @@ class ReusableCiHelperTests(unittest.TestCase):
 
 
     def test_durable_state_delegates_to_library(self):
-        from cad_ci.durable import DurableScopeState
+        from cad_ci.publication.durable import DurableScopeState
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -272,7 +272,7 @@ class ReusableCiHelperTests(unittest.TestCase):
             repo.mkdir()
             generated = root / "generated"
             with patch(
-                "cad_ci.durable.fetch_durable_scope_state",
+                "cad_ci.publication.durable.fetch_durable_scope_state",
                 return_value=DurableScopeState(
                     scope="dev-ci",
                     base_sha="a" * 40,
@@ -304,7 +304,7 @@ class ReusableCiHelperTests(unittest.TestCase):
         )
 
     def test_durable_publish_delegates_build_then_pages(self):
-        from cad_ci.durable import DurableScopeState
+        from cad_ci.publication.durable import DurableScopeState
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -316,11 +316,11 @@ class ReusableCiHelperTests(unittest.TestCase):
 
             with (
                 patch(
-                    "cad_ci.durable.publish_durable_scope",
+                    "cad_ci.publication.durable.publish_durable_scope",
                     return_value="c" * 40,
                 ) as build,
                 patch(
-                    "cad_ci.durable.publish_durable_pages",
+                    "cad_ci.publication.durable.publish_durable_pages",
                     return_value="d" * 40,
                 ) as pages,
             ):

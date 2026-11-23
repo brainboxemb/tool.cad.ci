@@ -5,7 +5,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LIB_COMMIT = "24c3abb267feea9ae91f24f8fdb435cba68f089a"
+LIB_COMMIT = "a68bcd9e3940b21872dea5fc210bcd9a26519ebc"
 
 
 class LibraryBoundaryTests(unittest.TestCase):
@@ -27,10 +27,16 @@ class LibraryBoundaryTests(unittest.TestCase):
         publication = (
             ROOT / "cad_ci_tool/publication_cli.py"
         ).read_text(encoding="utf-8")
-        for module in ("config", "git", "planner", "runner"):
-            self.assertIn(f"from cad_ci.{module}", cli)
-        for module in ("config", "build_store", "git_publish", "pages"):
-            self.assertIn(f"from cad_ci.{module}", publication)
+        self.assertIn("from cad_ci.config", cli)
+        self.assertIn("from cad_ci.repository.git", cli)
+        self.assertIn("from cad_ci.repository.planner", cli)
+        self.assertIn("from cad_ci.execution.runner", cli)
+        self.assertIn("from cad_ci.config", publication)
+        self.assertIn("from cad_ci.repository.git", publication)
+        self.assertIn("from cad_ci.repository.planner", publication)
+        self.assertIn("from cad_ci.publication.build_store", publication)
+        self.assertIn("from cad_ci.publication.git_publish", publication)
+        self.assertIn("from cad_ci.publication.pages", publication)
 
     def test_tool_does_not_implement_builder_resolution(self):
         for path in (
@@ -44,14 +50,14 @@ class LibraryBoundaryTests(unittest.TestCase):
 
     def test_workflow_helper_only_delegates_durable_state(self):
         helper = (ROOT / "scripts/reusable_ci.py").read_text(encoding="utf-8")
-        self.assertIn("from cad_ci.durable import", helper)
+        self.assertIn("from cad_ci.publication.durable import", helper)
         self.assertIn("fetch_durable_scope_state", helper)
         self.assertIn("publish_durable_scope", helper)
         self.assertIn("publish_durable_pages", helper)
         self.assertNotIn("build.json", helper)
-        self.assertNotIn("from cad_ci.build_store", helper)
-        self.assertNotIn("from cad_ci.pages", helper)
-        self.assertNotIn("from cad_ci.git_publish", helper)
+        self.assertNotIn("from cad_ci.publication.build_store", helper)
+        self.assertNotIn("from cad_ci.publication.pages", helper)
+        self.assertNotIn("from cad_ci.publication.git_publish", helper)
 
 
 if __name__ == "__main__":

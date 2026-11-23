@@ -400,7 +400,7 @@ def durable_state(
 ) -> dict[str, object]:
     """Resolve one complete durable scope through the pinned library."""
 
-    from cad_ci.durable import fetch_durable_scope_state
+    from cad_ci.publication.durable import fetch_durable_scope_state
 
     state = fetch_durable_scope_state(
         repo=repo.resolve(),
@@ -434,7 +434,7 @@ def durable_publish(
 ) -> tuple[str, str]:
     """Publish one complete build scope and its optional configured Pages site."""
 
-    from cad_ci.durable import (
+    from cad_ci.publication.durable import (
         DurableScopeState,
         publish_durable_pages,
         publish_durable_scope,
