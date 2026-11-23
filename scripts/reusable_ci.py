@@ -391,6 +391,7 @@ def durable_state(
     generated_build: Path,
     scope: str,
     source_sha: str,
+    build_branch: str = "build",
 ) -> dict[str, object]:
     """Resolve one complete durable scope through the pinned library."""
 
@@ -401,6 +402,7 @@ def durable_state(
         generated_build=generated_build.resolve(),
         scope=scope,
         source_sha=exact_sha(source_sha, "source_sha"),
+        branch=_policy_ref(build_branch, "build_branch"),
     )
     return {
         "scope": state.scope,
@@ -422,6 +424,8 @@ def durable_publish(
     exists: bool,
     source_sha: str,
     source_ref: str,
+    build_branch: str = "build",
+    pages_branch: str = "gh-pages",
 ) -> tuple[str, str]:
     """Publish one complete build scope and its optional configured Pages site."""
 
@@ -439,6 +443,8 @@ def durable_publish(
         exists=exists,
     )
     source_ref = _policy_ref(source_ref, "source_ref")
+    build_branch = _policy_ref(build_branch, "build_branch")
+    pages_branch = _policy_ref(pages_branch, "pages_branch")
 
     build_commit = publish_durable_scope(
         repo=repo.resolve(),
@@ -448,6 +454,7 @@ def durable_publish(
         state=state,
         source_sha=source_sha,
         source_ref=source_ref,
+        build_branch=build_branch,
     )
     pages_commit = publish_durable_pages(
         repo=repo.resolve(),
@@ -457,6 +464,7 @@ def durable_publish(
         source_sha=source_sha,
         source_ref=source_ref,
         build_commit=build_commit,
+        pages_branch=pages_branch,
     )
     return build_commit, pages_commit or ""
 
@@ -506,6 +514,7 @@ def main() -> int:
     )
     durable_state_parser.add_argument("--scope", required=True)
     durable_state_parser.add_argument("--source-sha", required=True)
+    durable_state_parser.add_argument("--build-branch", default="build")
     durable_state_parser.add_argument(
         "--github-output", type=Path, required=True
     )
@@ -527,6 +536,8 @@ def main() -> int:
     durable_publish_parser.add_argument("--exists", required=True)
     durable_publish_parser.add_argument("--source-sha", required=True)
     durable_publish_parser.add_argument("--source-ref", required=True)
+    durable_publish_parser.add_argument("--build-branch", default="build")
+    durable_publish_parser.add_argument("--pages-branch", default="gh-pages")
     durable_publish_parser.add_argument(
         "--github-output", type=Path, required=True
     )
@@ -577,6 +588,7 @@ def main() -> int:
                 generated_build=args.generated_build,
                 scope=args.scope,
                 source_sha=args.source_sha,
+                build_branch=args.build_branch,
             )
             for key in ("scope", "base_sha", "full_run", "exists"):
                 value = resolution[key]
@@ -597,6 +609,8 @@ def main() -> int:
                 exists=parse_bool(args.exists),
                 source_sha=args.source_sha,
                 source_ref=args.source_ref,
+                build_branch=args.build_branch,
+                pages_branch=args.pages_branch,
             )
             write_github_output(
                 args.github_output, "build_commit", build_commit
