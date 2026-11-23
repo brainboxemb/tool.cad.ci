@@ -124,6 +124,7 @@ jobs:
             --generated-build "$GENERATED_BUILD" \
             --scope "$CAD_CI_SCOPE" \
             --source-sha "$CAD_CI_SOURCE_SHA" \
+            --build-branch "${{ inputs.build_branch }}" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Fetch exact durable base revision
@@ -165,4 +166,6 @@ jobs:
             --exists "${{ steps.state.outputs.exists }}" \
             --source-sha "$CAD_CI_SOURCE_SHA" \
             --source-ref "$CAD_CI_SOURCE_REF" \
+            --build-branch "${{ inputs.build_branch }}" \
+            --pages-branch "${{ inputs.pages_branch }}" \
             --github-output "$GITHUB_OUTPUT"
