@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.33.1 - 2026-11-23
+
+- repin the thin tool to released `lib.py.cad.ci 0.17.1` at exact commit
+  `00d0a763413650339945ca2d9bcfa4265e8dff35`;
+- carry the library-owned build123d runtime-interpreter compatibility fix
+  discovered by external acceptance, without adding tool-owned runtime logic;
+- preserve all public CLI/workflow inputs and template versions;
+- repin copy-ready workflow templates to exact `v0.33.1`.
+
 ## 0.33.0 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.17.0` at exact commit
