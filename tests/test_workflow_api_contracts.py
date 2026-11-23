@@ -15,6 +15,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 CALLABLE = (
     "reusable-ci.yml",
     "reusable-durable.yml",
+    "reusable-release.yml",
     "reusable-pr.yml",
     "reusable-plan.yml",
     "reusable-run.yml",
@@ -90,6 +91,33 @@ class WorkflowApiContractTests(unittest.TestCase):
         cmd = next(step for step in steps if "run" in step)
         self.assertIn("scripts/merge_command.py", cmd["run"])
         self.assertNotIn("gh api", cmd["run"])
+
+    def test_release_api_checks_build_before_shared_release(self):
+        wf = load_yaml(WORKFLOWS / "reusable-release.yml")
+        contract = wf["on"]["workflow_call"]
+        self.assertEqual(
+            set(contract["inputs"]),
+            {
+                "command",
+                "issue_number",
+                "stable_ref",
+                "build_branch",
+                "validator_path",
+            },
+        )
+        self.assertEqual(set(wf["jobs"]), {"check_build", "release"})
+        check = wf["jobs"]["check_build"]
+        self.assertEqual(check["permissions"], {"contents": "read"})
+        release = wf["jobs"]["release"]
+        self.assertEqual(release["needs"], "check_build")
+        self.assertEqual(
+            release["uses"],
+            "brainboxemb/tool.py.lib.ci/.github/workflows/"
+            "reusable-release.yml@58ead6897a4ac8cafef22a3c1f834491bf61568d",
+        )
+        text = (WORKFLOWS / "reusable-release.yml").read_text(encoding="utf-8")
+        self.assertNotIn("gh-pages", text)
+        self.assertNotIn("provenance.json", text)
 
     def test_durable_workflow_is_one_runner_and_one_run(self):
         wf = load_yaml(WORKFLOWS / "reusable-durable.yml")

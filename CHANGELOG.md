@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.36.0 - 2026-11-23
+
+- add the central CAD release workflow and copy-ready `cad-release` template;
+- validate the exact stable `main/build.json` ci-build-record through the
+  pinned `lib.py.cad.ci` implementation before a release is allowed;
+- keep Pages/`gh-pages` completely outside release qualification;
+- delegate strict `/release` parsing and the tag/GitHub Release transaction
+  to released `tool.py.lib.ci v0.2.1` at exact commit
+  `58ead6897a4ac8cafef22a3c1f834491bf61568d`;
+- retain the optional repository validator only for repository/domain-specific
+  release rules;
+- repin all copy-ready templates to exact `v0.36.0`.
+
+
 ## 0.35.0 - 2026-11-23
 
 - add optional public `item` and JSON-list `changed_paths` selectors

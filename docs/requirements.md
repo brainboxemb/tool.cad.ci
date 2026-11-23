@@ -105,6 +105,34 @@ action or consumer-owned post-step phase. `reusable-ci.yml` remains the
 read-only/run-only high-level surface and `reusable-pr.yml` remains the PR
 lifecycle surface.
 
+## CAD release flow
+
+A CAD-CI consumer must use one released shared release path rather than parsing
+generated build/Page output in repository-local workflow code.
+
+Required behavior:
+
+- the requested release commit is an exact 40-character source commit on the
+  configured stable branch;
+- the CAD release workflow reads the stable main `ci-build-record`
+  (`main/build.json`) from the configured generated build branch;
+- the `ci-build-record` must identify the requested source commit and satisfy
+  the released CAD-CI complete-main-build contract;
+- `gh-pages` and all other Pages output are excluded from release
+  qualification;
+- after the CAD build check succeeds, the workflow delegates tag/GitHub Release
+  creation to one exact released `tool.py.lib.ci` reusable release workflow;
+- an optional consumer validator is limited to repository/domain-specific
+  release rules and must not duplicate CAD build-record or generic GitHub
+  release behavior;
+- the complete released flow must be black-box accepted in
+  `tool.cad.ci.test` before a consumer migrates to it.
+
+`reusable-release.yml` and `cad-release.yml` are versioned `tool.cad.ci`
+interfaces. Their implementation must remain thin: generic
+build-record semantics stay in the pinned `lib.py.cad.ci`; generic
+tag/GitHub Release mechanics stay in released `tool.py.lib.ci`.
+
 ## CI use
 
 - Local and GitHub Actions use the same `cad-ci` commands.

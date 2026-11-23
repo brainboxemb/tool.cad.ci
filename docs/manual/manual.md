@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.35.0**
+- tool release: **v0.36.0**
 
 Each YAML template contains:
 
@@ -29,6 +29,7 @@ placeholder to replace.
 | `cad-ci-lanes.yml` | 5 | PR validation, read-only targeted manual qualification, plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
+| `cad-release.yml` | 1 | Owner-issued CAD release: check the stable main ci-build-record, then call the shared Python-library release workflow. |
 
 ## First handoff: merge policy
 
@@ -202,6 +203,51 @@ is already part of the released reusable CI API. The optional
 `development_branches` and `docs_only_prefixes`. Optional non-secret
 command values use `command_environment`; the JSON serialization remains an
 input value format, not a field-name suffix.
+
+## CAD release flow
+
+A repository that uses CAD-CI must not build its own release gate around the
+generated `build` or Pages branches.
+
+The shared release path is:
+
+```text
+/release vX.Y.Z <source-commit>
+  -> tool.cad.ci release workflow
+       -> read the stable main ci-build-record from the generated build branch
+       -> require source_commit == requested release commit
+       -> require the complete main build set required by the CAD-CI contract
+       -> call the released tool.py.lib.ci reusable release workflow
+            -> optional repository-specific validator
+            -> create/verify tag and GitHub Release
+```
+
+The generated Pages branch is web output. `gh-pages` is **not** release
+evidence and the release flow must not read it to decide whether a source commit
+may be released.
+
+The stable CAD build evidence is `main/build.json` in the generated build
+branch. This manual calls that file the **ci-build-record**. Its schema and
+validation rules belong to the released CAD-CI stack; consumers do not parse or
+reimplement them in repository scripts.
+
+A repository-specific validator may still check rules that are genuinely owned
+by that repository, for example:
+
+- package/version files agree;
+- the changelog contains the requested version;
+- repository-specific release blockers are clear.
+
+It must not reimplement:
+
+- CAD-CI build-record validation;
+- generated branch freshness rules;
+- tag/GitHub Release creation;
+- Pages checks as release evidence.
+
+The public workflow is `reusable-release.yml`; the copy-ready wrapper is
+`cad-release.yml`. They ship together in tool.cad.ci v0.36.0. Consumers must
+wait for released-stack acceptance in `tool.cad.ci.test` before migrating.
 
 ## What the consumer may own
 

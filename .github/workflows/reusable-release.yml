@@ -1,0 +1,140 @@
+# Public CAD release workflow.
+# Checks the stable CAD build record, then delegates the GitHub release
+# transaction to released tool.py.lib.ci.
+
+name: Reusable CAD release
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        description: "Exact owner release command: /release vX.Y.Z <40-char-sha>."
+        required: true
+        type: string
+      issue_number:
+        description: Triggering issue number used by the shared release workflow.
+        required: true
+        type: number
+      stable_ref:
+        description: Stable source branch whose head must equal the release commit.
+        required: false
+        type: string
+        default: main
+      build_branch:
+        description: Generated CAD-CI build branch containing main/build.json.
+        required: false
+        type: string
+        default: build
+      validator_path:
+        description: Optional repository-relative validator for repository-specific release rules.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      tag:
+        description: Published or verified release tag.
+        value: ${{ jobs.release.outputs.tag }}
+      target_sha:
+        description: Exact released source commit.
+        value: ${{ jobs.release.outputs.target_sha }}
+      release_url:
+        description: GitHub Release URL.
+        value: ${{ jobs.release.outputs.release_url }}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check_build:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
+      startsWith(inputs.command, '/release ')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TOOL_ROOT: ${{ github.workspace }}/.cache/cad-ci-tool-source
+      LIB_ROOT: ${{ github.workspace }}/.cache/cad-ci-lib-source
+      PY_RELEASE_ROOT: ${{ github.workspace }}/.cache/py-lib-ci-source
+      GENERATED_BUILD: ${{ github.workspace }}/.cache/cad-ci-generated-build
+      PYTHONPATH: ${{ github.workspace }}/.cache/cad-ci-tool-source:${{ github.workspace }}/.cache/cad-ci-lib-source
+
+    steps:
+      - name: Checkout released Python release tool
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: brainboxemb/tool.py.lib.ci
+          ref: 58ead6897a4ac8cafef22a3c1f834491bf61568d
+          path: .cache/py-lib-ci-source
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Parse release command
+        id: request
+        shell: bash
+        run: |
+          python "$PY_RELEASE_ROOT/scripts/release_command.py" parse \
+            --command "${{ inputs.command }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Checkout exact requested consumer source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.request.outputs.target_sha }}
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: true
+
+      - name: Checkout called CAD CI tool revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .cache/cad-ci-tool-source
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Resolve exact pinned CAD CI library revision
+        id: library
+        run: |
+          python "$TOOL_ROOT/scripts/reusable_ci.py" library-revision \
+            --tool-root "$TOOL_ROOT" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned CAD CI library source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: brainboxemb/lib.py.cad.ci
+          ref: ${{ steps.library.outputs.revision }}
+          path: .cache/cad-ci-lib-source
+          fetch-depth: 1
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Check stable main ci-build-record
+        run: |
+          python "$TOOL_ROOT/scripts/reusable_ci.py" release-check \
+            --repo . \
+            --generated-build "$GENERATED_BUILD" \
+            --source-sha "${{ steps.request.outputs.target_sha }}" \
+            --build-branch "${{ inputs.build_branch }}"
+
+  release:
+    needs: check_build
+    permissions:
+      contents: write
+      issues: write
+    uses: brainboxemb/tool.py.lib.ci/.github/workflows/reusable-release.yml@58ead6897a4ac8cafef22a3c1f834491bf61568d
+    with:
+      command: ${{ inputs.command }}
+      issue_number: ${{ inputs.issue_number }}
+      stable_ref: ${{ inputs.stable_ref }}
+      validator_path: ${{ inputs.validator_path }}

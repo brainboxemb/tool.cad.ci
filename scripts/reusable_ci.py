@@ -471,6 +471,35 @@ def durable_state(
     }
 
 
+def release_check(
+    *,
+    repo: Path,
+    generated_build: Path,
+    source_sha: str,
+    build_branch: str = "build",
+) -> str:
+    """Require the stable main ci-build-record for one exact source commit."""
+
+    from cad_ci.publication.durable import fetch_durable_scope_state
+
+    source_sha = exact_sha(source_sha, "source_sha")
+    state = fetch_durable_scope_state(
+        repo=repo.resolve(),
+        generated_build=generated_build.resolve(),
+        scope="main",
+        source_sha=source_sha,
+        branch=_policy_ref(build_branch, "build_branch"),
+    )
+    if not state.exists:
+        raise ValueError("stable main ci-build-record is missing")
+    if state.base_sha != source_sha:
+        raise ValueError(
+            "stable main ci-build-record does not match release source: "
+            f"{state.base_sha}"
+        )
+    return state.base_sha
+
+
 def durable_publish(
     *,
     repo: Path,
@@ -578,6 +607,14 @@ def main() -> int:
         "--github-output", type=Path, required=True
     )
 
+    release_check_parser = commands.add_parser("release-check")
+    release_check_parser.add_argument("--repo", type=Path, required=True)
+    release_check_parser.add_argument(
+        "--generated-build", type=Path, required=True
+    )
+    release_check_parser.add_argument("--source-sha", required=True)
+    release_check_parser.add_argument("--build-branch", default="build")
+
     durable_publish_parser = commands.add_parser("durable-publish")
     durable_publish_parser.add_argument("--repo", type=Path, required=True)
     durable_publish_parser.add_argument(
@@ -641,6 +678,15 @@ def main() -> int:
                 if isinstance(value, bool):
                     value = str(value).lower()
                 write_github_output(args.github_output, key, str(value))
+            return 0
+
+        if args.command == "release-check":
+            release_check(
+                repo=args.repo,
+                generated_build=args.generated_build,
+                source_sha=args.source_sha,
+                build_branch=args.build_branch,
+            )
             return 0
 
         if args.command == "durable-state":
