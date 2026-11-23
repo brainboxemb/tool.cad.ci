@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
 
-from cad_ci.scons_engine import ENGINE_SCHEMA as SCONS_ENGINE_SCHEMA
+from cad_ci.scons.engine import ENGINE_SCHEMA as SCONS_ENGINE_SCHEMA
 from cad_ci_tool.cli import main
 
 
