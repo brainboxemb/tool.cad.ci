@@ -63,20 +63,20 @@ Entry point: `workflow_call`. Inputs: `source_sha` (string, default triggering s
 
 ### `reusable-run.yml`
 
-Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, optional `pr_policy_json`, `jobs` (number, default 1), `environment_json` (nonsecret JSON string, default `{}`), `upload_build` (boolean, default false), `build_artifact_name` (string, default `cad-ci-build`). Output: `build_artifact_name` (empty when nothing uploaded). Requires `contents: read` and `packages: read`. Side effects: shallow caller checkout/base fetch, optional lane-policy preflight, then tool/library/Python/GHCR bootstrap and exactly one CAD-CI run when not skipped; optional Actions artifact upload. No durable build-branch publication.
+Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, optional `pull_request_policy`, `jobs` (number, default 1), `command_environment` (nonsecret JSON string, default `{}`), `upload_build` (boolean, default false), `build_artifact_name` (string, default `cad-ci-build`). Output: `build_artifact_name` (empty when nothing uploaded). Requires `contents: read` and `packages: read`. Side effects: shallow caller checkout/base fetch, optional lane-policy preflight, then tool/library/Python/GHCR bootstrap and exactly one CAD-CI run when not skipped; optional Actions artifact upload. No durable build-branch publication.
 
 ### `reusable-ci.yml`
 
-Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`, plus optional `pr_policy_json` (default empty). Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
+Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`, plus optional `pull_request_policy` (default empty). Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
 
-When `pr_policy_json` is set on a pull request, the existing single runner may apply stable/lane/docs-only policy before Python/library/GHCR bootstrap. The policy supports `stable_ref`, `lane_refs`, and `docs_only_prefixes`. Exact configured lane→stable promotion forces full CI; a non-empty development-lane diff entirely below configured docs prefixes succeeds without CAD-CI bootstrap; all other/unknown cases fail safe to running CI. No second classifier job is created.
+When `pull_request_policy` is set on a pull request, the existing single runner may apply stable/lane/docs-only policy before Python/library/GHCR bootstrap. The policy JSON object supports `stable_branch`, `development_branches`, and `docs_only_prefixes`. Exact configured lane→stable promotion forces full CI; a non-empty development-lane diff entirely below configured docs prefixes succeeds without CAD-CI bootstrap; all other/unknown cases fail safe to running CI. No second classifier job is created.
 
 ### `reusable-durable.yml`
 
 Public `workflow_call` entry point for permanent source branches. Required
 inputs are `source_sha`, `source_ref` and `scope`; optional inputs are
 `build_branch` (string, default `build`), `pages_branch` (string, default
-`gh-pages`), `jobs` (positive number, default 1) and `environment_json`
+`gh-pages`), `jobs` (positive number, default 1) and `command_environment`
 (default `{}`). Outputs are the published build commit and optional Pages
 commit.
 
@@ -97,7 +97,7 @@ Pages semantics and durable scope inventory are library-owned. It requires
 Public `workflow_call` entry point for a complete PR lifecycle:
 `opened`, `reopened`, `synchronize` and `closed`. Inputs:
 `full_run` (boolean, default false), `jobs` (positive number, default 1),
-`environment_json` (non-secret string environment JSON, default `{}`),
+`command_environment` (non-secret string environment JSON, default `{}`),
 `publish_build` (boolean, default true).
 
 **Exactly one job and one runner.** It checks out the exact caller/source
@@ -127,14 +127,14 @@ deletion. Missing refs are idempotent; moved refs are retained and reported.
 This API exists only for deliberately retiring unique history after review. It
 does not alter the evidence rules of normal `/cleanup-branches`.
 
-### `reusable-branch-cleanup.yml` — separate governance maintenance API\n\nEntry point: `workflow_call`, intended behind an owner-only `/cleanup-branches` comment. Required: `command` (exact `/cleanup-branches`), `issue_number`, `lane_refs_json`. Optional: `stable_ref` (default `main`), `permanent_refs_json` and `temporary_prefixes_json`. Requires `contents: write`, `pull-requests: read` and `issues: write`. It enumerates current branches/open PRs/merged PR head evidence, and deletes only allow-listed temporary branches whose current inspected SHA is positively retired by integration into a configured durable ref or an exact merged-PR `(ref, SHA)` record. It re-reads the branch SHA immediately before deletion. Permanent/generated refs, `backup/*`, open PR heads, moved refs and unique/unmerged history are retained and reported.\n\nThis maintenance surface is distinct from the post-merge cleanup performed by `reusable-merge-policy.yml`; it exists for stale branches left by historical/manual workflows. Live deletion must be qualified in `tool.cad.ci.test` before consumer adoption.\n\n### `reusable-merge-policy.yml` — separate governance API
+### `reusable-branch-cleanup.yml` — separate governance maintenance API\n\nEntry point: `workflow_call`, intended behind an owner-only `/cleanup-branches` comment. Required: `command` (exact `/cleanup-branches`), `issue_number`, `development_branches`. Optional: `stable_branch` (default `main`), `permanent_branches` and `temporary_branch_prefixes`. The list values are JSON-encoded strings. Requires `contents: write`, `pull-requests: read` and `issues: write`. It enumerates current branches/open PRs/merged PR head evidence, and deletes only allow-listed temporary branches whose current inspected SHA is positively retired by integration into a configured durable ref or an exact merged-PR `(ref, SHA)` record. It re-reads the branch SHA immediately before deletion. Permanent/generated refs, `backup/*`, open PR heads, moved refs and unique/unmerged history are retained and reported.\n\nThis maintenance surface is distinct from the post-merge cleanup performed by `reusable-merge-policy.yml`; it exists for stale branches left by historical/manual workflows. Live deletion must be qualified in `tool.cad.ci.test` before consumer adoption.\n\n### `reusable-merge-policy.yml` — separate governance API
 
 Entry point: `workflow_call`, intended behind owner-only `/merge` and
 multiline `/merge-resolved` commands. Required inputs are `command`,
-`pull_request_number` and `lane_refs_json`. Optional policy inputs are
-`stable_ref` (default `main`), `permanent_refs_json`,
-`temporary_prefixes_json`, `integration_workflow`, and
-`resolution_prefix` (default `resolve/`).
+`pull_request_number` and `development_branches`. Optional policy inputs are
+`stable_branch` (default `main`), `permanent_branches`,
+`temporary_branch_prefixes`, `integration_workflow`, and
+`resolution_branch_prefix` (default `resolve/`). List values remain JSON-encoded strings.
 
 Normal `/merge` requires a mergeable PR and uses GitHub's PR merge endpoint.
 `/merge-resolved` is only for a conflicted exact permanent-ref direction. Its
@@ -163,7 +163,7 @@ See [requirements](requirements.md), [design](design.md), [consumer guide](consu
 
 ### Consumer environment boundary
 
-`environment_json` is an object of **non-secret string values**, available
+`command_environment` is an object of **non-secret string values**, available
 to domain commands only. It is not a general runner-configuration channel.
 The helper rejects malformed names, non-string values and reserved names
 or prefixes including `GITHUB_*`, `ACTIONS_*`, `RUNNER_*`,
@@ -226,3 +226,18 @@ An evidence cell marked **GAP** is incomplete, not passed.
   releases until a new exact release completes acceptance.
 - The split `plan`/`run` workflows and optional merge-governance API are
   not deleted simply because their current design is under review.
+
+
+### v0.31.0 workflow naming compatibility
+
+v0.31.0 removes serialization suffixes and internal lane/ref terminology from
+public workflow-call inputs. Internal helper flags remain unchanged.
+
+Key public names are `stable_branch`, `development_branches`,
+`permanent_branches`, `temporary_branch_prefixes`,
+`pull_request_policy` and `command_environment`.
+
+This is a versioned workflow-schema change, not a behavioral merge/cleanup/run
+change. Consumers pinned to v0.30.0 or earlier remain valid because release
+tags are immutable. Consumers moving to v0.31.0 must update to the matching
+canonical template version; v0.31.0 does not expose deprecated aliases.
