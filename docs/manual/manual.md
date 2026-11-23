@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.31.0**
+- tool release: **v0.32.0**
 
 Each YAML template contains:
 
@@ -157,6 +157,35 @@ Those are compatibility defaults. A repository that needs isolated output may
 use other Git branch names, for example `test-output/build` and
 `test-output/gh-pages`. This changes only the generated refs; stable/named
 scope and Pages subtree semantics remain unchanged.
+
+When Pages can be built completely inside the normal CAD-CI graph, keep the
+existing item-output publication form:
+
+```yaml
+publication:
+  pages:
+    item: site
+    output: site
+```
+
+When the final site must use the prepared complete durable scope and the exact
+generated build commit, use the library-owned post-build renderer instead:
+
+```yaml
+builders:
+  pages-site: ci/builders/pages-site
+
+publication:
+  pages:
+    builder: pages-site
+    output: site
+```
+
+That builder is still repository-owned executable behavior. It contains one
+plain command step and runs once after durable build publication, outside the
+SCons graph, with CAD-CI-owned complete-scope/source/build provenance
+environment. The consumer workflow does not add a post-step or second CAD-CI
+run.
 
 When the merge-policy wrapper should explicitly dispatch post-merge integration,
 set its optional `integration_workflow` to `cad-ci.yml`. The dispatched
