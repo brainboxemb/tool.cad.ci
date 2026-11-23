@@ -131,6 +131,13 @@ phases only; all scope validation, selection semantics, builder resolution,
 build-store mutation, named-scope inventory and Pages publication semantics
 remain library-owned.
 
+Generated branch selection is transparent adapter configuration. The workflow
+passes `build_branch` to both durable-state materialization and durable build
+publication, and passes `pages_branch` to durable Pages publication. Defaults
+remain `build` and `gh-pages`. The tool does not interpret branch contents,
+derive scope layout from these names, or merge both outputs into one
+`output_root` branch.
+
 `source_ref` identifies the permanent source branch whose freshness is checked
 during generated-branch publication. `scope` identifies its durable complete
 scope: stable uses `main`, while another safe permanent branch uses the same
