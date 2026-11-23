@@ -203,6 +203,52 @@ is already part of the released reusable CI API. The optional
 command values use `command_environment`; the JSON serialization remains an
 input value format, not a field-name suffix.
 
+## CAD release flow
+
+A repository that uses CAD-CI must not build its own release gate around the
+generated `build` or Pages branches.
+
+The shared release path is:
+
+```text
+/release vX.Y.Z <source-commit>
+  -> tool.cad.ci release workflow
+       -> read the stable main ci-build-record from the generated build branch
+       -> require source_commit == requested release commit
+       -> require the complete main build set required by the CAD-CI contract
+       -> call the released tool.py.lib.ci reusable release workflow
+            -> optional repository-specific validator
+            -> create/verify tag and GitHub Release
+```
+
+The generated Pages branch is web output. `gh-pages` is **not** release
+evidence and the release flow must not read it to decide whether a source commit
+may be released.
+
+The stable CAD build evidence is `main/build.json` in the generated build
+branch. This manual calls that file the **ci-build-record**. Its schema and
+validation rules belong to the released CAD-CI stack; consumers do not parse or
+reimplement them in repository scripts.
+
+A repository-specific validator may still check rules that are genuinely owned
+by that repository, for example:
+
+- package/version files agree;
+- the changelog contains the requested version;
+- repository-specific release blockers are clear.
+
+It must not reimplement:
+
+- CAD-CI build-record validation;
+- generated branch freshness rules;
+- tag/GitHub Release creation;
+- Pages checks as release evidence.
+
+Issue #176 defines the public workflow and copy-ready template that will expose
+this path. Until that release is externally accepted, existing consumers remain
+pinned to their last accepted release procedure; do not add a new local
+workaround.
+
 ## What the consumer may own
 
 A consumer may own:
