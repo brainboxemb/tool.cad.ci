@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.33.2 - 2026-11-23
+
+- repin the thin tool to released `lib.py.cad.ci 0.17.2` at exact commit
+  `d4e8140d988be06460326fda802e514b6b306d64`;
+- carry the library-owned host UID:GID bind-mount ownership fix discovered by
+  external acceptance, without adding tool-owned runtime behavior;
+- preserve all public CLI/workflow inputs and template versions;
+- repin copy-ready workflow templates to exact `v0.33.2`.
+
 ## 0.33.1 - 2026-11-23
 
 - repin the thin tool to released `lib.py.cad.ci 0.17.1` at exact commit
