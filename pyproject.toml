@@ -8,7 +8,7 @@ version = "0.29.0"
 description = "Command-line interface for BrainboxEmb CAD CI"
 requires-python = ">=3.11"
 dependencies = [
-  "brainboxemb-cad-ci-lib @ git+https://github.com/brainboxemb/lib.py.cad.ci.git@8f0516a484e3eac11758b498ca181d5e39ed1efe"
+  "brainboxemb-cad-ci-lib @ git+https://github.com/brainboxemb/lib.py.cad.ci.git@b24e9a3826dfc07e07b4f3fd9971fcb4ab5aa12d"
 ]
 
 [project.scripts]
