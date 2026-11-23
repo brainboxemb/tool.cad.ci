@@ -10,7 +10,7 @@ keeps only its trigger, permissions and exact released tool version tag:
 ```yaml
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.25.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.29.0
 ```
 
 The reusable workflow owns generic checkout, Python/tool setup and one
@@ -147,7 +147,4 @@ adopting it.
 A repository using stable `main` plus long-lived `dev-cad` / `dev-ci`
 starts from `cad-ci-lanes.yml`, not a local classifier.
 
-The template configures the released `reusable-ci.yml` lane policy. The
-consumer does not paginate pull-request files, loop over docs paths or compute
-promotion `full_run` expressions. Repository-owned changes are limited to
-intentional lane names/docs prefixes and ordinary workflow/job dependencies.
+Template version 2 configures both released lane surfaces. Pull requests use\n`reusable-ci.yml` lane policy; permanent `push` and `workflow_dispatch` events\nuse `reusable-durable.yml` with the current branch name as source ref and\ndurable scope. The durable route performs one CAD-CI graph and library-owned\nbuild/Pages publication on one runner.\n\nThe consumer does not paginate pull-request files, loop over docs paths, compute\npromotion `full_run` expressions, or add its own durable publication steps.\nRepository-owned changes are limited to intentional lane names/docs prefixes,\npermissions and ordinary workflow dependencies.
