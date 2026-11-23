@@ -128,8 +128,8 @@ Required behavior:
 - the complete released flow must be black-box accepted in
   `tool.cad.ci.test` before a consumer migrates to it.
 
-The public workflow/template names, inputs and outputs are versioned
-`tool.cad.ci` interfaces. Their implementation must remain thin: generic
+`reusable-release.yml` and `cad-release.yml` are versioned `tool.cad.ci`
+interfaces. Their implementation must remain thin: generic
 build-record semantics stay in the pinned `lib.py.cad.ci`; generic
 tag/GitHub Release mechanics stay in released `tool.py.lib.ci`.
 
