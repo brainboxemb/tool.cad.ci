@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.30.0 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.14.0` at exact commit
+  `b24e9a3826dfc07e07b4f3fd9971fcb4ab5aa12d`;
+- add optional `build_branch` and `pages_branch` inputs to
+  `reusable-durable.yml`, preserving `build` and `gh-pages` as defaults;
+- pass generated branch selection through the existing one-runner durable
+  adapter to library-owned state/materialization/publication semantics;
+- support isolated generated refs such as `test-output/build` and
+  `test-output/gh-pages` without changing scope layout or root
+  `cad-ci.yml`;
+- update canonical `cad-ci-lanes.yml` to template version 3 with explicit
+  generated branch settings and pin all copy-ready templates to `v0.30.0`.
+
 ## 0.29.0 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.13.0` at exact commit
