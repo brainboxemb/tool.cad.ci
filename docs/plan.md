@@ -6,46 +6,58 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
 
 - `lib.py.cad.ci v0.18.2` @
   `088644a05ff698957aef2ddc6cc5de037ddfa158`;
-- `tool.cad.ci v0.34.2` @
-  `37f7a82c6769279d33367144c56976da89bb1a5d`;
-- exact v0.34.2/v0.18.2 external acceptance is complete in
-  `tool.cad.ci.test #248`, including CadQuery Workplane + Assembly and
-  dev-ci/main/dev-cad durable provenance;
-- `lib.py.cad.verification v0.16.0` remains immutable at
-  `c7c145b7be0c602724e8cca874ef29990baaad1e`.
+- `tool.cad.ci v0.35.0` @
+  `9fcad92b7c5f10ae29a9cb085a4f25bb38ed00f9`;
+- released-stack acceptance is owned by `tool.cad.ci.test`;
+- consumers remain pinned to accepted releases until a newer exact stack passes
+  that external acceptance.
 
 ## Current work
 
-### #168 — targeted reusable CI selection / v0.35.0
+### #176 — central CAD release flow
 
-**Now.** This is the missing staged-migration invocation contract exposed by
-Forge #740.
+**Now. Documentation first.**
+
+The Forge v0.12.0 release attempt exposed a missing shared contract: a CAD-CI
+consumer must not parse Pages or invent repository-local build checks before a
+release.
 
 Required order:
 
-1. expose optional public `item` and JSON-list `changed_paths` on the
-   read-only reusable CI surface;
-2. forward directly to existing CLI `--item` / `--changed` selection;
-3. keep targeted selectors mutually exclusive with effective full-run;
-4. update canonical `cad-ci-lanes` to template version 5 so manual targeted
-   dispatch is read-only while empty dispatch remains durable;
-5. keep exact library pin v0.18.2; add no planner/SCons behavior here;
-6. require tool CI green and publish exact `tool.cad.ci v0.35.0`;
-7. externally black-box accept targeted single- and multi-item selection in
-   `tool.cad.ci.test`;
-8. only then repin Forge #740/#755 and qualify 1 -> 5 -> 10 -> full.
+1. document the release flow in the consumer manual;
+2. align requirements/design/API with that manual;
+3. define the public workflow/template names and exact inputs/outputs;
+4. implement the shared CAD release workflow:
+   - check the stable main ci-build-record from the generated build branch;
+   - do not read `gh-pages`;
+   - delegate tag/GitHub Release creation to an exact released
+     `tool.py.lib.ci` reusable release workflow;
+5. update the copy-ready consumer template;
+6. test the workflow contract here;
+7. release `tool.cad.ci`;
+8. black-box accept the exact released flow in `tool.cad.ci.test`;
+9. only then migrate Forge.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #168 targeted reusable CI selection | **now** | Finish v0.35.0, external acceptance, then return to Forge #740. |
-| #164 workflow/tool ownership cleanup | later | Architectural cleanup; do not block Forge migration. |
-| #117 historical changelog alignment | later / docs-only | Keep separate from active migration. |
+| #176 central CAD release flow | **now** | Finish docs contract first, then workflow/template, release and external acceptance. |
+| #175 duplicate-looking main/dev runs | **next CI cleanup** | Decide whether the second post-merge run can be removed or reduced. |
+| #174 readable CAD-CI names | **next CI cleanup** | Audit code/API/workflow names after #176's public names are chosen. |
+| #173 duplicate CAD rebuild after permanent merge | **next CI cleanup** | Combine with #175 where behavior overlaps; prove required work before changing topology. |
+| #172 self-describing Actions runs | **next CI cleanup** | Add literal run names after the release-flow work no longer blocks Forge. |
+| #171 refresh permanent PR validation after branch updates | later | Keep separate from the release path. |
+| #170 permanent-branch conflict recovery | later | Redesign after current release path is fixed; preserve exact branch history. |
+| #164 reduce tool to shared workflows/governance adapters | later | Architectural cleanup; do not mix into #176. |
+| #117 historical changelog alignment | later / docs-only | Keep separate from active work. |
 
 ## Boundary
 
-`tool.cad.ci` transports GitHub workflow inputs to the released CLI. It does
-not own affected-item calculation, dependency closure, direct-dependent
-selection, SCons execution/cache, builders, verification-package wiring or
-durable publication semantics.
+`tool.cad.ci` transports released CAD-CI behavior into GitHub Actions. It
+does not own generic build-record semantics, SCons execution or build-store
+algorithms; those remain in `lib.py.cad.ci`.
+
+For the release path, `tool.cad.ci` owns the CAD-specific workflow
+composition. Generic tag/GitHub Release mechanics remain in
+`tool.py.lib.ci`. A consumer must not fill gaps with local workflow code.
