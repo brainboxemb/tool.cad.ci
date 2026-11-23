@@ -310,6 +310,54 @@ pull requests.
 The current Forge policy is the acceptance reference for the first release.
 Downstream CAD's temporary local copy is not a second normative implementation.
 
+## Conservative stale-branch maintenance cleanup
+
+The merge-governance API also exposes a separate owner-issued maintenance
+operation for stale temporary branches left by historical/manual workflows.
+
+This operation is not the normal post-merge cleanup path.
+
+Required behavior:
+
+- only explicitly configured temporary branch prefixes are candidates;
+- stable, configured lane, permanent/generated and every `backup/*` ref are
+  never general cleanup targets;
+- a same-repository branch used by an open pull request is retained;
+- deletion requires positive evidence tied to the current inspected SHA:
+  either the branch tip is already integrated into a configured stable/lane
+  ref, or the exact `(head ref, head SHA)` equals a merged pull request head;
+- branch name, issue state and historical use of the same name are not deletion
+  evidence;
+- immediately before delete, the current branch SHA is read again; a moved
+  branch is retained and reported;
+- unique/unmerged history is retained and reported;
+- enumeration/API failures fail closed rather than producing a partial
+  best-effort deletion pass;
+- the operation runs trusted released tool source only and never executes
+  consumer or PR code;
+- live deletion behavior must be externally qualified in `tool.cad.ci.test`
+  before a consumer adopts a new release.
+
+## Separately reviewed exact-SHA branch retirement
+
+Unique/unmerged history must never become automatically disposable merely
+because an issue is closed or a branch name is old. When an owner has reviewed
+such history and intentionally decides to retire it, the governance layer may
+provide a separate exact-SHA operation.
+
+Required behavior:
+
+- the command is owner-only and separate from `/cleanup-branches`;
+- every requested branch carries an exact 40-character expected SHA;
+- stable, configured lane and permanent/generated refs are always refused;
+- same-repository open PR heads are refused;
+- the complete reviewed set is preflighted before the first deletion;
+- a SHA mismatch during preflight refuses the operation before mutation;
+- each ref is re-read immediately before DELETE and a moved ref is retained;
+- missing refs are reported idempotently;
+- no ancestry, issue state or historical branch-name evidence substitutes for
+  the explicit exact-SHA review.
+
 ## Stable-to-lane synchronization
 
 The reusable dev-lane merge policy must distinguish three merge classes:
@@ -335,6 +383,38 @@ the resulting stable merge commit.
 Lane-to-lane, temporary-to-lane, temporary-to-stable and other ordinary
 supported pull requests remain squash merges unless a separate future contract
 explicitly changes them.
+
+## Reviewed conflict resolution for permanent refs
+
+A genuinely conflicted permanent-ref promotion or synchronization must not be
+replaced by a temporary squash merge or force-push.
+
+The owner merge API therefore supports a separate reviewed
+`/merge-resolved` recovery command with these requirements:
+
+- only exact configured `lane -> stable` promotion or `stable -> lane`
+  synchronization is eligible;
+- the original PR must still be open, non-draft and `mergeable: false`;
+- the command records the reviewed base SHA and head SHA explicitly and refuses
+  either parent if it moved;
+- a separate same-repository resolution PR must target the same base, be
+  normally mergeable, and have independent green checks/statuses;
+- the command records that resolution PR number, its exact head ref/commit SHA
+  and the exact Git tree SHA;
+- the resolution ref must use the configured reserved prefix (default
+  `resolve/`);
+- immediately before ref mutation, the original PR, review PR, permanent refs
+  and resolution ref are re-read and must still match the reviewed evidence;
+- the resulting Git commit must use exactly the reviewed tree and exactly two
+  parents in order: current base first, current permanent head second;
+- the base ref is advanced without force; promotion/synchronization lifecycle
+  and integration dispatch then use the same rules as a normal permanent merge;
+- the conflicted PR and resolution review PR are closed after success and the
+  unchanged resolution ref is deleted;
+- any API failure after the irreversible base-ref update is reported as an
+  uncertain/partial post-merge outcome rather than a pre-merge refusal;
+- the resolved path is not available for ordinary temporary PRs and does not
+  accept an arbitrary merge method.
 
 ## Merge-command check isolation
 

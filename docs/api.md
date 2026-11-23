@@ -28,7 +28,9 @@ reinterpret that configuration.
 | `reusable-pr.yml` | **Public stable** complete PR verification/publication lifecycle | `.github/workflows/reusable-pr.yml` | `tests/test_reusable_ci.py`; candidate acceptance | Retain |
 | `reusable-plan.yml` | **Public advanced** selection-only workflow | `.github/workflows/reusable-plan.yml` | unit/schema + external candidate plan output | Retain as explicit plan-only API; not default |
 | `reusable-run.yml` | **Internal workflow implementation** delegated from `reusable-ci.yml` | `.github/workflows/reusable-run.yml` | unit/schema via public `reusable-ci.yml` | Not a supported direct consumer API |
-| `reusable-merge-policy.yml` | GitHub merge governance; used by Forge | `.github/workflows/reusable-merge-policy.yml`, `scripts/merge_policy.py`, `scripts/merge_command.py` | `tests/test_merge_policy.py`, `tests/test_merge_command.py`; external merge policy case | **Ownership review**; preserve current consumer behavior |
+| `reusable-merge-policy.yml` | GitHub merge governance; used by Forge | `.github/workflows/reusable-merge-policy.yml`, `scripts/merge_policy.py`, `scripts/merge_command.py`, `scripts/merge_resolution.py` | `tests/test_merge_policy.py`, `tests/test_merge_command.py`; external merge policy case | **Ownership review**; preserve current consumer behavior |
+| `reusable-branch-cleanup.yml` | Conservative stale temporary-branch maintenance | `.github/workflows/reusable-branch-cleanup.yml`, `scripts/branch_cleanup.py` | `tests/test_branch_cleanup.py`; live external acceptance in `tool.cad.ci.test` #180 | Released governance surface |
+| `reusable-branch-retirement.yml` | Separately reviewed exact-SHA branch retirement | `.github/workflows/reusable-branch-retirement.yml`, `scripts/branch_retirement.py` | `tests/test_branch_retirement.py`; live external acceptance required | Candidate destructive governance surface under #140 |
 | `ci.yml` | This repository's CI, **not** consumer API | `.github/workflows/ci.yml` | GitHub Actions | Internal |
 | `scripts/*.py` | Workflow/maintenance implementation, **not** separate public CLI contract | `scripts/` | associated tests | Internal unless explicitly promoted |
 
@@ -109,9 +111,40 @@ same-repository PR publication runs in that job, while fork PRs never publish.
 Callers needing strictly read-only verification use `reusable-ci.yml`.
 Do not split the workflow into a second publication runner.
 
-### `reusable-merge-policy.yml` — separate governance API
+### `reusable-branch-retirement.yml` — separately reviewed destructive governance API
 
-Entry point: `workflow_call`, intended behind an owner-only `/merge` command. Required: `command` (exact `/merge`), `pull_request_number`, `lane_refs_json`. Optional: `stable_ref` (default `main`), `permanent_refs_json` (default `["build","gh-pages"]`), `temporary_prefixes_json` (prefix allow-list), `integration_workflow` (default empty). Requires `contents: write`, `pull-requests: write`, `issues: write`, `checks: read`, `statuses: read`, `actions: write`. Side effects: merge, possible branch mutation/deletion, comments and optional integration dispatch. Branch-role rules and check/status gate are covered in design, but **this API's appropriate ownership and safe behavior need independent review**, not merely documentation.
+Entry point: `workflow_call`, intended behind an owner-only multiline
+`/retire-branches` issue comment. Each subsequent line must contain exactly
+one branch name and one reviewed 40-character SHA. The workflow refuses
+stable/lane/permanent refs and open same-repository PR heads, preflights all
+requested refs before mutation, and re-reads each SHA immediately before
+deletion. Missing refs are idempotent; moved refs are retained and reported.
+
+This API exists only for deliberately retiring unique history after review. It
+does not alter the evidence rules of normal `/cleanup-branches`.
+
+### `reusable-branch-cleanup.yml` — separate governance maintenance API\n\nEntry point: `workflow_call`, intended behind an owner-only `/cleanup-branches` comment. Required: `command` (exact `/cleanup-branches`), `issue_number`, `lane_refs_json`. Optional: `stable_ref` (default `main`), `permanent_refs_json` and `temporary_prefixes_json`. Requires `contents: write`, `pull-requests: read` and `issues: write`. It enumerates current branches/open PRs/merged PR head evidence, and deletes only allow-listed temporary branches whose current inspected SHA is positively retired by integration into a configured durable ref or an exact merged-PR `(ref, SHA)` record. It re-reads the branch SHA immediately before deletion. Permanent/generated refs, `backup/*`, open PR heads, moved refs and unique/unmerged history are retained and reported.\n\nThis maintenance surface is distinct from the post-merge cleanup performed by `reusable-merge-policy.yml`; it exists for stale branches left by historical/manual workflows. Live deletion must be qualified in `tool.cad.ci.test` before consumer adoption.\n\n### `reusable-merge-policy.yml` — separate governance API
+
+Entry point: `workflow_call`, intended behind owner-only `/merge` and
+multiline `/merge-resolved` commands. Required inputs are `command`,
+`pull_request_number` and `lane_refs_json`. Optional policy inputs are
+`stable_ref` (default `main`), `permanent_refs_json`,
+`temporary_prefixes_json`, `integration_workflow`, and
+`resolution_prefix` (default `resolve/`).
+
+Normal `/merge` requires a mergeable PR and uses GitHub's PR merge endpoint.
+`/merge-resolved` is only for a conflicted exact permanent-ref direction. Its
+owner comment must bind the reviewed base/head SHAs, a separate green
+resolution PR, its exact resolution ref/commit SHA, and its exact tree SHA. The
+tool then creates and verifies a two-parent Git merge object, rechecks all refs,
+and advances the base without force before applying the same permanent-lane
+lifecycle and integration dispatch.
+
+Requires `contents: write`, `pull-requests: write`, `issues: write`,
+`checks: read`, `statuses: read`, `actions: write`. Side effects include
+merge/ref mutation, resolution-ref cleanup, PR comments/closure and optional
+integration dispatch. Branch-role and reviewed-tree safety rules are defined in
+requirements/design.
 
 ## API review gates
 
@@ -174,7 +207,8 @@ An evidence cell marked **GAP** is incomplete, not passed.
 | GOV-001 | Shared merge-policy workflow / branch classifier | `scripts/merge_policy.py`, `reusable-merge-policy.yml` | `tests/test_merge_policy.py` | Forge `/merge` consumer, existing external source-contract check | Ownership review |
 | GOV-002 | Stable-to-lane extension / cleanup boundary | `scripts/merge_policy.py`, `scripts/merge_command.py` | `tests/test_merge_policy.py`, `tests/test_merge_command.py` | **GAP:** real lane/ref lifecycle with new implementation | Draft fix |
 | GOV-003 | Irreversible merge and post-merge reporting | `scripts/merge_command.py` | `tests/test_merge_command.py` mocked failures | **GAP:** live partial-failure recovery proof | Draft fix |
-| GOV-004 | Command-run check isolation | `scripts/merge_command.py` | `tests/test_merge_command.py` fixtures | Existing #108 acceptance covered old workflow; **GAP:** new adapter behavior | Draft fix |
+| GOV-004 | Command-run check isolation | `scripts/merge_command.py` | `tests/test_merge_command.py` fixtures | v0.27.1 live stable-to-lane evidence in `tool.cad.ci.test` PR #190 | Accepted |
+| GOV-005 | Reviewed permanent-ref conflict recovery | `scripts/merge_command.py`, `scripts/merge_resolution.py` | `tests/test_merge_command.py`, `tests/test_merge_resolution.py` | **GAP until released:** conflicted permanent sync/promotion in `tool.cad.ci.test` | Candidate |
 | SEC-001 | Trusted tool bootstrap and permission boundary | `reusable-merge-policy.yml` | `tests/test_merge_policy.py` source assertions | **GAP:** permission / denial / race matrix in external tests | Incomplete |
 
 ### Release/compatibility decisions still required

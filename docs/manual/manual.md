@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.25.0**
+- tool release: **v0.28.0**
 
 Each YAML template contains:
 
@@ -23,7 +23,9 @@ placeholder to replace.
 
 | File | Template version | Use |
 | --- | ---: | --- |
-| `merge-policy.yml` | 2 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
+| `merge-policy.yml` | 3 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
+| `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
+| `branch-retirement.yml` | 1 | Owner-issued exact-SHA retirement for separately reviewed unique history. |
 | `cad-ci-lanes.yml` | 1 | PR validation for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
@@ -54,7 +56,30 @@ dispatch its integration workflow.
 
 Do not copy merge implementation, GitHub API calls, check/status evaluation,
 branch cleanup or merge-method logic into the consumer. Those stay in the
-released reusable workflow.
+released reusable workflows.
+
+For a conflicted permanent-lane promotion or synchronization, do **not**
+create a temporary merge workaround. Create a short-lived `resolve/*` branch
+whose tree is the reviewed resolved result, open a normal review PR from that
+branch to the same permanent base, and let its normal validation finish green.
+Then use the exact evidence from the conflicted PR and review PR:
+
+```text
+/merge-resolved
+base <base-sha>
+head <head-sha>
+resolution-pr <review-pr-number>
+resolution resolve/<name> <resolution-commit-sha> <resolution-tree-sha>
+```
+
+The shared tool refuses moved parents, a changed resolution ref/tree, a
+non-green review PR, ordinary temporary PRs, or a conflicted PR that has become
+normally mergeable. The resolution PR itself is never merged; its reviewed tree
+is used to construct the exact two-parent permanent merge commit.
+
+For maintenance cleanup, copy `branch-cleanup.yml` beside the merge wrapper. The command only deletes allow-listed temporary refs with positive integration or exact merged-PR-head SHA evidence; open PR heads, moved refs, unique history and `backup/*` refs are retained and reported.
+
+When unique history has been separately reviewed and intentionally declared disposable, use `branch-retirement.yml` instead of weakening cleanup. The issue comment carries one exact `branch SHA` pair per line after `/retire-branches`; permanent refs and open-PR heads are refused, and each SHA is re-read immediately before deletion.
 
 ## New CAD-CI repository
 

@@ -436,6 +436,50 @@ planning/execution requirement. The first release should be implemented and
 tested entirely in tool.cad.ci, then black-box accepted in tool.cad.ci.test and
 finally qualified from Forge #674.
 
+## Stale-branch cleanup governance
+
+Historical/manual workflows can leave temporary refs after their pull request
+has already been integrated. Cleaning those refs is a repository-maintenance
+operation, not CAD-CI execution and not the same transaction as a normal
+`/merge`.
+
+The reusable cleanup workflow is deliberately thin. It checks out the exact
+called `tool.cad.ci` revision and invokes `scripts/branch_cleanup.py`.
+The helper owns GitHub pagination, evidence evaluation, the final SHA re-read,
+delete mutation and audit comment. Consumer YAML contains only the command
+trigger, permission ceiling and repository branch-role configuration.
+
+Deletion uses two positive evidence forms:
+
+1. GitHub compare shows the inspected temporary tip is contained in a
+   configured stable/lane ref;
+2. a merged pull request records the exact same head ref and head SHA.
+
+The second form is necessary for squash merges, where ancestry no longer proves
+the temporary commit is contained in the destination. Matching only a historical
+branch name is unsafe because branch names can be deleted and recreated.
+
+The final ref read immediately before DELETE narrows the race between evidence
+collection and mutation. A changed SHA is reported as moved and is not deleted.
+Backup refs and permanent/generated refs never enter the candidate set.
+
+## Exact-SHA branch retirement governance
+
+Automatic cleanup and explicit retirement are intentionally different
+operations. Automatic cleanup derives retirement evidence from Git history and
+merged pull requests. Exact-SHA retirement accepts the repository owner's
+reviewed `(ref, SHA)` pairs as the evidence for unique history that is
+intentionally disposable.
+
+The reusable workflow remains thin and checks out its exact called tool
+revision. The Python helper parses the multiline owner command, blocks
+stable/lane/permanent refs and open PR heads, preflights every requested ref,
+then re-reads each SHA immediately before DELETE. A branch that moved after
+review is preserved and reported.
+
+This is the separately reviewed mechanism required by Forge #620; it does not
+broaden `/cleanup-branches` or make issue state a deletion signal.
+
 ## Stable-to-lane merge-policy extension
 
 Issue #106 extends the shared merge-policy classifier without changing CAD-CI
@@ -480,6 +524,48 @@ the normal PR merge already writes the lane base and preserves both histories.
 The existing `integrate_base` rule remains appropriate for synchronization
 because the base is a configured durable lane. Promotion additionally dispatches
 the retained lane exactly as in 0.19.0.
+
+## Reviewed permanent-ref conflict recovery
+
+GitHub's normal PR merge endpoint cannot merge a PR whose mergeability is
+`false`. For permanent refs, resolving that by squash/rebase would violate the
+history contract. The recovery path therefore treats a separate
+same-repository resolution PR as the reviewed tree carrier.
+
+```text
+conflicted permanent PR
+  base=A, head=B
+        |
+        +-- owner prepares resolve/<name>
+        |      -> separate PR to same base
+        |      -> mergeable + green validation
+        |      -> exact resolution commit R / tree T
+        |
+        +-- owner comments:
+               /merge-resolved
+               base A
+               head B
+               resolution-pr N
+               resolution resolve/<name> R T
+                  |
+                  -> revalidate A, B, N, R, T
+                  -> create Git commit tree=T parents=[A,B]
+                  -> verify returned object
+                  -> revalidate refs again
+                  -> non-force advance base
+                  -> normal permanent lifecycle + dispatch
+                  -> close review PRs / delete unchanged resolve ref
+```
+
+The resolution branch is not merged. Its PR exists to expose and validate the
+exact resolved snapshot. The tool uses only its reviewed tree. This ensures the
+resulting permanent merge commit has the two required permanent parents rather
+than adding the temporary resolution commit as a third/history parent.
+
+Raw Git object creation remains inside `scripts/merge_command.py`; the
+consumer wrapper passes no arbitrary tree or parent values except through the
+owner-reviewed comment. `scripts/merge_resolution.py` owns only strict command
+parsing and merge-object verification.
 
 ## Command-workflow isolation in the PR green gate
 

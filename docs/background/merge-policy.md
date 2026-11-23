@@ -1,10 +1,10 @@
 # Merge-governance API and recovery contract
 
-Status: implementation under review on issue #110, with defect tracking #112–#114. This API is separate from CAD-CI selection and execution. It remains in this repository pending the product-boundary decision.
+Status: current merge-governance API. Normal merge behavior is released; reviewed conflicted permanent-ref recovery is defined by issue #124. This API is separate from CAD-CI selection and execution.
 
 ## Caller contract
 
-A caller exposes an owner-only `/merge` comment trigger and invokes `reusable-merge-policy.yml` at an **immutable released SHA**. Inputs are documented in [API inventory](../api.md). The workflow runs `scripts/merge_command.py` from that same immutable tool revision; it never executes PR-head code.
+A caller exposes owner-only `/merge` and `/merge-resolved` comment triggers and invokes `reusable-merge-policy.yml` at an **immutable released SHA**. Inputs are documented in [API inventory](../api.md). The workflow runs `scripts/merge_command.py` from that same immutable tool revision; it never executes PR-head code.
 
 Example consumer wrapper (replace the placeholder with an **immutable released**
 40-character tool commit, never `main`):
@@ -22,7 +22,8 @@ jobs:
   merge:
     if: >-
       github.event.issue.pull_request &&
-      github.event.comment.body == '/merge' &&
+      (github.event.comment.body == '/merge' ||
+       startsWith(github.event.comment.body, '/merge-resolved')) &&
       github.actor == github.repository_owner
     permissions:
       contents: write
@@ -64,6 +65,39 @@ A temporary head is eligible for deletion only if it matches the configured pref
 The command rejects drafts, closed PRs, non-green checks or commit statuses. GitHub's asynchronous `mergeable: null` is polled with bounded exponential delay before refusal. The check-runs and issue-comment command-run APIs must be fetched completely; an incomplete response fails closed. Immediately before the PUT merge, the command fetches the PR again and rejects a changed base/head commit or branch role. The PUT itself is pinned to the checked head SHA. This reduces but cannot eliminate races with external branch updates. Checks are grouped by (GitHub App ID, name), using the latest check of each identity.
 
 All `issue_comment` workflow runs for the checked head are excluded from the validation check set. This preserves #108's avoidance of self-check deadlock, including older command attempts. **At least one separate validation check must remain**. A pending/failed normal validation check always blocks the merge.
+
+## Conflicted permanent-ref recovery
+
+Normal `/merge` still refuses an unmergeable PR. For an exact permanent
+`lane -> stable` or `stable -> lane` PR with a genuine conflict, the owner
+may prepare a separate resolution branch using the reserved `resolve/`
+prefix and open a **review-only** PR from that branch to the same base.
+
+That resolution PR must be normally mergeable and green. It is never merged.
+After reviewing its exact commit and Git tree, the owner comments on the
+original conflicted PR:
+
+```text
+/merge-resolved
+base <reviewed-base-sha>
+head <reviewed-head-sha>
+resolution-pr <review-pr-number>
+resolution resolve/<name> <reviewed-resolution-commit-sha> <reviewed-tree-sha>
+```
+
+The shared command verifies the original PR is still conflicted at the exact
+parent SHAs, verifies the separate review PR/ref/commit/tree and its independent
+checks/statuses, then rechecks all mutable refs. It creates one Git commit with
+the reviewed tree and parents exactly `[base, head]`, reads that object back,
+rechecks every ref again, and advances the base ref without force.
+
+Only after that irreversible ref update does normal permanent-lane lifecycle
+run. Promotion can advance the retained lane and dispatch stable + lane;
+synchronization dispatches the updated lane. The original conflicted PR and
+review PR are closed, and the unchanged resolution ref is deleted.
+
+If the original PR becomes normally mergeable, use `/merge` instead.
+`/merge-resolved` is refused for temporary/ordinary PRs.
 
 ## Irreversible operation and recovery
 

@@ -15,6 +15,7 @@ import sys
 import time
 
 from merge_policy import evaluate, _strings
+from merge_resolution import parse_resolution_command, verify_merge_object
 
 
 class Refused(Exception):
@@ -33,13 +34,22 @@ class GitHubError(RuntimeError):
         super().__init__(f"{operation}: HTTP {status}: {detail[:250]}")
 
 
-def api(method: str, endpoint: str, *, fields: dict[str, str] | None = None):
+def api(
+    method: str,
+    endpoint: str,
+    *,
+    fields: dict[str, str] | None = None,
+    field_lists: dict[str, list[str]] | None = None,
+):
     """Call GitHub with JSON and distinguish API absence from API failure."""
     argv = ["gh", "api", "-X", method, "-H", "Accept: application/vnd.github+json",
             "-i", endpoint]
     for name, value in (fields or {}).items():
         # GitHub refs PATCH requires a JSON boolean for force, not a string.
         argv += ["-F" if name == "force" else "-f", f"{name}={value}"]
+    for name, values in (field_lists or {}).items():
+        for value in values:
+            argv += ["-f", f"{name}[]={value}"]
     result = subprocess.run(argv, text=True, capture_output=True, check=False)
     # gh api -i returns headers and body; the last response handles 100/redirects.
     matches = list(re.finditer(r"(?m)^HTTP/\S+ (\d{3})[^\n]*\r?$", result.stdout))
@@ -104,8 +114,43 @@ def ready_pr(repo: str, number: int, retries: int = 5) -> dict:
     raise Refused("mergeability still unknown after bounded retries")
 
 
-def verify_fresh_pr(repo: str, number: int, previous: dict) -> None:
-    """Reject a PR whose base or head changed while checks were inspected."""
+def conflicted_pr(
+    repo: str,
+    number: int,
+    expected_base_sha: str,
+    expected_head_sha: str,
+    retries: int = 5,
+) -> dict:
+    """Require one open PR that is still genuinely conflicted at reviewed parents."""
+    for attempt in range(retries):
+        pr = api("GET", f"repos/{repo}/pulls/{number}")
+        if pr.get("state") != "open":
+            raise Refused("pull request is not open")
+        if pr.get("draft") is not False:
+            raise Refused("pull request is still a draft")
+        base = pr.get("base") or {}
+        head = pr.get("head") or {}
+        if base.get("sha") != expected_base_sha:
+            raise Refused("reviewed base SHA no longer matches pull request")
+        if head.get("sha") != expected_head_sha:
+            raise Refused("reviewed head SHA no longer matches pull request")
+        if pr.get("mergeable") is not None:
+            if pr["mergeable"] is not False:
+                raise Refused("pull request is mergeable; use normal /merge")
+            return pr
+        if attempt + 1 < retries:
+            time.sleep(min(2**attempt, 5))
+    raise Refused("mergeability still unknown after bounded retries")
+
+
+def verify_fresh_pr(
+    repo: str,
+    number: int,
+    previous: dict,
+    *,
+    require_mergeable: bool = True,
+) -> None:
+    """Reject a PR whose base/head/state changed while evidence was inspected."""
     current = api("GET", f"repos/{repo}/pulls/{number}")
     if current.get("state") != "open" or current.get("draft") is not False:
         raise Refused("PR changed state during validation")
@@ -114,17 +159,30 @@ def verify_fresh_pr(repo: str, number: int, previous: dict) -> None:
         after = current.get(side) or {}
         if after.get("ref") != before.get("ref") or after.get("sha") != before.get("sha"):
             raise Refused(f"PR {side} changed during validation; rerun checks")
-    if current.get("mergeable") is False:
-        raise Refused("PR became unmergeable during validation")
+    mergeable = current.get("mergeable")
+    if require_mergeable and mergeable is not True:
+        raise Refused("PR is no longer mergeable after validation")
+    if not require_mergeable and mergeable is not False:
+        raise Refused("conflicted PR changed mergeability; restart reviewed resolution")
 
 
-def validated_checks(checks: list[dict], commands: list[dict]) -> list[dict]:
+def validated_checks(
+    checks: list[dict],
+    commands: list[dict],
+    current_run_id: str = "",
+) -> list[dict]:
     """Remove command-workflow checks, not normal PR validation checks.
 
-    All issue_comment runs on the checked SHA are excluded, including older
-    command attempts, to avoid the deadlock addressed in #108.
+    All indexed issue_comment runs on the checked SHA are excluded, including
+    older command attempts. The current command run is excluded explicitly by
+    run id as well, because its check can become visible before the Actions
+    runs API indexes the corresponding issue_comment run.
     """
     command_ids = {str(run["id"]) for run in commands if "id" in run}
+    if current_run_id:
+        if not current_run_id.isdigit():
+            raise Refused("current_run_id must be a numeric GitHub Actions run id")
+        command_ids.add(current_run_id)
     pattern = re.compile(r"/actions/runs/(\d+)(?:/|$|[?#])")
     by_identity: dict[tuple[str, str], dict] = {}
     for check in checks:
@@ -148,6 +206,36 @@ def validated_checks(checks: list[dict], commands: list[dict]) -> list[dict]:
     if bad:
         raise Refused("checks are not green: " + ", ".join(bad))
     return result
+
+
+def validate_commit(repo: str, sha: str, current_run_id: str = "") -> None:
+    """Require independent green checks/statuses for one immutable commit."""
+    checks = pages(f"repos/{repo}/commits/{sha}/check-runs", "check_runs")
+    command_runs = pages(
+        f"repos/{repo}/actions/runs?head_sha={sha}&event=issue_comment",
+        "workflow_runs",
+    )
+    validated_checks(checks, command_runs, current_run_id)
+    statuses = api("GET", f"repos/{repo}/commits/{sha}/status")
+    if statuses.get("statuses") and statuses.get("state") != "success":
+        raise Refused(f"commit status contexts are not green ({statuses.get('state')})")
+
+
+def ref_sha(repo: str, ref: str) -> str:
+    """Read one exact branch SHA or fail closed."""
+    payload = api("GET", f"repos/{repo}/git/ref/heads/{ref}")
+    sha = (payload.get("object") or {}).get("sha")
+    if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+        raise Refused(f"branch {ref} has no valid SHA")
+    return sha
+
+
+def require_ref_sha(repo: str, ref: str, expected: str, label: str) -> None:
+    current = ref_sha(repo, ref)
+    if current != expected:
+        raise Refused(
+            f"{label} ref moved: {ref} expected {expected}, current {current}"
+        )
 
 
 def comment(repo: str, number: int, message: str) -> None:
@@ -232,17 +320,216 @@ def apply_lifecycle(repo: str, head: str, merge_sha: str, policy,
     return lifecycle
 
 
+def _resolution_review(
+    repo: str,
+    original_number: int,
+    original_pr: dict,
+    resolved,
+) -> dict:
+    """Require a separate green mergeable PR that exposes the reviewed tree."""
+    if resolved.resolution_pr == original_number:
+        raise Refused("resolution review PR must be separate from conflicted PR")
+    review = ready_pr(repo, resolved.resolution_pr)
+    base = review.get("base") or {}
+    head = review.get("head") or {}
+    head_repo = (head.get("repo") or {}).get("full_name", "")
+    if base.get("ref") != (original_pr.get("base") or {}).get("ref"):
+        raise Refused("resolution review PR must target the conflicted PR base")
+    if base.get("sha") != resolved.base_sha:
+        raise Refused("resolution review PR base SHA differs from reviewed base")
+    if head_repo != repo:
+        raise Refused("resolution review PR must originate in this repository")
+    if head.get("ref") != resolved.resolution_ref:
+        raise Refused("resolution review PR head ref differs from reviewed resolution")
+    if head.get("sha") != resolved.resolution_sha:
+        raise Refused("resolution review PR head SHA differs from reviewed resolution")
+
+    require_ref_sha(
+        repo, resolved.resolution_ref, resolved.resolution_sha, "resolution"
+    )
+    commit = api("GET", f"repos/{repo}/git/commits/{resolved.resolution_sha}")
+    tree = (commit.get("tree") or {}).get("sha")
+    if tree != resolved.resolution_tree:
+        raise Refused(
+            "resolution commit tree differs from reviewed tree: "
+            f"expected {resolved.resolution_tree}, got {tree}"
+        )
+
+    validate_commit(repo, resolved.resolution_sha)
+    verify_fresh_pr(repo, resolved.resolution_pr, review)
+    return review
+
+
+def _close_pr_if_open(repo: str, number: int) -> str:
+    pr = api("GET", f"repos/{repo}/pulls/{number}")
+    if pr.get("state") != "open":
+        return "already closed"
+    api("PATCH", f"repos/{repo}/pulls/{number}", fields={"state": "closed"})
+    return "closed"
+
+
+def _cleanup_resolution_ref(repo: str, ref: str, expected_sha: str) -> str:
+    try:
+        current = ref_sha(repo, ref)
+    except GitHubError as exc:
+        if exc.status == 404:
+            return "resolution ref already absent"
+        raise
+    if current != expected_sha:
+        return f"resolution ref moved to {current}; retained"
+    api("DELETE", f"repos/{repo}/git/refs/heads/{ref}")
+    return "resolution ref deleted"
+
+
+def run_resolved(args) -> int:
+    """Apply one reviewed resolved tree to a conflicted permanent-ref PR."""
+    repository = args.repository
+    number = args.pull_request_number
+    resolved = parse_resolution_command(args.command, args.resolution_prefix)
+    pr = conflicted_pr(
+        repository,
+        number,
+        resolved.base_sha,
+        resolved.head_sha,
+    )
+    base, head = pr["base"]["ref"], pr["head"]["ref"]
+    head_repo = (pr["head"].get("repo") or {}).get("full_name", "")
+
+    policy = evaluate(
+        base=base,
+        head=head,
+        stable_ref=args.stable_ref,
+        lane_refs=_strings(args.lane_refs_json, "lane refs"),
+        permanent_refs=_strings(args.permanent_refs_json, "permanent refs"),
+        temporary_prefixes=_strings(args.temporary_prefixes_json, "temporary prefixes"),
+    )
+    if not (policy.direct_lane_promotion or policy.direct_lane_synchronization):
+        raise Refused("resolved merge recovery is only for permanent-ref direction")
+    if head_repo != repository:
+        raise Refused("permanent-branch merge must originate in this repository")
+
+    review = _resolution_review(repository, number, pr, resolved)
+
+    # Recheck all reviewed mutable identities immediately before creating the
+    # merge object. The object creation itself does not advance any ref.
+    verify_fresh_pr(repository, number, pr, require_mergeable=False)
+    verify_fresh_pr(repository, resolved.resolution_pr, review)
+    require_ref_sha(repository, base, resolved.base_sha, "base")
+    require_ref_sha(repository, head, resolved.head_sha, "head")
+    require_ref_sha(
+        repository, resolved.resolution_ref, resolved.resolution_sha, "resolution"
+    )
+
+    created = api(
+        "POST",
+        f"repos/{repository}/git/commits",
+        fields={
+            "message": (
+                f"Resolved permanent merge PR #{number}: {head} -> {base}"
+            ),
+            "tree": resolved.resolution_tree,
+        },
+        field_lists={"parents": [resolved.base_sha, resolved.head_sha]},
+    )
+    created_sha = created.get("sha")
+    if not isinstance(created_sha, str):
+        raise Refused("GitHub did not return a merge commit SHA")
+    exact = api("GET", f"repos/{repository}/git/commits/{created_sha}")
+    merge_sha = verify_merge_object(
+        exact,
+        expected_tree=resolved.resolution_tree,
+        expected_parents=(resolved.base_sha, resolved.head_sha),
+    )
+
+    # Final race check before the irreversible ref update.
+    verify_fresh_pr(repository, number, pr, require_mergeable=False)
+    verify_fresh_pr(repository, resolved.resolution_pr, review)
+    require_ref_sha(repository, base, resolved.base_sha, "base")
+    require_ref_sha(repository, head, resolved.head_sha, "head")
+    require_ref_sha(
+        repository, resolved.resolution_ref, resolved.resolution_sha, "resolution"
+    )
+
+    try:
+        api(
+            "PATCH",
+            f"repos/{repository}/git/refs/heads/{base}",
+            fields={"sha": merge_sha, "force": "false"},
+        )
+    except GitHubError as exc:
+        raise MergeOutcomeUnknown(
+            f"PR #{number}, reviewed parents {resolved.base_sha}/"
+            f"{resolved.head_sha}: base-ref update failed ({exc}); "
+            "the resolved merge may have completed. Inspect refs before retrying."
+        ) from exc
+
+    outcome = post_merge(
+        repository,
+        base,
+        head,
+        merge_sha,
+        policy,
+        head_repo,
+        resolved.head_sha,
+        args.integration_workflow,
+    )
+
+    cleanup_notes: list[str] = []
+    for pr_number, label in (
+        (number, "conflicted PR"),
+        (resolved.resolution_pr, "resolution review PR"),
+    ):
+        try:
+            cleanup_notes.append(
+                f"{label} {_close_pr_if_open(repository, pr_number)}"
+            )
+        except GitHubError as exc:
+            outcome.errors.append(f"{label} close: {exc}")
+    try:
+        cleanup_notes.append(
+            _cleanup_resolution_ref(
+                repository, resolved.resolution_ref, resolved.resolution_sha
+            )
+        )
+    except (GitHubError, Refused) as exc:
+        outcome.errors.append(f"resolution ref cleanup: {exc}")
+
+    message = (
+        f"Resolved conflicted permanent merge at `{merge_sha}`: "
+        f"`{head}` -> `{base}`. Parents: "
+        f"`{resolved.base_sha}`, `{resolved.head_sha}`. "
+        f"Reviewed resolution: PR #{resolved.resolution_pr}, "
+        f"`{resolved.resolution_ref}@{resolved.resolution_sha}`, tree "
+        f"`{resolved.resolution_tree}`. Branch lifecycle: "
+        f"{outcome.lifecycle}. Integration dispatched: "
+        f"{', '.join(outcome.dispatched) or 'none'}. "
+        f"Resolution cleanup: {'; '.join(cleanup_notes) or 'none'}."
+    )
+    if outcome.errors:
+        message += " Post-merge processing FAILED: " + "; ".join(outcome.errors)
+
+    print(message, file=sys.stderr if outcome.errors else sys.stdout)
+    try:
+        comment(repository, number, message)
+    except GitHubError as exc:
+        print(f"Unable to post result comment: {exc}", file=sys.stderr)
+        outcome.errors.append(f"report comment: {exc}")
+    return 1 if outcome.errors else 0
+
+
 def run(args) -> int:
     repository = args.repository
     number = args.pull_request_number
-    if args.command != "/merge":
-        raise Refused("command must be /merge")
     # The current release intentionally allows only the repository account
     # owner. Organization role policy is a separate compatibility decision.
     if args.actor != args.repository_owner:
-        raise Refused("only the repository owner may issue /merge")
+        raise Refused("only the repository owner may issue merge commands")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+\.ya?ml", args.integration_workflow or "x.yml"):
         raise Refused("integration_workflow must be one workflow YAML filename")
+    if args.command.startswith("/merge-resolved"):
+        return run_resolved(args)
+    if args.command != "/merge":
+        raise Refused("command must be /merge or reviewed /merge-resolved")
     pr = ready_pr(repository, number)
     base, head = pr["base"]["ref"], pr["head"]["ref"]
     head_sha = pr["head"]["sha"]
@@ -255,15 +542,9 @@ def run(args) -> int:
     )
     if (policy.direct_lane_promotion or policy.direct_lane_synchronization) and head_repo != repository:
         raise Refused("permanent-branch merge must originate in this repository")
-    checks = pages(f"repos/{repository}/commits/{head_sha}/check-runs", "check_runs")
-    command_runs = pages(
-        f"repos/{repository}/actions/runs?head_sha={head_sha}&event=issue_comment",
-        "workflow_runs",
+    validate_commit(
+        repository, head_sha, getattr(args, "current_run_id", "")
     )
-    validated_checks(checks, command_runs)
-    statuses = api("GET", f"repos/{repository}/commits/{head_sha}/status")
-    if statuses.get("statuses") and statuses.get("state") != "success":
-        raise Refused(f"commit status contexts are not green ({statuses.get('state')})")
     verify_fresh_pr(repository, number, pr)
     # The SHA parameter rejects a moved head. A network/API failure after this
     # irreversible call does NOT prove whether the merge happened.
@@ -321,6 +602,8 @@ def main() -> int:
     parser.add_argument("--permanent-refs-json", default='["build","gh-pages"]')
     parser.add_argument("--temporary-prefixes-json", required=True)
     parser.add_argument("--integration-workflow", default="")
+    parser.add_argument("--current-run-id", default="")
+    parser.add_argument("--resolution-prefix", default="resolve/")
     args = parser.parse_args()
     try:
         return run(args)

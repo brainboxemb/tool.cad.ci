@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.28.0 - 2026-11-22
+
+- add owner-reviewed `/merge-resolved` recovery for genuinely conflicted permanent-lane promotion/synchronization without squash, rebase or force-push;
+- bind the operation to explicit reviewed base/head SHAs, a separate mergeable green resolution PR, its exact resolution commit and exact Git tree;
+- create and read back one two-parent merge object with parents exactly `[base, head]`, then recheck every mutable ref before a non-force base advance;
+- reuse normal permanent-lane lifecycle and integration dispatch after the resolved merge, then close review PRs and delete the unchanged `resolve/*` ref;
+- refuse ordinary PRs, moved parent/ref/tree evidence, a non-green resolution review, or a conflicted PR that becomes normally mergeable;
+- bump the canonical merge-policy wrapper to template version 3 and update all consumer templates to `v0.28.0`.
+
+## 0.27.1 - 2026-11-22
+
+- exclude the currently executing owner `/merge` workflow by explicit GitHub Actions run id before validating the PR head checks;
+- remove the indexing race where a command check could become visible before the corresponding `issue_comment` workflow run appeared in the Actions-runs API;
+- preserve exclusion of older indexed command runs while continuing to require independent PR validation checks and commit statuses;
+- add regression coverage for the stable-to-lane synchronization failure reproduced by `tool.cad.ci.test` PR #190;
+- update copy-ready consumer templates to the exact `v0.27.1` release tag.
+
+## 0.27.0 - 2026-11-22
+
+- add a separate owner-only `/retire-branches` workflow for intentionally disposable unique branch history;
+- require one exact reviewed branch/SHA pair per command line, refuse stable/lane/permanent refs and open PR heads, and preflight the full set before mutation;
+- re-read every branch SHA immediately before deletion so moved refs are retained and audited;
+- keep conservative `/cleanup-branches` evidence rules unchanged;
+- add the canonical branch-retirement wrapper and update all copy-ready templates to `v0.27.0`.
+
+## 0.26.0 - 2026-11-22
+
+- add a reusable owner-controlled `/cleanup-branches` governance workflow for stale temporary refs;
+- delete only allow-listed temporary branches with positive current-SHA integration evidence or an exact merged-PR head `(ref, SHA)` match;
+- retain and report open-PR heads, moved refs, unique/unmerged history, permanent/generated refs and every `backup/*` ref;
+- add the canonical versioned branch-cleanup consumer template and document the maintenance API separately from normal post-merge cleanup;
+- require live released-stack branch-deletion acceptance in `tool.cad.ci.test` before consumer adoption;
+- update all copy-ready workflow templates to the exact `v0.26.0` release tag without changing unrelated template versions.
+
 ## 0.25.0 - 2026-11-22
 
 - consume released `lib.py.cad.ci 0.12.0` at exact commit
