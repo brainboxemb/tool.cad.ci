@@ -58,7 +58,7 @@
 - `reusable-run.yml` performs exactly one `cad-ci run` for `reusable-ci.yml`; direct external use is not a supported public contract.
 - A consumer can optionally request a `build/` artifact for a downstream domain/publication job; the artifact includes hidden `.cad-ci` evidence and excludes private `.cache/cad-ci` state.
 - Optional consumer environment input is non-secret, validates variable names, and cannot overwrite GitHub/runner/action environment namespaces.
-- Caller `environment_json` values are inherited process environment only; root `cad-ci.yml:variables` are parsed by the released library and override a caller value with the same name.
+- Caller `command_environment` values are inherited process environment only; root `cad-ci.yml:variables` are parsed by the released library and override a caller value with the same name.
 - The tool does not parse, duplicate or merge root repository variables.
 - CAD-CI-owned `CAD_CI_*` values remain authoritative over both caller environment and repository variables.
 - Domain image selection/build/publication remain consumer-owned.
@@ -66,7 +66,7 @@
   reusable-workflow behavior: the caller grants `packages: read` and the
   workflow uses its GitHub token for Docker login before consumer commands run.
 - The workflow never parses or selects a consumer container image and never
-  exposes registry credentials through `environment_json` or CAD-CI-owned
+  exposes registry credentials through `command_environment` or CAD-CI-owned
   environment.
 
 ## Durable source-lane reusable workflow
@@ -519,18 +519,21 @@ requiring live GitHub mutation has **not** been certified by unit tests alone.
 
 ## Reusable permanent-lane PR policy
 
-The stable public `reusable-ci.yml` may receive optional `pr_policy_json`.
-Empty input preserves the normal run-only contract.
+The stable public `reusable-ci.yml` may receive optional
+`pull_request_policy`. Empty input preserves the normal run-only contract.
+
+The input is a JSON-encoded object because GitHub Actions workflow inputs are
+strings; JSON is the transport format, not part of the public field name.
 
 The policy object contains only:
-- `stable_ref`;
-- non-empty `lane_refs`;
+- `stable_branch`;
+- non-empty `development_branches`;
 - optional `docs_only_prefixes`.
 
 For pull requests:
 - explicit `full_run: true` always wins;
-- exact configured lane -> stable promotion runs complete processed CAD-CI;
-- a normal PR targeting a configured lane may skip expensive CAD-CI bootstrap
+- exact configured development-branch -> stable promotion runs complete processed CAD-CI;
+- a normal PR targeting a configured development branch may skip expensive CAD-CI bootstrap
   only when the exact non-empty Git diff is entirely below configured docs-only
   prefixes;
 - empty/unknown/mixed diffs run CAD-CI;
@@ -552,3 +555,37 @@ checks/statuses read.
 
 Template version 2 owns this correction. Repository-specific integration
 workflow and extra temporary prefixes remain caller-owned values.
+
+
+## Public workflow configuration naming
+
+Consumer-facing reusable-workflow names describe repository concepts rather
+than serialization details or internal classifier terminology.
+
+The public branch-role inputs are:
+
+```text
+stable_branch
+development_branches
+permanent_branches
+temporary_branch_prefixes
+```
+
+Structured string inputs use semantic names:
+
+```text
+pull_request_policy
+command_environment
+```
+
+Their values remain JSON-encoded where GitHub Actions requires string
+transport. Internal helper/script flags may retain explicit names such as
+`--lane-refs-json`, `--policy-json` and `--environment-json` because those
+flags consume serialized JSON directly.
+
+`plan_json` remains unchanged because JSON is the documented public output
+format.
+
+The v0.31.0 workflow schema does not duplicate old public names as aliases.
+Earlier exact release tags remain immutable and valid; upgrading consumers
+must use the matching v0.31.0 canonical templates.
