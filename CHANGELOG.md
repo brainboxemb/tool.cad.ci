@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.33.0 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.17.0` at exact commit
+  `a68bcd9e3940b21872dea5fc210bcd9a26519ebc`;
+- migrate thin tool imports to the library's canonical repository, execution and
+  publication owner packages introduced by the library foundation refactor;
+- expose library-owned built-in build123d/CadQuery shared batching and
+  first-class reusable verification without adding tool-owned builder,
+  verification, scheduler or cache behavior;
+- preserve all public CLI/workflow inputs and one-runner lifecycle semantics;
+- repin copy-ready workflow templates to exact `v0.33.0` without changing
+  template versions because wrapper structure/public workflow contracts are
+  unchanged.
+
 ## 0.32.0 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.15.0` at exact commit
