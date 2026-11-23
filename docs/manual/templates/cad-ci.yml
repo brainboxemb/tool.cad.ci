@@ -1,6 +1,6 @@
 # template: tool.cad.ci/cad-ci
 # template-version: 1
-# tool-release: v0.33.2
+# tool-release: v0.34.0
 #
 # Copy this file to:
 #   .github/workflows/cad-ci.yml
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.33.2
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.34.0
     with:
       source_sha: ${{ github.event.pull_request.head.sha }}
       base_sha: ${{ github.event.pull_request.base.sha }}
