@@ -21,7 +21,7 @@ on:
         required: false
         type: boolean
         default: false
-      pr_policy_json:
+      pull_request_policy:
         description: Optional stable/lane/docs-only pull-request policy JSON.
         required: false
         type: string
@@ -31,7 +31,7 @@ on:
         required: false
         type: number
         default: 1
-      environment_json:
+      command_environment:
         description: Optional non-secret environment values for consumer commands.
         required: false
         type: string
@@ -66,8 +66,8 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       base_sha: ${{ inputs.base_sha }}
       full_run: ${{ inputs.full_run }}
-      pr_policy_json: ${{ inputs.pr_policy_json }}
+      pull_request_policy: ${{ inputs.pull_request_policy }}
       jobs: ${{ inputs.jobs }}
-      environment_json: ${{ inputs.environment_json }}
+      command_environment: ${{ inputs.command_environment }}
       upload_build: ${{ inputs.upload_build }}
       build_artifact_name: ${{ inputs.build_artifact_name }}
