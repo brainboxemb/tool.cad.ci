@@ -284,6 +284,7 @@ class ReusableCiHelperTests(unittest.TestCase):
                     generated_build=generated,
                     scope="dev-ci",
                     source_sha="b" * 40,
+                    build_branch="test-output/build",
                 )
 
         self.assertEqual(
@@ -296,6 +297,10 @@ class ReusableCiHelperTests(unittest.TestCase):
             },
         )
         resolve.assert_called_once()
+        self.assertEqual(
+            resolve.call_args.kwargs["branch"],
+            "test-output/build",
+        )
 
     def test_durable_publish_delegates_build_then_pages(self):
         from cad_ci.durable import DurableScopeState
@@ -329,6 +334,8 @@ class ReusableCiHelperTests(unittest.TestCase):
                     exists=True,
                     source_sha="b" * 40,
                     source_ref="main",
+                    build_branch="test-output/build",
+                    pages_branch="test-output/gh-pages",
                 )
 
         self.assertEqual(result, ("c" * 40, "d" * 40))
@@ -339,8 +346,16 @@ class ReusableCiHelperTests(unittest.TestCase):
         self.assertFalse(state.full_run)
         self.assertTrue(state.exists)
         self.assertEqual(
+            build.call_args.kwargs["build_branch"],
+            "test-output/build",
+        )
+        self.assertEqual(
             pages.call_args.kwargs["build_commit"],
             "c" * 40,
+        )
+        self.assertEqual(
+            pages.call_args.kwargs["pages_branch"],
+            "test-output/gh-pages",
         )
 
 class ReusableWorkflowTests(unittest.TestCase):
