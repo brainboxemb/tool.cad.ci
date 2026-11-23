@@ -119,6 +119,12 @@ jobs:
           fetch-tags: false
           persist-credentials: false
 
+      - name: Install external CAD CI runtime dependencies
+        run: >-
+          python -m pip install --disable-pip-version-check
+          --no-deps --no-compile
+          "PyYAML>=6.0" "SCons==4.11.1"
+
       - name: Check stable main ci-build-record
         run: |
           python "$TOOL_ROOT/scripts/reusable_ci.py" release-check \
