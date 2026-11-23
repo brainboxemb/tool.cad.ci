@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "v0.33.0"
+RELEASE = "v0.33.1"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
