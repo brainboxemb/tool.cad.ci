@@ -8,9 +8,9 @@ from pathlib import Path
 import sys
 
 from cad_ci.config import ConfigError, load_repository
-from cad_ci.git import GitError, changed_files
-from cad_ci.planner import affected_items, build_plan
-from cad_ci.runner import RunError, run_repository
+from cad_ci.repository.git import GitError, changed_files
+from cad_ci.repository.planner import affected_items, build_plan
+from cad_ci.execution.runner import RunError, run_repository
 
 from .publication_cli import (
     PUBLICATION_ERRORS,
