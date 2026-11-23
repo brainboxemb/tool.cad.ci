@@ -155,25 +155,30 @@ def parse_pr_policy(raw: str) -> dict[str, object]:
     if not isinstance(value, dict):
         raise ValueError("PR policy must be a JSON object")
 
-    allowed = {"stable_ref", "lane_refs", "docs_only_prefixes"}
+    allowed = {"stable_branch", "development_branches", "docs_only_prefixes"}
     extra = set(value) - allowed
     if extra:
         raise ValueError(f"unsupported PR policy field(s): {sorted(extra)}")
 
-    stable_ref = _policy_ref(value.get("stable_ref", "main"), "stable_ref")
-    lane_value = value.get("lane_refs", [])
+    stable_ref = _policy_ref(
+        value.get("stable_branch", "main"),
+        "stable_branch",
+    )
+    lane_value = value.get("development_branches", [])
     if not isinstance(lane_value, list):
-        raise ValueError("lane_refs must be a JSON list")
+        raise ValueError("development_branches must be a JSON list")
     lane_refs = tuple(
-        _policy_ref(item, "lane_refs entry")
+        _policy_ref(item, "development_branches entry")
         for item in lane_value
     )
     if not lane_refs:
-        raise ValueError("lane_refs must contain at least one ref")
+        raise ValueError("development_branches must contain at least one branch")
     if len(set(lane_refs)) != len(lane_refs):
-        raise ValueError("lane_refs must not contain duplicates")
+        raise ValueError("development_branches must not contain duplicates")
     if stable_ref in lane_refs:
-        raise ValueError("stable_ref must not also be a lane ref")
+        raise ValueError(
+            "stable_branch must not also be a development branch"
+        )
 
     prefix_value = value.get("docs_only_prefixes", [])
     if not isinstance(prefix_value, list):
@@ -181,8 +186,8 @@ def parse_pr_policy(raw: str) -> dict[str, object]:
     prefixes = tuple(_policy_prefix(item) for item in prefix_value)
 
     return {
-        "stable_ref": stable_ref,
-        "lane_refs": lane_refs,
+        "stable_branch": stable_ref,
+        "development_branches": lane_refs,
         "docs_only_prefixes": prefixes,
     }
 
@@ -251,8 +256,8 @@ def resolve_pr_policy(
             "classification": "explicit-full",
         }
 
-    stable_ref = policy["stable_ref"]
-    lane_refs = policy["lane_refs"]
+    stable_ref = policy["stable_branch"]
+    lane_refs = policy["development_branches"]
     prefixes = policy["docs_only_prefixes"]
 
     if base_ref == stable_ref and head_ref in lane_refs:
