@@ -62,16 +62,26 @@ def positive_int(value: str) -> int:
 
 
 def parse_changed_paths(value: str) -> tuple[str, ...]:
-    """Validate newline-separated repository-relative explicit selection paths."""
+    """Validate one JSON list of repository-relative explicit selection paths."""
+
+    text = value.strip()
+    if not text:
+        return ()
+    try:
+        raw_paths = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError("changed_paths must be a JSON list") from exc
+    if not isinstance(raw_paths, list):
+        raise ValueError("changed_paths must be a JSON list")
 
     result: list[str] = []
-    for raw in value.splitlines():
+    for raw in raw_paths:
+        if not isinstance(raw, str):
+            raise ValueError("changed_paths entries must be strings")
         path = raw.strip()
-        if not path:
-            continue
         if (
-            path.startswith("/")
-            or "\\x00" in path
+            not path
+            or path.startswith("/")
             or ".." in Path(path).parts
         ):
             raise ValueError(
