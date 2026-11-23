@@ -15,16 +15,16 @@ on:
         required: true
         type: number
       stable_branch:
-        description: Stable ref that can never be retired.
+        description: Stable branch that can never be retired.
         required: false
         type: string
         default: main
       development_branches:
-        description: JSON list of long-lived lane refs that can never be retired.
+        description: JSON-encoded list of long-lived development branch names that can never be retired.
         required: true
         type: string
       permanent_branches:
-        description: JSON list of additional permanent/generated refs that can never be retired.
+        description: JSON-encoded list of additional permanent/generated branch names that can never be retired.
         required: false
         type: string
         default: '["build","gh-pages"]'
