@@ -329,6 +329,74 @@ class ReusableCiHelperTests(unittest.TestCase):
         changed.assert_not_called()
 
 
+    def test_release_check_uses_library_main_record(self):
+        from cad_ci.publication.durable import DurableScopeState
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            generated = root / "generated"
+            with patch(
+                "cad_ci.publication.durable.fetch_durable_scope_state",
+                return_value=DurableScopeState(
+                    scope="main",
+                    base_sha="b" * 40,
+                    full_run=False,
+                    exists=True,
+                ),
+            ) as resolve:
+                result = self.helper.release_check(
+                    repo=repo,
+                    generated_build=generated,
+                    source_sha="b" * 40,
+                    build_branch="test-output/build",
+                )
+
+        self.assertEqual(result, "b" * 40)
+        resolve.assert_called_once()
+        self.assertEqual(resolve.call_args.kwargs["scope"], "main")
+        self.assertEqual(
+            resolve.call_args.kwargs["branch"],
+            "test-output/build",
+        )
+
+    def test_release_check_rejects_missing_or_stale_main_record(self):
+        from cad_ci.publication.durable import DurableScopeState
+
+        cases = (
+            (
+                DurableScopeState(
+                    scope="main",
+                    base_sha="b" * 40,
+                    full_run=True,
+                    exists=False,
+                ),
+                "ci-build-record is missing",
+            ),
+            (
+                DurableScopeState(
+                    scope="main",
+                    base_sha="a" * 40,
+                    full_run=False,
+                    exists=True,
+                ),
+                "does not match release source",
+            ),
+        )
+        for state, message in cases:
+            with self.subTest(message=message):
+                with tempfile.TemporaryDirectory() as tmp, patch(
+                    "cad_ci.publication.durable.fetch_durable_scope_state",
+                    return_value=state,
+                ):
+                    with self.assertRaisesRegex(ValueError, message):
+                        self.helper.release_check(
+                            repo=Path(tmp),
+                            generated_build=Path(tmp) / "generated",
+                            source_sha="b" * 40,
+                        )
+
     def test_durable_state_delegates_to_library(self):
         from cad_ci.publication.durable import DurableScopeState
 
@@ -430,6 +498,25 @@ class ReusableWorkflowTests(unittest.TestCase):
         return (
             ROOT / ".github" / "workflows" / name
         ).read_text(encoding="utf-8")
+
+    def test_release_workflow_checks_build_then_delegates_release(self):
+        text = self.read("reusable-release.yml")
+        self.assertIn("workflow_call:", text)
+        self.assertIn("name: Check stable main ci-build-record", text)
+        self.assertIn('scripts/reusable_ci.py" release-check', text)
+        self.assertIn(
+            "tool.py.lib.ci/.github/workflows/reusable-release.yml@"
+            "58ead6897a4ac8cafef22a3c1f834491bf61568d",
+            text,
+        )
+        self.assertIn(
+            "ref: 58ead6897a4ac8cafef22a3c1f834491bf61568d",
+            text,
+        )
+        self.assertIn("scripts/release_command.py", text)
+        self.assertIn("validator_path: ${{ inputs.validator_path }}", text)
+        self.assertNotIn("gh-pages", text)
+        self.assertNotIn("provenance.json", text)
 
     def test_plan_workflow_uses_caller_source_and_called_tool_revision(self):
         text = self.read("reusable-plan.yml")
