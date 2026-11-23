@@ -109,6 +109,39 @@ preparation between generic stages.
 Workflow YAML remains orchestration-only. It does not own changed-item logic,
 SCons decisions, item loops or consumer commands.
 
+## Targeted qualification selection
+
+Staged migration selection is a workflow invocation concern, not repository
+model configuration.
+
+```text
+manual targeted dispatch
+  -> reusable-ci.yml
+     -> reusable-run.yml
+        -> scripts/reusable_ci.py transport validation
+           -> cad-ci run --item <id>
+           or
+           -> cad-ci run --changed <path>...
+              -> lib.py.cad.ci affected-item/dependency logic
+                 -> one SCons graph
+```
+
+The adapter accepts either one exact item id or a JSON list of changed paths.
+It does not interpret model names, dependency relationships or builder
+semantics. Multiple model paths are deliberately expressed through the existing
+`--changed` surface so the library selects all affected top-level items in one
+graph; this preserves shared-batch/direct-dependent behavior for 5- or 10-model
+migration gates.
+
+Targeted selection is mutually exclusive with effective full-run. This matters
+when pull-request policy turns a lane-to-stable promotion into a mandatory full
+run: the workflow must not allow an explicit selector to narrow that gate.
+
+The canonical lane wrapper version 5 treats a manual dispatch with `item` or
+`changed_paths` as a read-only probe. A manual dispatch with both selectors
+empty keeps the existing durable route. Thus partial qualification can never
+publish a partial durable scope.
+
 ## Durable source-lane workflow
 
 The permanent-lane execution topology is:

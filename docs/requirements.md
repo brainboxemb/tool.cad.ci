@@ -591,3 +591,27 @@ format.
 The v0.31.0 workflow schema does not duplicate old public names as aliases.
 Earlier exact release tags remain immutable and valid; upgrading consumers
 must use the matching v0.31.0 canonical templates.
+
+## Targeted read-only workflow selection
+
+The public run-only workflow must support staged qualification without requiring
+consumer configuration edits.
+
+- Optional `item` identifies one exact CAD-CI item and is forwarded to the
+  existing CLI `--item` selector.
+- Optional `changed_paths` is a JSON-encoded list of repository-relative
+  paths and is forwarded to the existing CLI `--changed` selector.
+- The workflow/tool layer validates transport shape and path safety only;
+  affected-item calculation, dependency closure, direct-dependent context and
+  SCons CURRENT/rebuild behavior remain library-owned.
+- `item`, `changed_paths` and effective `full_run` are mutually exclusive.
+  A lane-to-stable promotion that policy classifies as full-run must therefore
+  fail rather than silently execute a narrowed target.
+- Empty targeted selectors preserve the existing exact base/head incremental
+  path.
+- A targeted run is read-only. It must not publish or update durable build or
+  Pages state.
+- The canonical lane wrapper may route a manual dispatch with a non-empty
+  selector to this read-only path; an empty manual dispatch retains the normal
+  durable lifecycle.
+

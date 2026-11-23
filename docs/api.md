@@ -4,7 +4,7 @@ Status: **audit draft**, 2026-11-22. This document distinguishes observed entry 
 
 ## Product boundary
 
-`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (0.15.0 for this release). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
+`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above the exactly pinned `lib.py.cad.ci v0.18.2` owner library. Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
 
 A consumer uses an exact released version tag rather than a moving branch. CLI arguments and workflow_call inputs are separate interface types and are not interchangeable.
 
@@ -63,13 +63,22 @@ Entry point: `workflow_call`. Inputs: `source_sha` (string, default triggering s
 
 ### `reusable-run.yml`
 
-Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, optional `pull_request_policy`, `jobs` (number, default 1), `command_environment` (nonsecret JSON string, default `{}`), `upload_build` (boolean, default false), `build_artifact_name` (string, default `cad-ci-build`). Output: `build_artifact_name` (empty when nothing uploaded). Requires `contents: read` and `packages: read`. Side effects: shallow caller checkout/base fetch, optional lane-policy preflight, then tool/library/Python/GHCR bootstrap and exactly one CAD-CI run when not skipped; optional Actions artifact upload. No durable build-branch publication.
+Entry point: `workflow_call`. Inputs: `source_sha`, `base_sha`, `full_run`, optional targeted `item`, optional `changed_paths` (JSON list of repository-relative paths), optional `pull_request_policy`, `jobs` (number, default 1), `command_environment` (nonsecret JSON string, default `{}`), `upload_build` (boolean, default false), `build_artifact_name` (string, default `cad-ci-build`). Output: `build_artifact_name` (empty when nothing uploaded). Requires `contents: read` and `packages: read`. Side effects: shallow caller checkout/base fetch, optional lane-policy preflight, then tool/library/Python/GHCR bootstrap and exactly one CAD-CI run when not skipped; optional Actions artifact upload. No durable build-branch publication.
 
 ### `reusable-ci.yml`
 
-Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`, plus optional `pull_request_policy` (default empty). Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
+Entry point: `workflow_call`. Same run inputs and artifact-name output as `reusable-run.yml`, including targeted `item` / `changed_paths`, plus optional `pull_request_policy` (default empty). Adds caller-scoped concurrency/cancellation and delegates run to `reusable-run.yml`. This is the default public **run-only** workflow. `reusable-run.yml` is its internal implementation and is not a separate supported consumer API.
 
 When `pull_request_policy` is set on a pull request, the existing single runner may apply stable/lane/docs-only policy before Python/library/GHCR bootstrap. The policy JSON object supports `stable_branch`, `development_branches`, and `docs_only_prefixes`. Exact configured lane→stable promotion forces full CI; a non-empty development-lane diff entirely below configured docs prefixes succeeds without CAD-CI bootstrap; all other/unknown cases fail safe to running CI. No second classifier job is created.
+
+Targeted run selection is transport-only. `item` is forwarded to the existing
+CLI `--item` selector. `changed_paths` is a JSON-encoded string list that is
+validated as safe repository-relative paths and forwarded to the existing CLI
+`--changed <paths...>` selector. The tool does not calculate a second
+affected-item set. `item`, `changed_paths` and effective `full_run` are
+mutually exclusive; therefore lane-promotion policy cannot be narrowed by a
+targeted selector. Targeted runs are read-only and are not a durable
+publication mode.
 
 ### `reusable-durable.yml`
 

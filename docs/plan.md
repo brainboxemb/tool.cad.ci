@@ -4,41 +4,48 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
 
 ## Accepted owner baseline
 
-- `lib.py.cad.ci v0.18.2` is released at
+- `lib.py.cad.ci v0.18.2` @
   `088644a05ff698957aef2ddc6cc5de037ddfa158`;
-- v0.18.2 preserves real `cq.Assembly` support while restoring normal
-  `cq.Workplane` / Shape export compatibility found by external #248;
+- `tool.cad.ci v0.34.2` @
+  `37f7a82c6769279d33367144c56976da89bb1a5d`;
+- exact v0.34.2/v0.18.2 external acceptance is complete in
+  `tool.cad.ci.test #248`, including CadQuery Workplane + Assembly and
+  dev-ci/main/dev-cad durable provenance;
 - `lib.py.cad.verification v0.16.0` remains immutable at
-  `c7c145b7be0c602724e8cca874ef29990baaad1e`;
-- current released tool baseline is v0.34.1 on lib v0.18.1.
+  `c7c145b7be0c602724e8cca874ef29990baaad1e`.
 
 ## Current work
 
-### #165 — publish tool v0.34.2
+### #168 — targeted reusable CI selection / v0.35.0
 
-**Now.**
+**Now.** This is the missing staged-migration invocation contract exposed by
+Forge #740.
 
-Publish a thin exact-library adoption patch:
+Required order:
 
-1. pin exact `lib.py.cad.ci v0.18.2` @ `088644a05ff698957aef2ddc6cc5de037ddfa158`;
-2. change no tool-owned CAD-CI behavior;
-3. publish `tool.cad.ci v0.34.2`;
-4. repin copy-ready workflow templates to exact v0.34.2 while preserving
-   template-version numbers because copied workflow structure is unchanged;
-5. keep CLI/workflow contracts and one-runner lifecycle semantics unchanged;
-6. repin existing tool.cad.ci.test #248 and rerun full external acceptance
-   before Forge #740 resumes.
+1. expose optional public `item` and JSON-list `changed_paths` on the
+   read-only reusable CI surface;
+2. forward directly to existing CLI `--item` / `--changed` selection;
+3. keep targeted selectors mutually exclusive with effective full-run;
+4. update canonical `cad-ci-lanes` to template version 5 so manual targeted
+   dispatch is read-only while empty dispatch remains durable;
+5. keep exact library pin v0.18.2; add no planner/SCons behavior here;
+6. require tool CI green and publish exact `tool.cad.ci v0.35.0`;
+7. externally black-box accept targeted single- and multi-item selection in
+   `tool.cad.ci.test`;
+8. only then repin Forge #740/#755 and qualify 1 -> 5 -> 10 -> full.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #165 Publish v0.34.2 on lib.py.cad.ci 0.18.2 | **now** | Finish exact-stack CI/release, then rerun external #248. |
-| #117 Align historical changelog | later / docs-only | Keep separate from the active Forge migration. |
+| #168 targeted reusable CI selection | **now** | Finish v0.35.0, external acceptance, then return to Forge #740. |
+| #164 workflow/tool ownership cleanup | later | Architectural cleanup; do not block Forge migration. |
+| #117 historical changelog alignment | later / docs-only | Keep separate from active migration. |
 
 ## Boundary
 
-`tool.cad.ci` remains the thin CLI/GitHub workflow adapter. CadQuery model
-form detection/export, path matching, builder capability parsing,
-verification-package wiring, SCons, runtime batching and cache semantics remain
-library-owned.
+`tool.cad.ci` transports GitHub workflow inputs to the released CLI. It does
+not own affected-item calculation, dependency closure, direct-dependent
+selection, SCons execution/cache, builders, verification-package wiring or
+durable publication semantics.
