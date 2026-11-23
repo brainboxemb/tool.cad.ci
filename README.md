@@ -173,7 +173,7 @@ Normal consumers use `reusable-ci.yml` and do not reproduce generic
 checkout/Python/tool-install/run setup locally. None of these workflows
 contains Forge/SolidCraft/CAD-domain item names.
 
-The optional `environment_json` input supplies non-secret caller values to
+The optional `command_environment` input supplies non-secret caller values to
 the inherited process environment. Stable repository expectations, such as a
 runtime/version selected by that repository, belong in root
 `cad-ci.yml:variables`. The pinned library applies those repository values
@@ -193,9 +193,9 @@ that artifact.
 The released reusable merge-policy workflow derives merge method from configured
 permanent branch roles; callers do not choose a method manually.
 
-- configured long-lived lane -> stable: normal merge, then preserve/advance the
+- configured long-lived development branch -> stable: normal merge, then preserve/advance the
   lane at the resulting stable merge commit;
-- stable -> configured long-lived lane: normal history-preserving merge into the
+- stable -> configured long-lived development branch: normal history-preserving merge into the
   lane, with the stable source ref left unchanged;
 - all other supported pull requests: squash merge;
 - permanent/generated/backup refs are never cleanup targets; only explicitly
@@ -207,7 +207,7 @@ before every merge. Same-head GitHub Actions runs triggered by
 `issue_comment` are command workflows, not PR validation, so their check-runs
 are excluded from the validation set; at least one separate validation check
 must remain green. Optional consumer integration dispatch runs for the updated
-durable base; a promotion additionally dispatches the retained lane.
+durable base; a promotion additionally dispatches the retained development branch.
 
 ## Durable build output
 
