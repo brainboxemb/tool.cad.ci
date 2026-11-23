@@ -5,7 +5,7 @@ Read the [public API contract](../../docs/api.md) **before selecting a workflow*
 | File | Role | Who should invoke it? |
 | --- | --- | --- |
 | `reusable-ci.yml` | High-level run-only CAD-CI workflow with concurrency | Normal run-only consumers |
-| `reusable-durable.yml` | One-runner permanent-branch run + durable build/optional configured Pages publication, with configurable generated refs | Permanent `main` / named-lane consumers |
+| `reusable-durable.yml` | One-runner permanent-branch run + durable build/optional configured Pages publication, with configurable generated refs | Permanent `main` / named development-branch consumers |
 | `reusable-pr.yml` | Complete PR verification, optional publication/cleanup on **one runner** | PR consumers requiring the complete lifecycle |
 | `reusable-plan.yml` | **Public advanced** selection-only API; returns plan JSON and exact source/base commits | Callers that need planning without execution; not the normal run entry point |
 | `reusable-run.yml` | **Internal** single-run implementation behind `reusable-ci.yml` | Do not call directly from consumers |
