@@ -20,16 +20,16 @@ on:
         type: string
         default: main
       development_branches:
-        description: JSON list of long-lived development lane refs.
+        description: JSON-encoded list of long-lived development branch names.
         required: true
         type: string
       permanent_branches:
-        description: JSON list of additional permanent/generated refs that cleanup must never delete.
+        description: JSON-encoded list of additional permanent/generated branch names that cleanup must never delete.
         required: false
         type: string
         default: '["build","gh-pages"]'
       temporary_branch_prefixes:
-        description: JSON allow-list of temporary branch prefixes eligible for maintenance cleanup.
+        description: JSON-encoded allow-list of temporary branch prefixes eligible for maintenance cleanup.
         required: false
         type: string
         default: '["issue/","fix/","feature/","accept/","promote/","docs/","chore/"]'
