@@ -25,7 +25,7 @@ on:
         type: string
         default: ""
       changed_paths:
-        description: Optional newline-separated repository-relative paths for multi-item targeted qualification.
+        description: Optional JSON list of repository-relative paths for multi-item targeted qualification.
         required: false
         type: string
         default: ""
