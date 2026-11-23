@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.34.2 - 2026-11-23
+
+- consume released `lib.py.cad.ci 0.18.2` at exact commit
+  `088644a05ff698957aef2ddc6cc5de037ddfa158`;
+- carry the library-owned CadQuery export-dispatch compatibility correction so
+  real Assembly and normal Workplane/Shape forms remain supported together;
+- add no tool-owned model detection, export logic, runtime or SCons behavior;
+- repin all copy-ready workflow templates to exact `v0.34.2` without changing
+  template-version numbers.
+
 ## 0.34.1 - 2026-11-23
 
 - consume released `lib.py.cad.ci 0.18.1` at exact commit
