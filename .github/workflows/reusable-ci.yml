@@ -21,6 +21,16 @@ on:
         required: false
         type: boolean
         default: false
+      item:
+        description: Optional exact CAD-CI item id for a targeted read-only run.
+        required: false
+        type: string
+        default: ""
+      changed_paths:
+        description: Optional JSON list of repository-relative paths for explicit affected-item selection.
+        required: false
+        type: string
+        default: ""
       pull_request_policy:
         description: Optional JSON object describing stable/development/docs-only pull-request policy.
         required: false
@@ -66,6 +76,8 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       base_sha: ${{ inputs.base_sha }}
       full_run: ${{ inputs.full_run }}
+      item: ${{ inputs.item }}
+      changed_paths: ${{ inputs.changed_paths }}
       pull_request_policy: ${{ inputs.pull_request_policy }}
       jobs: ${{ inputs.jobs }}
       command_environment: ${{ inputs.command_environment }}

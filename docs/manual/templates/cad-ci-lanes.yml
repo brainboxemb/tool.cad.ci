@@ -1,6 +1,6 @@
 # template: tool.cad.ci/cad-ci-lanes
-# template-version: 4
-# tool-release: v0.34.2
+# template-version: 5
+# tool-release: v0.35.0
 #
 # Copy this file to:
 #   .github/workflows/cad-ci.yml
@@ -18,15 +18,36 @@ on:
   push:
     branches: [main, dev-cad, dev-ci]
   workflow_dispatch:
+    inputs:
+      item:
+        description: Optional exact CAD-CI item id for a read-only targeted qualification run.
+        required: false
+        type: string
+        default: ""
+      changed_paths:
+        description: Optional JSON list of repository-relative paths for multi-item targeted qualification.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
   packages: read
 
 jobs:
+  probe:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.item != '' || inputs.changed_paths != '')
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.35.0
+    with:
+      source_sha: ${{ github.sha }}
+      item: ${{ inputs.item }}
+      changed_paths: ${{ inputs.changed_paths }}
+
   pr:
     if: github.event_name == 'pull_request'
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.34.2
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.35.0
     with:
       # Repository policy: change only when branch/docs policy differs.
       pull_request_policy: '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],"docs_only_prefixes":["docs/"]}'
@@ -34,14 +55,16 @@ jobs:
   durable:
     if: >-
       (github.event_name == 'push' ||
-       github.event_name == 'workflow_dispatch') &&
+       (github.event_name == 'workflow_dispatch' &&
+        inputs.item == '' &&
+        inputs.changed_paths == '')) &&
       (github.ref_name == 'main' ||
        github.ref_name == 'dev-cad' ||
        github.ref_name == 'dev-ci')
     permissions:
       contents: write
       packages: read
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-durable.yml@v0.34.2
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-durable.yml@v0.35.0
     with:
       source_sha: ${{ github.sha }}
       source_ref: ${{ github.ref_name }}

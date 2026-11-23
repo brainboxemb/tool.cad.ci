@@ -53,6 +53,72 @@ class ReusableCiHelperTests(unittest.TestCase):
             jobs_index = command.index("--jobs")
             self.assertEqual(command[jobs_index + 1], "3")
 
+    def test_targeted_item_selection_bypasses_git_diff(self):
+        self.assertEqual(
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=False,
+                item="simple-box",
+            ),
+            ["--item", "simple-box"],
+        )
+
+    def test_targeted_changed_paths_select_multiple_affected_items(self):
+        self.assertEqual(
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=False,
+                changed_paths=json.dumps(
+                    [
+                        "examples/simple-box/ci.yml",
+                        "examples/components/ci.yml",
+                    ]
+                ),
+            ),
+            [
+                "--changed",
+                "examples/simple-box/ci.yml",
+                "examples/components/ci.yml",
+            ],
+        )
+
+    def test_targeted_selection_is_mutually_exclusive_and_cannot_narrow_full_run(self):
+        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=False,
+                item="simple-box",
+                changed_paths=json.dumps(["examples/components/ci.yml"]),
+            )
+        with self.assertRaisesRegex(ValueError, "cannot be combined with full_run"):
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=True,
+                item="simple-box",
+            )
+
+    def test_changed_paths_reject_parent_escape(self):
+        with self.assertRaisesRegex(ValueError, "repository-relative"):
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=False,
+                changed_paths=json.dumps(["../outside/ci.yml"]),
+            )
+
+    def test_changed_paths_requires_json_list(self):
+        with self.assertRaisesRegex(ValueError, "JSON list"):
+            self.helper.selection_args(
+                source_sha="",
+                base_sha="",
+                full_run=False,
+                changed_paths="examples/simple-box/ci.yml",
+            )
+
     def test_incremental_selection_uses_exact_base_and_source(self):
         self.assertEqual(
             self.helper.selection_args(
@@ -385,6 +451,22 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertNotIn("cache-primary-key", text)
         self.assertNotIn("restore-keys:", text)
 
+
+    def test_run_surfaces_expose_targeted_selection(self):
+        run = self.read("reusable-run.yml")
+        self.assertIn("item:", run)
+        self.assertIn("changed_paths:", run)
+        self.assertIn('CAD_CI_TARGET_ITEM: ${{ inputs.item }}', run)
+        self.assertIn(
+            'CAD_CI_CHANGED_PATHS_INPUT: ${{ inputs.changed_paths }}',
+            run,
+        )
+        self.assertIn('--item "$CAD_CI_TARGET_ITEM"', run)
+        self.assertIn('--changed-paths "$CAD_CI_CHANGED_PATHS_INPUT"', run)
+
+        high = self.read("reusable-ci.yml")
+        self.assertIn("item: ${{ inputs.item }}", high)
+        self.assertIn("changed_paths: ${{ inputs.changed_paths }}", high)
 
     def test_run_surfaces_expose_and_forward_bounded_jobs(self):
         run = self.read("reusable-run.yml")

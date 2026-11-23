@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.34.2**
+- tool release: **v0.35.0**
 
 Each YAML template contains:
 
@@ -26,7 +26,7 @@ placeholder to replace.
 | `merge-policy.yml` | 4 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
 | `branch-cleanup.yml` | 2 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
 | `branch-retirement.yml` | 2 | Owner-issued exact-SHA retirement for separately reviewed unique history. |
-| `cad-ci-lanes.yml` | 4 | PR validation plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes, with explicit generated branch names. |
+| `cad-ci-lanes.yml` | 5 | PR validation, read-only targeted manual qualification, plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
 
@@ -140,11 +140,16 @@ not contain SolidCraft-specific behavior. A repository may instead name any
 builder that fits its own domain.
 
 Use `cad-ci-lanes.yml` when the repository follows the permanent-development-branch model.
-The same wrapper has two released routes: pull requests call
-`reusable-ci.yml`; `push` or `workflow_dispatch` on `main`, `dev-cad`
-or `dev-ci` calls `reusable-durable.yml` with the exact branch SHA/name as
-source and durable scope. Do not add local publication steps or a second
-CAD-CI run.
+The wrapper has three routes:
+
+- pull requests call `reusable-ci.yml` with lane policy;
+- pushes, and manual dispatches with no targeted selector, call
+  `reusable-durable.yml` with the exact branch SHA/name as source and durable
+  scope;
+- a manual dispatch with `item` or `changed_paths` calls the read-only
+  `reusable-ci.yml` probe and never publishes durable state.
+
+Do not add local publication steps or a second CAD-CI run.
 
 The durable job also names its generated output branches explicitly:
 

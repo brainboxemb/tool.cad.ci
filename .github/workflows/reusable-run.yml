@@ -22,6 +22,16 @@ on:
         required: false
         type: boolean
         default: false
+      item:
+        description: Optional exact CAD-CI item id for a targeted read-only run.
+        required: false
+        type: string
+        default: ""
+      changed_paths:
+        description: Optional JSON list of repository-relative paths for explicit affected-item selection.
+        required: false
+        type: string
+        default: ""
       pull_request_policy:
         description: Optional JSON object describing stable/development/docs-only pull-request policy.
         required: false
@@ -80,7 +90,12 @@ jobs:
           persist-credentials: true
 
       - name: Fetch exact base revision for incremental selection
-        if: "!inputs.full_run"
+        if: >-
+          !inputs.full_run &&
+          (
+            (inputs.item == '' && inputs.changed_paths == '') ||
+            (inputs.pull_request_policy != '' && github.event_name == 'pull_request')
+          )
         env:
           BASE_SHA: ${{ env.CAD_CI_BASE_SHA }}
         run: |
@@ -196,12 +211,16 @@ jobs:
         if: steps.selection.outputs.run_cad == 'true'
         env:
           CAD_CI_CONSUMER_ENV_JSON: ${{ inputs.command_environment }}
+          CAD_CI_TARGET_ITEM: ${{ inputs.item }}
+          CAD_CI_CHANGED_PATHS_INPUT: ${{ inputs.changed_paths }}
         run: |
           python "$TOOL_ROOT/scripts/reusable_ci.py" run \
             --repo . \
             --source-sha "$CAD_CI_SOURCE_SHA" \
             --base-sha "$CAD_CI_BASE_SHA" \
             --full-run "${{ steps.selection.outputs.full_run }}" \
+            --item "$CAD_CI_TARGET_ITEM" \
+            --changed-paths "$CAD_CI_CHANGED_PATHS_INPUT" \
             --jobs "${{ inputs.jobs }}"
 
       - name: Check materialized build output

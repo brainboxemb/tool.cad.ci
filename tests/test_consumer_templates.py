@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "v0.34.2"
+RELEASE = "v0.35.0"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
-    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 4, "reusable-ci.yml"),
+    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 5, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
     "merge-policy.yml": ("tool.cad.ci/merge-policy", 4, "reusable-merge-policy.yml"),
     "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 2, "reusable-branch-cleanup.yml"),
@@ -99,7 +99,26 @@ class ConsumerTemplateTests(unittest.TestCase):
 
     def test_lane_template_delegates_pr_and_durable_lifecycles(self):
         wf = load_yaml(TEMPLATES / "cad-ci-lanes.yml")
-        self.assertEqual(set(wf["jobs"]), {"pr", "durable"})
+        self.assertEqual(set(wf["jobs"]), {"probe", "pr", "durable"})
+
+        dispatch = wf["on"]["workflow_dispatch"]["inputs"]
+        self.assertEqual(set(dispatch), {"item", "changed_paths"})
+        self.assertEqual(dispatch["item"]["default"], "")
+        self.assertEqual(dispatch["changed_paths"]["default"], "")
+
+        probe = wf["jobs"]["probe"]
+        self.assertNotIn("runs-on", probe)
+        self.assertEqual(
+            probe["uses"],
+            "brainboxemb/tool.cad.ci/.github/workflows/"
+            "reusable-ci.yml@" + RELEASE,
+        )
+        self.assertEqual(probe["with"]["source_sha"], "${{ github.sha }}")
+        self.assertEqual(probe["with"]["item"], "${{ inputs.item }}")
+        self.assertEqual(
+            probe["with"]["changed_paths"],
+            "${{ inputs.changed_paths }}",
+        )
 
         pr = wf["jobs"]["pr"]
         self.assertNotIn("runs-on", pr)
