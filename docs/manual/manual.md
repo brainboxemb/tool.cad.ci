@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.36.0**
+- tool release: **v0.36.1**
 
 Each YAML template contains:
 
@@ -246,7 +246,7 @@ It must not reimplement:
 - Pages checks as release evidence.
 
 The public workflow is `reusable-release.yml`; the copy-ready wrapper is
-`cad-release.yml`. They ship together in tool.cad.ci v0.36.0. Consumers must
+`cad-release.yml`. They ship together in tool.cad.ci v0.36.1. Consumers must
 wait for released-stack acceptance in `tool.cad.ci.test` before migrating.
 
 ## What the consumer may own
