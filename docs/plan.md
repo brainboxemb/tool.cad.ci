@@ -1,48 +1,57 @@
 # Repository plan
 
-Current source of truth for unfinished work in `tool.cad.ci` (2026-11-22).
+Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
 
 ## Released baseline
 
-- `tool.cad.ci v0.25.0` @
-  `92b9cbb59bf24f6b47ba1fae267f67f2becc503f`;
-- `lib.py.cad.ci 0.12.0` @
+- `tool.cad.ci v0.28.0` @
+  `805304b6a950319aed7dc8a77e9c7b501bb3fb61`;
+- released tool v0.28.0 still pins `lib.py.cad.ci 0.12.0` @
   `64656db8df528a5c0de799e62c0f028fd0133486`;
-- external released-stack acceptance passed in `tool.cad.ci.test` PR #135,
-  final run `45063617081`, through the normal
-  `reusable-ci.yml@v0.25.0` consumer path;
-- the accepted fixture proves two declarative item `ci.yml` files can share
-  one repository-owned builder and rebuild together when that builder changes;
+- reviewed permanent-ref conflict recovery is released and live-qualified in
+  `tool.cad.ci.test` PR #200;
+- the external test repository is back to only its permanent refs
+  (`main`, `dev-cad`, `dev-ci`, `build`, `gh-pages`);
 - root `action.yml` and root `cad-ci.py` are no longer current public
   entrypoints.
-
-Issue #134 is complete. Builder interpretation remains entirely library-owned;
-the tool only pins and exposes the released library behavior.
 
 ## Current work
 
 ### #137 — one config-driven durable-lane reusable workflow
 
-**Now. lib.py.cad.ci 0.13.0 is released at `8f0516a484e3eac11758b498ca181d5e39ed1efe`.**
+**Now.** The existing `issue/137-durable-lane-workflow` branch and draft
+PR #146 contain the one-runner `reusable-durable.yml` implementation. Do not
+rebuild this work.
 
-Add one public `reusable-durable.yml` for permanent source branches. One job
-and runner resolve the stored complete scope, run CAD-CI exactly once, publish
-the build scope and, when root `cad-ci.yml` configures Pages, publish that
-site through the same released library lifecycle.
+The candidate pins released `lib.py.cad.ci 0.13.0` @
+`8f0516a484e3eac11758b498ca181d5e39ed1efe`, which owns the durable
+integration/publication contract.
 
-Do not reintroduce root `action.yml`, consumer post-steps, artifact handoff or
-tool-owned builder/publication semantics.
+Current execution order:
 
-After release, qualify the exact stack in `tool.cad.ci.test` #141. Only then
-migrate CAD #288 and Forge #740.
+1. reconcile the existing #137 branch with the accepted v0.28.0 main history;
+2. keep one runner, one CAD-CI graph and library-owned durable state/publication;
+3. pass the complete tool repository API/unit contract on PR #146;
+4. release the resulting immutable tool revision;
+5. qualify that exact release in `tool.cad.ci.test` issue #141;
+6. only after black-box acceptance migrate CAD #288 and Forge #740.
+
+Do not fold API naming cleanup from #145 into #137.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #137 Config-driven durable-lane workflow | **now** | Implement against released lib 0.13.0, release tool, then qualify in test #141. |
-| #124 Define conflict-resolution contract for permanent-lane merge policy | **separate governance work** | Resolve independently of CAD-CI execution architecture. |
+| #137 Config-driven durable-lane workflow | **now** | Finish/review existing PR #146, release, then externally accept in `tool.cad.ci.test` #141. |
+| #145 Simplify public workflow configuration names / remove needless `_json` suffixes | **later** | Audit all public workflow/template/script inputs generically after #137; preserve released compatibility. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
+
+## Recently completed
+
+- #124 reviewed permanent-ref conflict resolution: released in v0.28.0 and
+  live-qualified through `tool.cad.ci.test` PR #200.
+- conservative stale-branch cleanup and exact-SHA retirement are released and
+  live-qualified; do not reopen them as part of #137.
 
 ## Boundary
 
