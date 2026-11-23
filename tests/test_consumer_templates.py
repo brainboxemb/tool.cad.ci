@@ -12,15 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "v0.30.0"
+RELEASE = "v0.31.0"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
-    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 3, "reusable-ci.yml"),
+    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 4, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
-    "merge-policy.yml": ("tool.cad.ci/merge-policy", 3, "reusable-merge-policy.yml"),
-    "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 1, "reusable-branch-cleanup.yml"),
-    "branch-retirement.yml": ("tool.cad.ci/branch-retirement", 1, "reusable-branch-retirement.yml"),
+    "merge-policy.yml": ("tool.cad.ci/merge-policy", 4, "reusable-merge-policy.yml"),
+    "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 2, "reusable-branch-cleanup.yml"),
+    "branch-retirement.yml": ("tool.cad.ci/branch-retirement", 2, "reusable-branch-retirement.yml"),
 }
 
 
@@ -109,8 +109,8 @@ class ConsumerTemplateTests(unittest.TestCase):
             "reusable-ci.yml@" + RELEASE,
         )
         self.assertEqual(
-            pr["with"]["pr_policy_json"],
-            '{"stable_ref":"main","lane_refs":["dev-cad","dev-ci"],'
+            pr["with"]["pull_request_policy"],
+            '{"stable_branch":"main","development_branches":["dev-cad","dev-ci"],'
             '"docs_only_prefixes":["docs/"]}',
         )
 
@@ -144,8 +144,8 @@ class ConsumerTemplateTests(unittest.TestCase):
             job["permissions"],
             {"contents": "write", "pull-requests": "read", "issues": "write"},
         )
-        self.assertEqual(job["with"]["stable_ref"], "main")
-        self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
+        self.assertEqual(job["with"]["stable_branch"], "main")
+        self.assertEqual(job["with"]["development_branches"], '["dev-cad","dev-ci"]')
         self.assertEqual(
             job["uses"],
             "brainboxemb/tool.cad.ci/.github/workflows/"
@@ -159,15 +159,15 @@ class ConsumerTemplateTests(unittest.TestCase):
             job["permissions"],
             {"contents": "write", "pull-requests": "read", "issues": "write"},
         )
-        self.assertEqual(job["with"]["stable_ref"], "main")
-        self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
+        self.assertEqual(job["with"]["stable_branch"], "main")
+        self.assertEqual(job["with"]["development_branches"], '["dev-cad","dev-ci"]')
         self.assertEqual(
             job["uses"],
             "brainboxemb/tool.cad.ci/.github/workflows/"
             "reusable-branch-retirement.yml@" + RELEASE,
         )
 
-    def test_merge_policy_is_version_3_and_copy_ready(self):
+    def test_merge_policy_is_version_4_and_copy_ready(self):
         wf = load_yaml(TEMPLATES / "merge-policy.yml")
         job = wf["jobs"]["merge"]
         self.assertEqual(
@@ -181,8 +181,8 @@ class ConsumerTemplateTests(unittest.TestCase):
                 "statuses": "read",
             },
         )
-        self.assertEqual(job["with"]["stable_ref"], "main")
-        self.assertEqual(job["with"]["lane_refs_json"], '["dev-cad","dev-ci"]')
+        self.assertEqual(job["with"]["stable_branch"], "main")
+        self.assertEqual(job["with"]["development_branches"], '["dev-cad","dev-ci"]')
         self.assertIn("/merge-resolved", job["if"])
         self.assertEqual(
             job["uses"],
