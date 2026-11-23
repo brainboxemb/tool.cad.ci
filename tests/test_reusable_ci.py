@@ -91,7 +91,7 @@ class ReusableCiHelperTests(unittest.TestCase):
                 base_sha="",
                 full_run=False,
                 item="simple-box",
-                changed_paths="examples/components/ci.yml",
+                changed_paths=json.dumps(["examples/components/ci.yml"]),
             )
         with self.assertRaisesRegex(ValueError, "cannot be combined with full_run"):
             self.helper.selection_args(
