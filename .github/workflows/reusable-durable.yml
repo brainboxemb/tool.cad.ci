@@ -18,6 +18,16 @@ on:
         description: Complete durable scope; main for stable or a safe named scope.
         required: true
         type: string
+      build_branch:
+        description: Generated build branch used for durable scope state and publication.
+        required: false
+        type: string
+        default: build
+      pages_branch:
+        description: Generated Pages branch used when publication.pages is configured.
+        required: false
+        type: string
+        default: gh-pages
       jobs:
         description: Maximum parallel SCons jobs; must be a positive integer.
         required: false
@@ -33,7 +43,7 @@ on:
         description: Published generated build-branch commit.
         value: ${{ jobs.durable.outputs.build_commit }}
       pages_commit:
-        description: Published gh-pages commit, or empty when Pages is not configured.
+        description: Published generated Pages-branch commit, or empty when Pages is not configured.
         value: ${{ jobs.durable.outputs.pages_commit }}
 
 permissions:
@@ -114,6 +124,7 @@ jobs:
             --generated-build "$GENERATED_BUILD" \
             --scope "$CAD_CI_SCOPE" \
             --source-sha "$CAD_CI_SOURCE_SHA" \
+            --build-branch "${{ inputs.build_branch }}" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Fetch exact durable base revision
@@ -155,4 +166,6 @@ jobs:
             --exists "${{ steps.state.outputs.exists }}" \
             --source-sha "$CAD_CI_SOURCE_SHA" \
             --source-ref "$CAD_CI_SOURCE_REF" \
+            --build-branch "${{ inputs.build_branch }}" \
+            --pages-branch "${{ inputs.pages_branch }}" \
             --github-output "$GITHUB_OUTPUT"

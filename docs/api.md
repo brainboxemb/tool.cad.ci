@@ -4,7 +4,7 @@ Status: **audit draft**, 2026-11-22. This document distinguishes observed entry 
 
 ## Product boundary
 
-`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (currently released 0.13.0 for this candidate). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
+`tool.cad.ci` exposes a released CAD-CI command-line interface and GitHub Actions adapters above an exactly pinned `lib.py.cad.ci` library (0.14.0 for this candidate). Planning, execution, cache decisions, build-store, Pages content placement and publication algorithms belong to the library. The repository also currently exposes a GitHub merge-governance workflow; whether that service belongs in this product is **under architecture review**.
 
 A consumer uses an exact released version tag rather than a moving branch. CLI arguments and workflow_call inputs are separate interface types and are not interchangeable.
 
@@ -75,8 +75,10 @@ When `pr_policy_json` is set on a pull request, the existing single runner may a
 
 Public `workflow_call` entry point for permanent source branches. Required
 inputs are `source_sha`, `source_ref` and `scope`; optional inputs are
-`jobs` (positive number, default 1) and `environment_json` (default
-`{}`). Outputs are the published build commit and optional Pages commit.
+`build_branch` (string, default `build`), `pages_branch` (string, default
+`gh-pages`), `jobs` (positive number, default 1) and `environment_json`
+(default `{}`). Outputs are the published build commit and optional Pages
+commit.
 
 Exactly one job/runner resolves the existing complete scope through the pinned
 library, fetches only the exact stored source base when incremental, runs one
@@ -84,9 +86,11 @@ CAD-CI graph, publishes the complete build scope, then publishes the root
 `cad-ci.yml:publication.pages` output when configured.
 
 The workflow does not accept builder commands, site paths, named-subtree keep
-lists or consumer publication steps. Stable/named Pages semantics and durable
-scope inventory are library-owned. It requires `contents: write` and
-`packages: read`.
+lists or consumer publication steps. `build_branch` and `pages_branch`
+select only the generated Git refs; values such as `test-output/build` and
+`test-output/gh-pages` do not change scope/subtree semantics. Stable/named
+Pages semantics and durable scope inventory are library-owned. It requires
+`contents: write` and `packages: read`.
 
 ### `reusable-pr.yml`
 

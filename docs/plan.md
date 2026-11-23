@@ -4,56 +4,66 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
 
 ## Released baseline
 
-- `tool.cad.ci v0.28.0` @
-  `805304b6a950319aed7dc8a77e9c7b501bb3fb61`;
-- released tool v0.28.0 still pins `lib.py.cad.ci 0.12.0` @
-  `64656db8df528a5c0de799e62c0f028fd0133486`;
-- reviewed permanent-ref conflict recovery is released and live-qualified in
-  `tool.cad.ci.test` PR #200;
-- the external test repository is back to only its permanent refs
-  (`main`, `dev-cad`, `dev-ci`, `build`, `gh-pages`);
-- root `action.yml` and root `cad-ci.py` are no longer current public
-  entrypoints.
+- `tool.cad.ci v0.29.0` @
+  `d134eeaa846261adfcf4bc1a296cdc29c05ca01e`;
+- v0.29.0 pins `lib.py.cad.ci 0.13.0` @
+  `8f0516a484e3eac11758b498ca181d5e39ed1efe`;
+- the one-runner `reusable-durable.yml` and canonical
+  `cad-ci-lanes` template v2 are released;
+- `tool.cad.ci.test` #141 / PR #216 is green for the existing v0.29.0
+  black-box suite, but the new durable publication lifecycle still needs live
+  acceptance on isolated generated refs;
+- `lib.py.cad.ci 0.14.0` is now released at
+  `b24e9a3826dfc07e07b4f3fd9971fcb4ab5aa12d` and owns configurable durable
+  generated build/Page branch selection.
 
 ## Current work
 
-### #137 — one config-driven durable-lane reusable workflow
+### #147 — configurable generated output branches in durable workflow
 
-**Now.** PR #146 contains the existing one-runner `reusable-durable.yml`\nimplementation and is synchronized with accepted v0.28.0 `main`. Repository CI\nrun #321 is green after preserving all later governance contracts.
+**Now.** Expose the released library behavior through the existing one-runner
+`reusable-durable.yml` surface without adding publication logic to the tool.
 
-The candidate pins released `lib.py.cad.ci 0.13.0` @
-`8f0516a484e3eac11758b498ca181d5e39ed1efe`, which owns the durable
-integration/publication contract.
+Public compatibility defaults remain:
 
-Current execution order:
+```text
+build_branch = build
+pages_branch = gh-pages
+```
 
-1. finish the v0.29.0 release candidate and canonical `cad-ci-lanes` template v2;
-2. keep one runner, one CAD-CI graph and library-owned durable state/publication;
-3. require green repository API/unit contracts on PR #146;
-4. merge and release the resulting immutable v0.29.0 revision;
-5. qualify that exact release in `tool.cad.ci.test` issue #141;
-6. only after black-box acceptance migrate CAD #288 and Forge #740.
+A consumer may select isolated refs such as:
 
-Do not fold API naming cleanup from #145 into #137.
+```text
+test-output/build
+test-output/gh-pages
+```
+
+Execution order:
+
+1. pin exact released `lib.py.cad.ci 0.14.0`;
+2. document the public workflow inputs in requirements/API/design;
+3. pass build/Page branch names through `scripts/reusable_ci.py` to the
+   library-owned durable APIs;
+4. update workflow/API/template contract tests;
+5. bump canonical `cad-ci-lanes` template to version 3 and expose the two
+   literal branch inputs;
+6. prepare and release `tool.cad.ci v0.30.0`;
+7. finish live acceptance in `tool.cad.ci.test` #141 on
+   `test-output/build` and `test-output/gh-pages`.
+
+Do not fold the separate public naming cleanup from #145 into this change.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #137 Config-driven durable-lane workflow | **now** | Finish/review existing PR #146, release, then externally accept in `tool.cad.ci.test` #141. |
-| #145 Simplify public workflow configuration names / remove needless `_json` suffixes | **later** | Audit all public workflow/template/script inputs generically after #137; preserve released compatibility. |
+| #147 Configurable generated output branches in durable workflow | **now** | Implement against released library 0.14.0, release v0.30.0, then finish #141. |
+| #145 Simplify public workflow configuration names / remove needless `_json` suffixes | **later** | Audit public naming generically after #147; preserve released compatibility. |
 | #117 Align historical changelog | **later / docs-only** | No runtime impact. |
-
-## Recently completed
-
-- #124 reviewed permanent-ref conflict resolution: released in v0.28.0 and
-  live-qualified through `tool.cad.ci.test` PR #200.
-- conservative stale-branch cleanup and exact-SHA retirement are released and
-  live-qualified; do not reopen them as part of #137.
 
 ## Boundary
 
-The supported consumer architecture is config-first:
+The supported consumer architecture remains config-first:
 
 ```text
 consumer workflow
@@ -65,7 +75,6 @@ consumer workflow
                            -> SCons
 ```
 
-Supported CLI entrypoints are the installed `cad-ci` command and
-`python -m cad_ci_tool`. Do not introduce another root wrapper or GitHub
-Actions execution route when the package/workflow entrypoints already cover the
-requirement.
+Generated branch selection is a workflow/publication transport setting. It is
+not added to repository `cad-ci.yml`, and the tool does not reimplement build
+store, Pages, freshness or Git publication semantics.

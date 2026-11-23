@@ -8,7 +8,7 @@ the repository, copy it into `.github/workflows/`, and keep its header.
 
 Current handoff baseline:
 
-- tool release: **v0.29.0**
+- tool release: **v0.30.0**
 
 Each YAML template contains:
 
@@ -26,7 +26,7 @@ placeholder to replace.
 | `merge-policy.yml` | 3 | Owner-issued `/merge` policy for `main` + `dev-cad` + `dev-ci`. |
 | `branch-cleanup.yml` | 1 | Owner-issued `/cleanup-branches` maintenance for stale temporary refs. |
 | `branch-retirement.yml` | 1 | Owner-issued exact-SHA retirement for separately reviewed unique history. |
-| `cad-ci-lanes.yml` | 2 | PR validation plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes. |
+| `cad-ci-lanes.yml` | 3 | PR validation plus durable build/Pages integration for permanent `main` / `dev-cad` / `dev-ci` lanes, with explicit generated branch names. |
 | `cad-ci.yml` | 1 | Normal read-only PR CAD-CI without lane policy. |
 | `cad-ci-pr.yml` | 1 | Complete one-runner PR lifecycle with optional durable PR publication. |
 
@@ -130,7 +130,31 @@ The name `solidcraft-model` is repository configuration; generic CAD-CI does
 not contain SolidCraft-specific behavior. A repository may instead name any
 builder that fits its own domain.
 
-Use `cad-ci-lanes.yml` when the repository follows the permanent-lane model.\nThe same wrapper has two released routes: pull requests call `reusable-ci.yml`;\n`push` or `workflow_dispatch` on `main`, `dev-cad` or `dev-ci` calls\n`reusable-durable.yml` with the exact branch SHA/name as source and durable\nscope. Do not add local publication steps or a second CAD-CI run.\n\nWhen the merge-policy wrapper should explicitly dispatch post-merge integration,\nset its optional `integration_workflow` to `cad-ci.yml`. The dispatched branch\nthen enters the same durable route.\n\nDo not add a local PR-files query or docs-only/promotion classifier; that policy\nis already part of the released reusable CI API.
+Use `cad-ci-lanes.yml` when the repository follows the permanent-lane model.
+The same wrapper has two released routes: pull requests call
+`reusable-ci.yml`; `push` or `workflow_dispatch` on `main`, `dev-cad`
+or `dev-ci` calls `reusable-durable.yml` with the exact branch SHA/name as
+source and durable scope. Do not add local publication steps or a second
+CAD-CI run.
+
+The durable job also names its generated output branches explicitly:
+
+```yaml
+build_branch: build
+pages_branch: gh-pages
+```
+
+Those are compatibility defaults. A repository that needs isolated output may
+use other Git branch names, for example `test-output/build` and
+`test-output/gh-pages`. This changes only the generated refs; stable/named
+scope and Pages subtree semantics remain unchanged.
+
+When the merge-policy wrapper should explicitly dispatch post-merge integration,
+set its optional `integration_workflow` to `cad-ci.yml`. The dispatched
+branch then enters the same durable route.
+
+Do not add a local PR-files query or docs-only/promotion classifier; that policy
+is already part of the released reusable CI API.
 
 ## What the consumer may own
 
@@ -139,6 +163,7 @@ A consumer may own:
 - event triggers;
 - caller permissions;
 - intentional branch/lane/docs-prefix values;
+- generated build/Page branch names when defaults need isolation;
 - optional integration workflow name;
 - repository secrets and domain runtime configuration.
 

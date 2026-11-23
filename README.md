@@ -16,7 +16,11 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The 0.29.0 release candidate pins released `lib.py.cad.ci` 0.13.0 at exact\ncommit `8f0516a484e3eac11758b498ca181d5e39ed1efe` and exposes the\none-runner permanent-branch durable lifecycle needed by config-driven consumers.
+The 0.30.0 release candidate pins released `lib.py.cad.ci` 0.14.0 at
+exact commit `b24e9a3826dfc07e07b4f3fd9971fcb4ab5aa12d`. The one-runner
+durable workflow keeps `build` / `gh-pages` defaults while allowing
+repository-owned generated refs such as `test-output/build` and
+`test-output/gh-pages`.
 
 ## Starting a consumer repository
 
@@ -27,7 +31,7 @@ Each copied template keeps a `template` id, integer `template-version`,
 and the exact released tool version tag it calls. The copy-ready files contain no
 release placeholder; change only values explicitly marked as repository policy.
 Repositories with permanent `main`/`dev-cad`/`dev-ci` lanes use the canonical
-`cad-ci-lanes.yml` wrapper; PR classification plus permanent-branch durable\nbuild/Pages integration stay inside the released reusable stack, not consumer\nYAML.
+`cad-ci-lanes.yml` wrapper; PR classification plus permanent-branch durable build/Pages integration stay inside the released reusable stack, not consumer YAML.
 
 ## Consumer layout
 
@@ -95,7 +99,7 @@ for every item that uses it. Shared builder commands receive
 `CAD_CI_ITEM_PATH` for the consuming item and `CAD_CI_BUILDER_PATH` for
 their implementation directory.
 
-Legacy item-local `steps` remain readable in lib.py.cad.ci 0.13.0 so existing
+Legacy item-local `steps` remain readable in lib.py.cad.ci 0.14.0 so existing
 repositories can migrate deliberately. New item configuration should use a
 builder reference instead of embedding `run` commands in `ci.yml`.
 

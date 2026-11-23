@@ -34,8 +34,14 @@
 
 ## Pages and generated branches
 
-- Stable Pages lives at the `gh-pages` root.
-- PR previews live below `previews/pr-<number>/`.
+- The durable generated build branch defaults to `build`.
+- The durable generated Pages branch defaults to `gh-pages`.
+- A durable workflow caller may select different generated branch names without
+  changing complete-scope or Pages subtree layout.
+- Alternate names such as `test-output/build` and
+  `test-output/gh-pages` are branch transport settings, not root
+  `cad-ci.yml` configuration.
+- PR previews live below `previews/pr-<number>/` in the selected Pages branch.
 - Generated branches are never force-pushed.
 - Source freshness and retry behaviour are implemented in the library.
 
@@ -79,9 +85,15 @@ It runs on one runner and performs, in order:
 6. if root `cad-ci.yml` configures `publication.pages`, publish that exact
    item output as stable or named Pages.
 
-The public inputs identify source commit/ref, complete scope, bounded SCons jobs
-and optional non-secret command environment. They do not contain builder
-commands, Pages paths, domain generators or a second lane-name inventory.
+The public inputs identify source commit/ref, complete scope, generated build
+branch, generated Pages branch, bounded SCons jobs and optional non-secret
+command environment. `build_branch` defaults to `build`;
+`pages_branch` defaults to `gh-pages`. They do not contain builder commands,
+Pages paths, domain generators or a second lane-name inventory.
+
+The branch inputs select only the remote generated refs used by the released
+library. They do not create an `output_root` filesystem abstraction, change
+scope names, or move publication mechanics into workflow YAML.
 
 The workflow requires `contents: write` and `packages: read`. Generated
 branches are published with source-freshness checking and never force-pushed.

@@ -10,7 +10,7 @@ keeps only its trigger, permissions and exact released tool version tag:
 ```yaml
 jobs:
   cad-ci:
-    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.29.0
+    uses: brainboxemb/tool.cad.ci/.github/workflows/reusable-ci.yml@v0.30.0
 ```
 
 The reusable workflow owns generic checkout, Python/tool setup and one
@@ -147,4 +147,19 @@ adopting it.
 A repository using stable `main` plus long-lived `dev-cad` / `dev-ci`
 starts from `cad-ci-lanes.yml`, not a local classifier.
 
-Template version 2 configures both released lane surfaces. Pull requests use\n`reusable-ci.yml` lane policy; permanent `push` and `workflow_dispatch` events\nuse `reusable-durable.yml` with the current branch name as source ref and\ndurable scope. The durable route performs one CAD-CI graph and library-owned\nbuild/Pages publication on one runner.\n\nThe consumer does not paginate pull-request files, loop over docs paths, compute\npromotion `full_run` expressions, or add its own durable publication steps.\nRepository-owned changes are limited to intentional lane names/docs prefixes,\npermissions and ordinary workflow dependencies.
+Template version 3 configures both released lane surfaces. Pull requests use
+`reusable-ci.yml` lane policy; permanent `push` and
+`workflow_dispatch` events use `reusable-durable.yml` with the current
+branch name as source ref and durable scope. The durable route performs one
+CAD-CI graph and library-owned build/Pages publication on one runner.
+
+The wrapper exposes `build_branch` and `pages_branch` as repository-owned
+generated-ref settings. Their defaults are `build` and `gh-pages`; isolated
+acceptance or staging repositories may use values such as
+`test-output/build` and `test-output/gh-pages`.
+
+The consumer does not paginate pull-request files, loop over docs paths, compute
+promotion `full_run` expressions, or add its own durable publication steps.
+Repository-owned changes are limited to intentional branch/lane/docs-prefix
+values, generated output branch names, permissions and ordinary workflow
+dependencies.

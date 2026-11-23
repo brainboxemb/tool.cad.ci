@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 MANUAL = DOCS / "manual"
 TEMPLATES = MANUAL / "templates"
-RELEASE = "v0.29.0"
+RELEASE = "v0.30.0"
 
 EXPECTED = {
     "cad-ci.yml": ("tool.cad.ci/cad-ci", 1, "reusable-ci.yml"),
-    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 2, "reusable-ci.yml"),
+    "cad-ci-lanes.yml": ("tool.cad.ci/cad-ci-lanes", 3, "reusable-ci.yml"),
     "cad-ci-pr.yml": ("tool.cad.ci/cad-ci-pr", 1, "reusable-pr.yml"),
     "merge-policy.yml": ("tool.cad.ci/merge-policy", 3, "reusable-merge-policy.yml"),
     "branch-cleanup.yml": ("tool.cad.ci/branch-cleanup", 1, "reusable-branch-cleanup.yml"),
@@ -128,6 +128,8 @@ class ConsumerTemplateTests(unittest.TestCase):
         self.assertEqual(durable["with"]["source_sha"], "${{ github.sha }}")
         self.assertEqual(durable["with"]["source_ref"], "${{ github.ref_name }}")
         self.assertEqual(durable["with"]["scope"], "${{ github.ref_name }}")
+        self.assertEqual(durable["with"]["build_branch"], "build")
+        self.assertEqual(durable["with"]["pages_branch"], "gh-pages")
         self.assertIn("workflow_dispatch", wf["on"])
         self.assertIn("push", wf["on"])
 

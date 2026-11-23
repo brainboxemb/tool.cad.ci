@@ -91,9 +91,30 @@ class WorkflowApiContractTests(unittest.TestCase):
         inputs = wf["on"]["workflow_call"]["inputs"]
         self.assertEqual(
             set(inputs),
-            {"source_sha", "source_ref", "scope", "jobs", "environment_json"},
+            {
+                "source_sha",
+                "source_ref",
+                "scope",
+                "build_branch",
+                "pages_branch",
+                "jobs",
+                "environment_json",
+            },
         )
+        self.assertEqual(inputs["build_branch"]["default"], "build")
+        self.assertEqual(inputs["pages_branch"]["default"], "gh-pages")
         steps = job["steps"]
+        state = next(
+            step for step in steps
+            if step.get("name") == "Resolve durable scope state"
+        )
+        publish = next(
+            step for step in steps
+            if step.get("name") == "Publish durable build and Pages"
+        )
+        self.assertIn('--build-branch "${{ inputs.build_branch }}"', state["run"])
+        self.assertIn('--build-branch "${{ inputs.build_branch }}"', publish["run"])
+        self.assertIn('--pages-branch "${{ inputs.pages_branch }}"', publish["run"])
         self.assertEqual(
             sum(step.get("name") == "Run selected CAD CI graph" for step in steps),
             1,
