@@ -8,59 +8,46 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
   `27bdf67077ddd485cea95ba199069249c20c2a46`;
 - v0.31.0 pins `lib.py.cad.ci 0.14.0` @
   `b24e9a3826dfc07e07b4f3fd9971fcb4ab5aa12d`;
-- configurable durable generated branches remain exposed through
-  `build_branch` / `pages_branch`;
-- public workflow configuration now uses literal consumer-facing names:
-  `stable_branch`, `development_branches`, `permanent_branches`,
-  `temporary_branch_prefixes`, `resolution_branch_prefix`,
-  `pull_request_policy` and `command_environment`;
-- JSON remains an encoded value format for structured/list workflow inputs;
-  internal helper/CLI flags may retain explicit transport names such as
-  `--lane-refs-json` and `--environment-json`;
-- released v0.30.0 and earlier tags remain immutable and retain their original
-  public workflow contracts;
-- `tool.cad.ci.test` #223 is complete: v0.31.0 passed real GitHub PR,
-  durable publication, permanent-branch promotion/synchronization,
-  merge-policy, exact-SHA retirement and conservative cleanup acceptance;
-- live durable acceptance remains isolated on
-  `test-output/build` / `test-output/gh-pages`; normal consumer defaults
-  remain `build` / `gh-pages`.
-
-## v0.31 public workflow-name acceptance
-
-Issue #145 is complete.
-
-External evidence in `tool.cad.ci.test` includes:
-
-- PR #225 / run #280 (`45147169700`) for
-  `pull_request_policy` and `command_environment`;
-- PR #227 / run #284 (`45148007487`) for direct development-branch
-  promotion classification and forced full run;
-- PR #228 / merge-policy run #56 (`45148617436`) for live
-  `stable_branch`, `development_branches` and `permanent_branches`;
-- branch-retirement run #44 (`45148940131`);
-- branch-cleanup run #49 (`45149155623`);
-- final accepted-baseline promotion/synchronization through PRs #229-#231,
-  with final dev-cad durable run #295 green.
-
-No compatibility aliases were added to v0.31.0. Older exact release tags remain
-the compatibility boundary.
+- `tool.cad.ci.test` #223 externally accepted normal CI, durable
+  publication, permanent-branch governance, exact-SHA retirement and cleanup
+  for that exact stack;
+- public workflow names and generated-branch configuration from v0.31 remain
+  the accepted contract.
 
 ## Current work
 
-No open runtime/API work.
+### #151 — release v0.32.0 with lib.py.cad.ci 0.15.0
+
+**Now.** Consume exact released `lib.py.cad.ci 0.15.0` @
+`24c3abb267feea9ae91f24f8fdb435cba68f089a`.
+
+Library 0.15.0 adds the generic post-build Pages renderer discovered by Forge
+#740. The existing `reusable-durable.yml` already delegates durable Pages
+publication to the library, so no new workflow input, job, runner or tool-owned
+publication logic is required.
+
+Required order:
+
+1. pin exact library commit `24c3abb267feea9ae91f24f8fdb435cba68f089a`;
+2. declare tool `0.32.0` and update release documentation;
+3. repin copy-ready templates to exact `v0.32.0` without changing their
+   template versions because wrapper structure is unchanged;
+4. pass the complete tool repository test/API contract;
+5. merge and publish exact immutable `v0.32.0`;
+6. black-box qualify that exact release in `tool.cad.ci.test`, including a
+   real durable publication-builder scenario;
+7. only after that acceptance resume Forge #740.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
+| #151 Release v0.32.0 with lib.py.cad.ci 0.15.0 | **now** | Pin exact library, release tool, then external acceptance. |
 | #117 Align historical changelog | **later / docs-only** | Apply shared changelog presentation without runtime/API changes. |
 
 ## Boundary
 
-Generic merge/cleanup behavior, CAD-CI execution, publication and JSON parsing
-remain in their existing owners. Public workflow naming is a tool/workflow
-adapter concern only.
-
-Forge/CAD may now migrate to the fully accepted v0.31.0 public workflow
-contract through their separately reviewed consumer issues.
+The post-build Pages renderer remains entirely library-owned. The tool exposes
+it only by pinning the released library through the existing durable workflow.
+Do not add a consumer post-step phase, second CAD-CI graph or Pages renderer to
+this repository.
