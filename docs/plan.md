@@ -6,17 +6,35 @@ Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
 
 - `lib.py.cad.ci v0.18.2` @
   `088644a05ff698957aef2ddc6cc5de037ddfa158`;
-- `tool.cad.ci v0.35.0` @
-  `9fcad92b7c5f10ae29a9cb085a4f25bb38ed00f9`;
+- `tool.cad.ci v0.36.0` @
+  `093eafb0eabf6b6617ec82dde17a76fdc718ae12`;
 - released-stack acceptance is owned by `tool.cad.ci.test`;
 - consumers remain pinned to accepted releases until a newer exact stack passes
   that external acceptance.
 
 ## Current work
 
+### #178 — fix reusable release runtime bootstrap
+
+**Now.**
+
+External acceptance of v0.36.0 reached the new release workflow but failed
+before the intended stale-source check because the workflow checked out the
+pinned CAD-CI library without installing its runtime dependencies. Run
+`45242477963` failed with `ModuleNotFoundError: No module named 'yaml'`.
+
+Required order:
+
+1. install the same PyYAML/SCons runtime dependencies already used by
+   `reusable-run.yml` and `reusable-durable.yml` before `release-check`;
+2. enforce that bootstrap in workflow tests;
+3. patch-release `tool.cad.ci v0.36.1` and repin the copy-ready templates;
+4. rerun `tool.cad.ci.test #256` from the failed stale-SHA step;
+5. only after external acceptance may Forge #739 migrate.
+
 ### #176 — central CAD release flow
 
-**Now. Candidate implementation is on PR #177.**
+**Implemented and released in v0.36.0; external acceptance blocked by #178.**
 
 The Forge v0.12.0 release attempt exposed a missing shared contract: a CAD-CI
 consumer must not parse Pages or invent repository-local build checks before a
@@ -33,16 +51,17 @@ Required order:
    - delegate tag/GitHub Release creation to exact released
      `tool.py.lib.ci v0.2.1`;
 5. **complete in candidate** — copy-ready templates pin `v0.36.0`;
-6. **now** — pass repository workflow/helper/template tests;
-7. merge and release `tool.cad.ci v0.36.0`;
-8. black-box accept the exact released flow in `tool.cad.ci.test`;
-9. only then migrate Forge.
+6. **complete** — repository workflow/helper/template tests passed;
+7. **complete** — released `tool.cad.ci v0.36.0`;
+8. **blocked on #178** — black-box acceptance reached the release workflow and exposed the missing runtime bootstrap;
+9. only after the v0.36.1 fix passes external acceptance may Forge migrate.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #176 central CAD release flow | **now** | PR #177 contains docs + reusable workflow + template; pass tests, release v0.36.0, then external acceptance. |
+| #178 release workflow runtime dependencies | **now** | Add the missing released-workflow bootstrap, patch-release v0.36.1 and rerun external acceptance. |
+| #176 central CAD release flow | **implemented, acceptance blocked** | v0.36.0 is released; #178 fixes the dependency bootstrap found by `tool.cad.ci.test #256`. |
 | #175 duplicate-looking main/dev runs | **next CI cleanup** | Decide whether the second post-merge run can be removed or reduced. |
 | #174 readable CAD-CI names | **next CI cleanup** | Audit code/API/workflow names after #176's public names are chosen. |
 | #173 duplicate CAD rebuild after permanent merge | **next CI cleanup** | Combine with #175 where behavior overlaps; prove required work before changing topology. |
