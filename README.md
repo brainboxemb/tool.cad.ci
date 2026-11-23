@@ -16,7 +16,10 @@ logic in the CAD-CI library.
 **Workflow catalogue:** [workflows README](.github/workflows/README.md).
 **Active work:** [repository plan](docs/plan.md).
 
-The current #137 development candidate pins released `lib.py.cad.ci` 0.13.0\nat exact commit `8f0516a484e3eac11758b498ca181d5e39ed1efe`.\n`tool.cad.ci v0.28.0` remains the latest released tool until the durable\nworkflow candidate is released and externally accepted.
+The current #137 development candidate pins released `lib.py.cad.ci` 0.13.0
+at exact commit `8f0516a484e3eac11758b498ca181d5e39ed1efe`.
+`tool.cad.ci v0.28.0` remains the latest released tool until the durable
+workflow candidate is released and externally accepted.
 
 ## Starting a consumer repository
 
