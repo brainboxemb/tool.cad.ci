@@ -11,9 +11,9 @@ import argparse
 from pathlib import Path
 
 from cad_ci.config import load_repository
-from cad_ci.git import GitError, changed_files
-from cad_ci.planner import affected_items
-from cad_ci.build_store import (
+from cad_ci.repository.git import GitError, changed_files
+from cad_ci.repository.planner import affected_items
+from cad_ci.publication.build_store import (
     BuildStoreError,
     install_scope,
     prepare_main,
@@ -25,7 +25,7 @@ from cad_ci.build_store import (
     remove_pr,
     resolve_view,
 )
-from cad_ci.git_publish import (
+from cad_ci.publication.git_publish import (
     GitPublishError,
     publish_build_pr_cleanup,
     publish_build_scope,
@@ -33,7 +33,7 @@ from cad_ci.git_publish import (
     publish_pages_preview_cleanup,
     materialize_generated_branch,
 )
-from cad_ci.pages import (
+from cad_ci.publication.pages import (
     PagesError,
     install_named,
     install_preview,
