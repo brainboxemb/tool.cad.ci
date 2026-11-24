@@ -46,6 +46,7 @@ class ConsumerTemplateTests(unittest.TestCase):
                 "requirements.md",
                 "manual",
                 "background",
+                "changes",
             },
         )
 

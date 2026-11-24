@@ -68,6 +68,22 @@ candidate `.cad-ci/item.json` evidence can be checked against current config.
 Sparse PR scopes contain only the selected top-level items. Do not add runtime
 SCons dependency closure to a PR overlay.
 
+## Change records
+
+Structural public-API, workflow, template or consumer-contract changes use
+`docs/changes/`.
+
+- Change numbers use their own sequential four-digit series starting at
+  `0001`; they are not GitHub issue numbers.
+- One change record describes one coherent design/migration decision.
+- A change may lead to multiple issues and pull requests across this repository,
+  `tool.cad.ci.test` and real consumers.
+- Issues track executable work and current blockers; PRs implement slices; the
+  change record remains the stable design source.
+- Add the record to `docs/changes/README.md` and do not renumber existing
+  records.
+- Define/audit the contract in the change record before broad implementation.
+
 ## Development process
 
 One logical change uses one issue, one branch and one pull request.
