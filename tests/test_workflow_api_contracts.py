@@ -229,7 +229,7 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertIn("opened|reopened|synchronize|closed", guard["run"])
         self.assertEqual(steps[1]["name"], "Checkout caller source")
 
-    def test_pr_workflow_single_runner_and_no_artifact_transport(self):
+    def test_pr_workflow_single_runner_and_same_job_review_artifact(self):
         wf = load_yaml(WORKFLOWS / "reusable-pr.yml")
         self.assertEqual(set(wf["jobs"]), {"pr"})
         pr = wf["jobs"]["pr"]
@@ -238,6 +238,7 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertEqual(
             wf["on"]["workflow_call"]["inputs"]["publish_build"]["default"], "true"
         )
+
         steps = pr["steps"]
         self.assertEqual(
             sum(step.get("name") == "Run selected CAD CI graph" for step in steps), 1
@@ -248,13 +249,64 @@ class WorkflowApiContractTests(unittest.TestCase):
         self.assertEqual(
             sum(step.get("name") == "Remove closed PR build scope" for step in steps), 1
         )
-        self.assertFalse(any("upload-artifact" in step.get("uses", "")
-                             or "download-artifact" in step.get("uses", "")
-                             for step in steps))
-        self.assertLess(
-            next(i for i, step in enumerate(steps) if step.get("name") == "Run selected CAD CI graph"),
-            next(i for i, step in enumerate(steps) if step.get("name") == "Publish affected PR build scope"),
+
+        uploads = [
+            step for step in steps
+            if "actions/upload-artifact@" in step.get("uses", "")
+        ]
+        downloads = [
+            step for step in steps
+            if "actions/download-artifact@" in step.get("uses", "")
+        ]
+        self.assertEqual(len(uploads), 1)
+        self.assertEqual(downloads, [])
+
+        upload = uploads[0]
+        self.assertEqual(upload["name"], "Upload PR review evidence")
+        self.assertEqual(upload["with"]["name"], "cad-review-evidence")
+        self.assertIn("build/", upload["with"]["path"])
+        self.assertIn("review-provenance.json", upload["with"]["path"])
+        self.assertEqual(upload["with"]["if-no-files-found"], "error")
+        self.assertEqual(upload["with"]["retention-days"], "7")
+        self.assertIn("github.event.action != 'closed'", upload["if"])
+        self.assertIn(
+            "steps.build_output.outputs.available == 'true'",
+            upload["if"],
         )
+
+        provenance = next(
+            step for step in steps
+            if step.get("name") == "Write PR review provenance"
+        )
+        self.assertEqual(
+            provenance["env"]["REVIEW_SOURCE_SHA"],
+            "${{ github.event.pull_request.head.sha }}",
+        )
+        self.assertEqual(
+            provenance["env"]["REVIEW_BASE_SHA"],
+            "${{ github.event.pull_request.base.sha }}",
+        )
+        self.assertEqual(
+            provenance["env"]["REVIEW_PR_NUMBER"],
+            "${{ github.event.pull_request.number }}",
+        )
+        self.assertIn('"source_commit"', provenance["run"])
+        self.assertIn('"base_commit"', provenance["run"])
+        self.assertIn('"pull_request"', provenance["run"])
+
+        run_index = next(
+            i for i, step in enumerate(steps)
+            if step.get("name") == "Run selected CAD CI graph"
+        )
+        provenance_index = steps.index(provenance)
+        upload_index = steps.index(upload)
+        publish_index = next(
+            i for i, step in enumerate(steps)
+            if step.get("name") == "Publish affected PR build scope"
+        )
+        self.assertLess(run_index, provenance_index)
+        self.assertLess(provenance_index, upload_index)
+        self.assertLess(upload_index, publish_index)
 
     def test_all_external_github_actions_use_immutable_40_character_shas(self):
         """Release reproducibility must not depend on moving action tags."""

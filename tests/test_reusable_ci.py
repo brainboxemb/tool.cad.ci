@@ -736,7 +736,7 @@ class ReusableWorkflowTests(unittest.TestCase):
         )
 
     def test_pr_workflow_uses_one_runner_for_verification_and_publication(self):
-        """One job/workspace, no artifact transfer or repeated Python setup."""
+        """One workspace; review upload is transport, never a job handoff."""
 
         text = self.read("reusable-pr.yml")
         self.assertIn("workflow_call:", text)
@@ -744,8 +744,10 @@ class ReusableWorkflowTests(unittest.TestCase):
         self.assertIn("  pr:", text)
         self.assertNotIn("  publish:", text)
         self.assertNotIn("  verify:", text)
-        self.assertNotIn("actions/upload-artifact@", text)
+        self.assertEqual(text.count("actions/upload-artifact@"), 1)
         self.assertNotIn("actions/download-artifact@", text)
+        self.assertIn("name: cad-review-evidence", text)
+        self.assertIn("review-provenance.json", text)
         self.assertEqual(text.count("Run selected CAD CI graph"), 1)
         self.assertEqual(text.count("Checkout called tool revision"), 1)
         self.assertEqual(text.count("Install external CAD CI runtime dependencies"), 1)

@@ -52,7 +52,7 @@
 - The called workflow checks out its own tool source using `job.workflow_repository` and `job.workflow_sha`; workflow and tool implementation therefore cannot drift.
 - The complete PR workflow resolves the exact `lib.py.cad.ci` commit from that tool revision's `pyproject.toml`, checks out that source, and exposes both repositories through `PYTHONPATH`.
 - The called workflow checks out the caller repository at the real source commit, not a temporary PR merge ref.
-- `reusable-pr.yml` is the normal pull-request entry point when the consumer wants CAD-CI verification plus durable PR publication/cleanup.
+- `reusable-pr.yml` is the normal pull-request entry point when the consumer wants CAD-CI verification plus durable PR publication/cleanup; every successful open-PR run with materialized `build/` output also exposes one same-job `cad-review-evidence` artifact containing that exact sparse build plus PR/head/base provenance for review.
 - `reusable-ci.yml` remains the high-level run-only entry point and delegates to the generic run workflow from the same tool revision.
 - `reusable-plan.yml` exposes the compact generic item plan without executing the graph.
 - `reusable-run.yml` performs exactly one `cad-ci run` for `reusable-ci.yml`; direct external use is not a supported public contract.
@@ -213,8 +213,10 @@ unchanged.
 
 `reusable-pr.yml` provides the complete PR verification and durable-build
 publication/cleanup API. **Exactly one job and runner** handle the configured
-lifecycle. No artifact upload/download, second publisher job, second tool
-bootstrap, or extra SCons execution graph is permitted.
+lifecycle. One same-job GitHub artifact upload may transport the already
+materialized sparse `build/` output for review; no artifact download/handoff,
+second publisher job, second tool bootstrap, or extra SCons execution graph is
+permitted.
 
 For `opened`, `synchronize` and `reopened` events:
 
@@ -222,7 +224,13 @@ For `opened`, `synchronize` and `reopened` events:
 2. Fetch the exact base commit only for an incremental run.
 3. Install external runtime dependencies and authenticate generically to GHCR.
 4. Run exactly one `cad-ci run` graph.
-5. When `publish_build` (default true) and same-repository materialized
+5. When materialized `build/` output exists, upload one
+   `cad-review-evidence` artifact from the same workspace. The artifact
+   contains the sparse `build/` tree and `review-provenance.json` with the
+   exact PR number, base commit and head/source commit. This transport is
+   independent of durable `publish_build` and never performs a second CAD-CI
+   execution.
+6. When `publish_build` (default true) and same-repository materialized
    `build/` output exist, prepare and publish the sparse PR scope **within
    that same job and workspace**.
 
@@ -236,7 +244,7 @@ Unknown events fail validation before checkout.
 The one-runner design is intentional. Same-repository publication is a
 caller-trust decision; fork PRs never publish. Callers requiring a strictly
 read-only PR verification path use `reusable-ci.yml`. Do not introduce a
-second runner or artifact handoff to change this contract.
+second runner or artifact handoff to change this contract. The same-job review upload is evidence transport, not a handoff between execution jobs.
 
 Planning, build-store validation, freshness checking and publication policy
 remain in `lib.py.cad.ci`; workflow YAML only orchestrates them.

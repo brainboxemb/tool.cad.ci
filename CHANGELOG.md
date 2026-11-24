@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.36.2 - 2026-11-24
+
+- expose successful materialized PR CAD output as one same-job `cad-review-evidence` artifact from the existing sparse `build/` tree;
+- add `review-provenance.json` with exact pull-request number, base commit and PR head/source commit so render evidence can be tied to the reviewed source;
+- preserve the one-job / one-runner / one-CAD-CI-run PR architecture with no artifact download/handoff, second checkout or durable PR Pages publication;
+- document operator retrieval and enforce the same-runner review-artifact topology in workflow contract tests;
+- repin all copy-ready consumer templates to exact `v0.36.2` without changing template-version numbers.
+
 ## 0.36.1 - 2026-11-23
 
 - install the pinned CAD-CI library runtime dependencies before the reusable release workflow checks the stable main ci-build-record;

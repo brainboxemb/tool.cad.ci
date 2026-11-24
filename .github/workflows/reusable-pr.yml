@@ -1,5 +1,5 @@
 # Public PR verification, conditional durable publication and close cleanup.
-# ONE runner/job: no artifact handoff or separate publication runner.
+# ONE runner/job: review artifact upload is same-runner transport only; no handoff or separate publication runner.
 # Contract: docs/api.md; source trust review: #115.
 
 name: Reusable CAD CI PR
@@ -143,6 +143,49 @@ jobs:
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Write PR review provenance
+        if: >-
+          github.event.action != 'closed' &&
+          steps.build_output.outputs.available == 'true'
+        shell: bash
+        env:
+          REVIEW_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          Path("review-provenance.json").write_text(
+              json.dumps(
+                  {
+                      "schema": 1,
+                      "source_commit": os.environ["REVIEW_SOURCE_SHA"],
+                      "base_commit": os.environ["REVIEW_BASE_SHA"],
+                      "pull_request": int(os.environ["REVIEW_PR_NUMBER"]),
+                  },
+                  indent=2,
+                  sort_keys=True,
+              ) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload PR review evidence
+        if: >-
+          github.event.action != 'closed' &&
+          steps.build_output.outputs.available == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cad-review-evidence
+          path: |
+            build/
+            review-provenance.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Prepare affected PR build scope
         if: >-

@@ -152,6 +152,34 @@ The wrapper has three routes:
 
 Do not add local publication steps or a second CAD-CI run.
 
+### Complete PR review evidence
+
+Repositories that use `cad-ci-pr.yml` / `reusable-pr.yml` receive one
+downloadable review artifact after a successful open-PR run whenever
+materialized `build/` output exists.
+
+Artifact name:
+
+```text
+cad-review-evidence
+```
+
+In GitHub Actions:
+
+1. open the PR validation run;
+2. open its run summary;
+3. under **Artifacts**, download `cad-review-evidence`;
+4. inspect `review-provenance.json` first and require
+   `source_commit` to equal the exact PR head being reviewed;
+5. inspect the sparse `build/` tree for the selected model's primary
+   `model.png` and any model-owned extra PNG views such as
+   `native/underside.png`.
+
+The artifact is produced on the same runner after the existing single CAD-CI
+run. It is review transport only: it does not publish Pages, create durable PR
+state, execute a second CAD graph, or copy unrelated durable-base models into
+the sparse PR evidence.
+
 The durable job also names its generated output branches explicitly:
 
 ```yaml

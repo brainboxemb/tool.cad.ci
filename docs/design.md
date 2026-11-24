@@ -100,7 +100,9 @@ configuration changes. Update the pinned tool release tag when the handoff basel
 ## Reusable workflows
 
 `reusable-pr.yml` is the normal complete pull-request entry point when a
-consumer wants verification plus durable PR publication/cleanup.
+consumer wants verification plus durable PR publication/cleanup. Materialized
+open-PR output is also transported from that same runner as one
+`cad-review-evidence` artifact for visual review.
 
 `reusable-ci.yml` remains the high-level run-only entry point. Lower-level
 reusable plan/run workflows exist for cases that need repository-specific
@@ -308,6 +310,11 @@ The reusable workflow may inspect the filesystem after the released CLI
 returns. This is GitHub transport behavior only. It does not interpret CAD-CI
 selection or build semantics.
 
+The complete PR workflow applies the same boundary to review evidence: the
+existing sparse `build/` directory is uploaded unchanged together with a
+workflow-owned `review-provenance.json`. No second item selection or output
+projection is performed in `tool.cad.ci`.
+
 ## Main candidate selection delegation
 
 The CLI's unselected `build prepare-main` path delegates scope selection to the
@@ -334,9 +341,11 @@ output.
 ## One-runner PR architecture
 
 The complete `reusable-pr.yml` remains a **single job on one runner**
-for its entire PR lifecycle. That was the established performance and
-architecture requirement. It does not download/upload build artifacts or
-repeat checkout/Python setup between verification and publication.
+for its entire PR lifecycle. That is the established performance and
+architecture requirement. It may upload one review artifact from the already
+materialized sparse `build/` tree, but it does not download an artifact or use
+artifact transport between jobs. It does not repeat checkout/Python setup
+between verification and publication.
 
 ```text
 PR opened/synchronize/reopened
@@ -344,6 +353,9 @@ PR opened/synchronize/reopened
       -> exact PR head / exact tool and library
       -> GHCR authentication
       -> one CAD-CI run
+      -> if materialized output:
+           write exact PR/head/base review provenance
+           upload build/ + provenance as cad-review-evidence
       -> if materialized output and eligible same-repo PR:
            prepare PR build scope
            -> publish build scope in the same workspace
@@ -363,10 +375,12 @@ rewriting the product topology.
 
 ## PR performance contract
 
-The workflow does not introduce artifact handoff, extra runners, repeated
-tool/library checkout, or a second SCons graph to facilitate publication.
-Any credential-security solution requires explicit evaluation of the
-one-job PR trade-off rather than replacing this contract.
+The workflow does not introduce artifact handoff between jobs, extra runners,
+repeated tool/library checkout, or a second SCons graph to facilitate
+publication. The same-job review upload is transport of already produced
+evidence, not another execution stage. Any credential-security solution
+requires explicit evaluation of the one-job PR trade-off rather than replacing
+this contract.
 
 ## Direct source bootstrap for pull requests
 
@@ -743,9 +757,12 @@ server-side branch deletion races.
 ## PR source trust
 
 The one-runner design is intentional. Same-repository PR publication uses the
-same runner by contract; fork PRs do not publish. Consumers needing a strict
-read-only path use `reusable-ci.yml`. This trust assumption is documented so
-future fixes do not reintroduce extra runners or artifact handoff.
+same runner by contract; fork PRs do not publish durable output. Either source
+may expose the same-job review artifact because that upload carries only the
+already produced sparse build evidence plus exact PR provenance. Consumers
+needing the run-only path use `reusable-ci.yml`. This trust assumption is
+documented so future fixes do not reintroduce extra runners or artifact
+handoff between execution jobs.
 
 ## Reusable lane PR preflight
 

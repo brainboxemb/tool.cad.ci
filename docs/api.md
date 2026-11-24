@@ -133,13 +133,20 @@ Public `workflow_call` entry point for a complete PR lifecycle:
 `publish_build` (boolean, default true).
 
 **Exactly one job and one runner.** It checks out the exact caller/source
-and immutable tool/library pins, runs one CAD-CI graph, optionally
-prepares and publishes the same-repository sparse PR build scope from
-the same workspace, and cleans closed-PR output without SCons execution.
-No artifact handoff or second runner is part of this API. Fork PRs do not
-publish or delete durable caller branches. `publish_build: false`
-disables write-side effects, not the job's declared maximum permissions;
-a genuinely read-only caller should use `reusable-ci.yml`.
+and immutable tool/library pins, runs one CAD-CI graph, uploads one
+`cad-review-evidence` artifact from the already materialized sparse
+`build/` tree when output exists, optionally prepares and publishes the
+same-repository sparse PR build scope from the same workspace, and cleans
+closed-PR output without SCons execution.
+
+The review artifact is same-job evidence transport, not an artifact handoff:
+there is no download step, second runner or second CAD-CI graph. It also
+contains `review-provenance.json` with the exact PR number, base commit and
+head/source commit. Fork PRs may receive review evidence but do not publish or
+delete durable caller branches. `publish_build: false` disables durable
+write-side effects, not review evidence or the job's declared maximum
+permissions; a genuinely read-only run-only caller should use
+`reusable-ci.yml`.
 
 The workflow declares `contents: write` for optional durable output and
 `packages: read` for GHCR. This is a deliberate one-runner contract:

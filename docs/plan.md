@@ -1,82 +1,74 @@
 # Repository plan
 
-Current source of truth for unfinished work in `tool.cad.ci` (2026-11-23).
+Current source of truth for unfinished work in `tool.cad.ci` (2026-11-24).
 
 ## Accepted owner baseline
 
 - `lib.py.cad.ci v0.18.2` @
   `088644a05ff698957aef2ddc6cc5de037ddfa158`;
-- `tool.cad.ci v0.36.0` @
-  `093eafb0eabf6b6617ec82dde17a76fdc718ae12`;
-- released-stack acceptance is owned by `tool.cad.ci.test`;
+- `tool.cad.ci v0.36.1` @
+  `8a9acb8ea69581728a3850c658b4c1ae2db6ff5a`;
+- `tool.cad.ci.test #256` externally accepted the v0.36.1 central release
+  flow, including stale-source refusal, exact-main release and idempotency;
 - consumers remain pinned to accepted releases until a newer exact stack passes
-  that external acceptance.
+  external acceptance.
 
 ## Current work
 
-### #178 — fix reusable release runtime bootstrap
+### #181 — sparse PR render review evidence
 
 **Now.**
 
-External acceptance of v0.36.0 reached the new release workflow but failed
-before the intended stale-source check because the workflow checked out the
-pinned CAD-CI library without installing its runtime dependencies. Run
-`45242477963` failed with `ModuleNotFoundError: No module named 'yaml'`.
+CAD model PRs can already build exact sparse native output inside
+`reusable-pr.yml`, but the output disappears with the runner. That blocks
+pre-merge visual acceptance of exact PR renders in consumers such as CAD #348,
+#362 and #373.
 
-Required order:
+Implementation direction:
 
-1. install the same PyYAML/SCons runtime dependencies already used by
-   `reusable-run.yml` and `reusable-durable.yml` before `release-check`;
-2. enforce that bootstrap in workflow tests;
-3. patch-release `tool.cad.ci v0.36.1` and repin the copy-ready templates;
-4. rerun `tool.cad.ci.test #256` from the failed stale-SHA step;
-5. only after external acceptance may Forge #739 migrate.
+1. keep the existing one-job / one-runner PR topology;
+2. execute CAD-CI exactly once;
+3. when materialized sparse `build/` output exists, write exact PR/head/base
+   review provenance;
+4. upload that existing sparse tree as one same-job
+   `cad-review-evidence` artifact;
+5. do not add a download step, second runner, second CAD graph or PR Pages
+   publication;
+6. document operator retrieval and enforce the topology in workflow tests;
+7. patch-release as v0.36.2;
+8. black-box accept the released artifact in `tool.cad.ci.test` before CAD
+   consumers migrate.
 
-### #176 — central CAD release flow
+This is GitHub Actions transport only. Item selection, build output semantics
+and SCons execution remain owned by `lib.py.cad.ci`.
 
-**Implemented and released in v0.36.0; external acceptance blocked by #178.**
+## Recently completed baseline work
 
-The Forge v0.12.0 release attempt exposed a missing shared contract: a CAD-CI
-consumer must not parse Pages or invent repository-local build checks before a
-release.
-
-Required order:
-
-1. **complete** — document the release flow in the consumer manual;
-2. **complete** — align requirements/design/API with that manual;
-3. **complete** — define `reusable-release.yml` + `cad-release.yml` and their exact inputs/outputs;
-4. **complete in candidate** — implement the shared CAD release workflow:
-   - check the stable main ci-build-record from the generated build branch;
-   - do not read `gh-pages`;
-   - delegate tag/GitHub Release creation to exact released
-     `tool.py.lib.ci v0.2.1`;
-5. **complete in candidate** — copy-ready templates pin `v0.36.0`;
-6. **complete** — repository workflow/helper/template tests passed;
-7. **complete** — released `tool.cad.ci v0.36.0`;
-8. **blocked on #178** — black-box acceptance reached the release workflow and exposed the missing runtime bootstrap;
-9. only after the v0.36.1 fix passes external acceptance may Forge migrate.
+- #176 central CAD release flow: released and externally accepted through
+  v0.36.1.
+- #178 reusable release runtime bootstrap: fixed in v0.36.1 and externally
+  accepted by `tool.cad.ci.test #256`.
 
 ## Open issue assessment
 
 | Issue | Status | Next |
 | --- | --- | --- |
-| #178 release workflow runtime dependencies | **now** | Add the missing released-workflow bootstrap, patch-release v0.36.1 and rerun external acceptance. |
-| #176 central CAD release flow | **implemented, acceptance blocked** | v0.36.0 is released; #178 fixes the dependency bootstrap found by `tool.cad.ci.test #256`. |
-| #175 duplicate-looking main/dev runs | **next CI cleanup** | Decide whether the second post-merge run can be removed or reduced. |
-| #174 readable CAD-CI names | **next CI cleanup** | Audit code/API/workflow names after #176's public names are chosen. |
-| #173 duplicate CAD rebuild after permanent merge | **next CI cleanup** | Combine with #175 where behavior overlaps; prove required work before changing topology. |
-| #172 self-describing Actions runs | **next CI cleanup** | Add literal run names after the release-flow work no longer blocks Forge. |
-| #171 refresh permanent PR validation after branch updates | later | Keep separate from the release path. |
-| #170 permanent-branch conflict recovery | later | Redesign after current release path is fixed; preserve exact branch history. |
-| #164 reduce tool to shared workflows/governance adapters | later | Architectural cleanup; do not mix into #176. |
-| #117 historical changelog alignment | later / docs-only | Keep separate from active work. |
+| #181 sparse PR CAD review artifact | **now** | Finish same-job evidence upload, release v0.36.2, then externally prove sparse PNG/provenance contents. |
+| #180 replace public `durable` terminology | **next naming slice** | Define owner-layer/public migration before renaming workflow/API surfaces. |
+| #175 duplicate-looking permanent-merge runs | **later CI cleanup** | Determine which second-branch work is truly required and coordinate with #173. |
+| #174 readable CAD-CI names | **later naming audit** | Audit public terms after the focused #180 branch-build rename decision. |
+| #173 duplicate rebuild after permanent merge | **later / may need library primitive** | Prove one-build multi-scope publication ownership before changing merge topology. |
+| #172 self-describing Actions runs | **later UX** | Add literal run names after public branch-build naming is settled. |
+| #171 refresh promotion PR validation | **later** | Reproduce externally and design around GitHub token recursion without consumer hacks. |
+| #170 permanent-lane conflict recovery | **later** | Prefer stable-into-development reconciliation while preserving exact-tree provenance. |
+| #164 reduce tool to shared workflows/governance adapters | **later architecture** | Migrate only after released installed CAD-CI CLI ownership is ready. |
+| #117 historical changelog alignment | **later / docs-only** | Normalize history separately; do not mix retrospective cleanup into functional releases. |
 
 ## Boundary
 
 `tool.cad.ci` transports released CAD-CI behavior into GitHub Actions. It
-does not own generic build-record semantics, SCons execution or build-store
-algorithms; those remain in `lib.py.cad.ci`.
+does not own generic build-record semantics, affected-item selection, SCons
+execution or build-store algorithms; those remain in `lib.py.cad.ci`.
 
-For the release path, `tool.cad.ci` owns the CAD-specific workflow
-composition. Generic tag/GitHub Release mechanics remain in
-`tool.py.lib.ci`. A consumer must not fill gaps with local workflow code.
+GitHub-required same-job artifact upload is tool-owned transport. It may carry
+already-produced sparse output, but must not reinterpret or rebuild that output.
